@@ -14,3 +14,7 @@ class PageMeta(BaseModel):
     slug: str
     created_at: datetime
     updated_at: datetime
+
+
+class PageResponse(PageMeta):
+    url: str

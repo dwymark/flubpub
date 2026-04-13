@@ -154,11 +154,12 @@ Document revision: 2026-04-13 &middot; Classification: Internal</p>
 <p>Previously, when pushing a markdown file that linked to sub-pages containing images, the sub-page images were never uploaded. URLs were rewritten to <code>/assets/{sub-slug}/img.png</code> but the files didn't exist on the server. This is now fixed.</p>
 
 <h3>2.1 Setup Test Files</h3>
+<p class="note">Prerequisite: a real PNG image at <code>~/Downloads/FirstPainting.png</code> (any valid PNG will do).</p>
 <pre>mkdir -p /tmp/flubpub-img-test/pics
 
-# Create test images (1x1 PNGs)
-printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' > /tmp/flubpub-img-test/main-photo.png
-printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' > /tmp/flubpub-img-test/pics/sub-photo.png
+# Use a real image for both main and sub-page
+cp ~/Downloads/FirstPainting.png /tmp/flubpub-img-test/main-photo.png
+cp ~/Downloads/FirstPainting.png /tmp/flubpub-img-test/pics/sub-photo.png
 
 # Create a sub-page with its own image
 cat > /tmp/flubpub-img-test/gallery.md &lt;&lt;'EOF'

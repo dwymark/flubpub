@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>flubpub -- User Acceptance Testing Guide</title>
+  <style>
+    body {
+      background: #000040;
+      color: #e0e0e0;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 1rem 2rem 3rem;
+    }
+    h1 {
+      color: #ffff99;
+      font-size: 1.6rem;
+      text-align: center;
+      margin-bottom: 0.2rem;
+      border-bottom: 2px solid #446;
+      padding-bottom: 0.5rem;
+    }
+    h2 {
+      color: #ccddff;
+      font-size: 1.2rem;
+      margin-top: 2rem;
+      border-bottom: 1px solid #335;
+      padding-bottom: 0.2rem;
+    }
+    h3 {
+      color: #aaccee;
+      font-size: 1rem;
+      margin-top: 1.2rem;
+      margin-bottom: 0.3rem;
+    }
+    a { color: #6699ff; }
+    a:visited { color: #9966cc; }
+    hr { border: none; border-top: 1px solid #334; margin: 1.5rem 0; }
+    code {
+      font-family: "Courier New", Courier, monospace;
+      color: #99ccff;
+      background: #000030;
+      padding: 1px 4px;
+      font-size: 13px;
+    }
+    pre {
+      background: #000020;
+      border: 1px solid #223;
+      padding: 0.6rem 0.8rem;
+      overflow-x: auto;
+      font-family: "Courier New", Courier, monospace;
+      color: #99ccff;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .subtitle {
+      text-align: center;
+      font-style: italic;
+      color: #999;
+      margin-bottom: 1.5rem;
+    }
+    .step {
+      background: #000030;
+      border-left: 3px solid #446;
+      padding: 0.5rem 0.8rem;
+      margin: 0.8rem 0;
+    }
+    .step-num {
+      color: #ffff99;
+      font-weight: bold;
+    }
+    .expected {
+      color: #88cc88;
+      font-style: italic;
+    }
+    .note {
+      color: #cc9966;
+      font-size: 0.9em;
+    }
+    ol { padding-left: 1.4rem; }
+    ol li { margin-bottom: 0.6rem; }
+    .toc { background: #000030; padding: 0.8rem 1.2rem; border: 1px solid #334; margin: 1rem 0; }
+    .toc a { text-decoration: none; }
+    .toc ol { margin: 0.3rem 0; }
+    .footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #667;
+      margin-top: 3rem;
+      border-top: 1px solid #334;
+      padding-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+<h1>flubpub &mdash; User Acceptance Testing Guide</h1>
+<p class="subtitle">Comprehensive step-by-step testing of all four feature enhancements<br>
+Document revision: 2026-04-13 &middot; Classification: Internal</p>
+
+<hr>
+
+<div class="toc">
+<b style="color:#ffff99;">Table of Contents</b>
+<ol>
+  <li><a href="#prereqs">Prerequisites &amp; Environment Setup</a></li>
+  <li><a href="#feature1">Feature 1: Per-Page Theming</a></li>
+  <li><a href="#feature2">Feature 2: Markdown with Local References</a></li>
+  <li><a href="#feature3">Feature 3: Revisions</a></li>
+  <li><a href="#feature4">Feature 4: CRUD Management Interface</a></li>
+  <li><a href="#cleanup">Cleanup</a></li>
+</ol>
+</div>
+
+<hr>
+
+<h2 id="prereqs">1. Prerequisites &amp; Environment Setup</h2>
+
+<p>All tests assume the server is running locally. Start it in a separate terminal:</p>
+
+<pre>uv run flubpub serve</pre>
+
+<p>Verify the server is healthy:</p>
+
+<pre>curl http://localhost:8000/health
+# Expected: {"status":"ok"}</pre>
+
+<p class="note">Note: All <code>uv run flubpub</code> commands below assume you are in the project root directory.</p>
+
+<hr>
+
+<h2 id="feature1">2. Feature 1: Per-Page Theming</h2>
+
+<p>This feature adds Jinja2-based per-page theming with 6 built-in themes inspired by 90s web design archetypes.</p>
+
+<h3>2.1 List Available Themes</h3>
+<div class="step">
+<span class="step-num">Step:</span> Query the themes API endpoint.<br>
+<pre>curl http://localhost:8000/api/themes</pre>
+<span class="expected">Expected:</span> JSON array containing: <code>["default","geocities","academic","hacker","angelfire","web-ring"]</code>
+</div>
+
+<h3>2.2 Publish a Page with Each Theme</h3>
+
+<p>Create a test HTML file:</p>
+<pre>cat &gt; /tmp/theme-test.html &lt;&lt;'EOF'
+&lt;h2&gt;Theme Test Content&lt;/h2&gt;
+&lt;p&gt;This is a test page to verify theme rendering.&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Item one&lt;/li&gt;
+  &lt;li&gt;Item two&lt;/li&gt;
+  &lt;li&gt;Item three&lt;/li&gt;
+&lt;/ul&gt;
+EOF</pre>
+
+<p>Push with each theme, one at a time:</p>
+
+<div class="step">
+<span class="step-num">Step 1 &mdash; Geocities:</span>
+<pre>uv run flubpub push /tmp/theme-test.html --title "Geocities Demo" --slug geocities-demo --theme geocities</pre>
+<span class="expected">Expected:</span> <code>Published: Geocities Demo</code> with URL <code>/geocities-demo/</code><br>
+<span class="expected">Verify:</span> Open <code>http://localhost:8000/geocities-demo/</code> in browser. Should see: dark marble background, rainbow-cycling title, marquee, Comic Sans text, visitor counter, 88&times;31 badges.
+</div>
+
+<div class="step">
+<span class="step-num">Step 2 &mdash; Academic:</span>
+<pre>uv run flubpub push /tmp/theme-test.html --title "Academic Demo" --slug academic-demo --theme academic</pre>
+<span class="expected">Verify:</span> Dark navy blue background (#000040), white/yellow serif text, minimal decoration, dense layout.
+</div>
+
+<div class="step">
+<span class="step-num">Step 3 &mdash; Hacker:</span>
+<pre>uv run flubpub push /tmp/theme-test.html --title "Hacker Demo" --slug hacker-demo --theme hacker</pre>
+<span class="expected">Verify:</span> Black background, green monospace text, scanline overlay, ASCII art header, blinking cursor.
+</div>
+
+<div class="step">
+<span class="step-num">Step 4 &mdash; Angelfire:</span>
+<pre>uv run flubpub push /tmp/theme-test.html --title "Angelfire Demo" --slug angelfire-demo --theme angelfire</pre>
+<span class="expected">Verify:</span> Starfield background, gold glowing title, sparkle dividers, centered layout with ridge border.
+</div>
+
+<div class="step">
+<span class="step-num">Step 5 &mdash; Web Ring:</span>
+<pre>uv run flubpub push /tmp/theme-test.html --title "Web Ring Demo" --slug web-ring-demo --theme web-ring</pre>
+<span class="expected">Verify:</span> Gray crosshatch background, "Under Construction" banner with wiggling emoji, HRs everywhere, webring navigation bar at bottom.
+</div>
+
+<div class="step">
+<span class="step-num">Step 6 &mdash; Default:</span>
+<pre>uv run flubpub push /tmp/theme-test.html --title "Default Demo" --slug default-demo --theme default</pre>
+<span class="expected">Verify:</span> Clean modern layout matching the standard flubpub style.
+</div>
+
+<h3>2.3 Publish Without a Theme (Baseline)</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>uv run flubpub push /tmp/theme-test.html --title "No Theme" --slug no-theme-demo</pre>
+<span class="expected">Expected:</span> Page is rendered through the standard 11ty/nunjucks base.njk layout (not a Jinja2 theme). Verify at <code>http://localhost:8000/no-theme-demo/</code>.
+</div>
+
+<h3>2.4 Invalid Theme Name</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>uv run flubpub push /tmp/theme-test.html --title "Bad Theme" --slug bad-theme --theme nonexistent</pre>
+<span class="expected">Expected:</span> Error message containing <code>Unknown theme: nonexistent</code>.
+</div>
+
+<h3>2.5 Index Page Lists All Themed Pages</h3>
+<div class="step">
+<span class="step-num">Step:</span> Open <code>http://localhost:8000/</code> in browser.<br>
+<span class="expected">Expected:</span> All published pages (geocities-demo, academic-demo, etc.) appear in the chronological listing.
+</div>
+
+<hr>
+
+<h2 id="feature2">3. Feature 2: Markdown with Local References</h2>
+
+<p>This feature auto-detects local image references and links to other .md files, uploads them, and rewrites links.</p>
+
+<h3>3.1 Setup Test Files</h3>
+<pre>mkdir -p /tmp/flubpub-md-test/images
+
+# Create a small test image (1x1 PNG)
+printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' &gt; /tmp/flubpub-md-test/images/photo.png
+
+# Create a linked markdown page
+cat &gt; /tmp/flubpub-md-test/sub-page.md &lt;&lt;'EOF'
+# Sub Page
+
+This is a linked sub-page that was auto-discovered.
+EOF
+
+# Create the main markdown file with local refs
+cat &gt; /tmp/flubpub-md-test/main-doc.md &lt;&lt;'EOF'
+# Main Document
+
+Here is an image:
+
+![Test Photo](images/photo.png)
+
+And here is a link to another page: [Sub Page](sub-page.md)
+
+End of document.
+EOF</pre>
+
+<h3>3.2 Push with Local References</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>cd /tmp/flubpub-md-test
+uv run --project ~/projects/flubpub flubpub push main-doc.md --title "Main Document"</pre>
+<span class="expected">Expected output:</span>
+<pre>Local references found:
+  Images:
+    ./images/photo.png
+  Linked pages:
+    ./sub-page.md
+
+These files will be uploaded. Continue? [y/N]</pre>
+Type <code>y</code> and press Enter.<br><br>
+<span class="expected">Expected:</span> Should see:
+<pre>Uploaded asset: photo.png
+Pushed linked page: sub-page
+Published: Main Document
+/main-document/</pre>
+</div>
+
+<h3>3.3 Verify Asset Upload</h3>
+<div class="step">
+<span class="step-num">Step:</span> Check that the image is accessible.<br>
+<pre>curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/assets/main-document/photo.png</pre>
+<span class="expected">Expected:</span> HTTP status <code>200</code>
+</div>
+
+<h3>3.4 Verify Link Rewriting</h3>
+<div class="step">
+<span class="step-num">Step:</span> Retrieve the published page content and verify links were rewritten.<br>
+<pre>uv run flubpub get main-document</pre>
+<span class="expected">Expected:</span> The content should contain <code>![Test Photo](/assets/main-document/photo.png)</code> and <code>[Sub Page](/sub-page/)</code> (rewritten from local paths).
+</div>
+
+<h3>3.5 Verify Linked Page Was Published</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>uv run flubpub get sub-page</pre>
+<span class="expected">Expected:</span> Should return the sub-page content with title "Sub Page".
+</div>
+
+<h3>3.6 Push with No Local References (No Prompt)</h3>
+<div class="step">
+<span class="step-num">Step:</span> Create a simple .md with no local refs:<br>
+<pre>echo "# Simple Page" &gt; /tmp/simple.md
+uv run flubpub push /tmp/simple.md --title "Simple"</pre>
+<span class="expected">Expected:</span> No confirmation prompt appears. Page is published directly.
+</div>
+
+<hr>
+
+<h2 id="feature3">4. Feature 3: Revisions</h2>
+
+<p>This feature allows updating already-published pages with new content and/or titles.</p>
+
+<h3>4.1 Create a Page to Revise</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>echo "&lt;p&gt;Version 1&lt;/p&gt;" &gt; /tmp/rev-test.html
+uv run flubpub push /tmp/rev-test.html --title "Revision Test" --slug revision-test</pre>
+<span class="expected">Expected:</span> <code>Published: Revision Test</code>
+</div>
+
+<h3>4.2 Revise Content Only</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>echo "&lt;p&gt;Version 2 - Updated content&lt;/p&gt;" &gt; /tmp/rev-test-v2.html
+uv run flubpub revise revision-test /tmp/rev-test-v2.html</pre>
+<span class="expected">Expected:</span> <code>Revised: Revision Test</code><br>
+<span class="expected">Verify:</span>
+<pre>uv run flubpub get revision-test</pre>
+Content should contain "Version 2". Title should still be "Revision Test".
+</div>
+
+<h3>4.3 Revise Title Only (with New Content)</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>echo "&lt;p&gt;Version 3&lt;/p&gt;" &gt; /tmp/rev-test-v3.html
+uv run flubpub revise revision-test /tmp/rev-test-v3.html --title "Revision Test v3"</pre>
+<span class="expected">Expected:</span> <code>Revised: Revision Test v3</code><br>
+<span class="expected">Verify:</span> <code>uv run flubpub get revision-test</code> shows new title and "Version 3" content.
+</div>
+
+<h3>4.4 Revise with Theme Change</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>echo "&lt;p&gt;Now with hacker theme&lt;/p&gt;" &gt; /tmp/rev-test-v4.html
+uv run flubpub revise revision-test /tmp/rev-test-v4.html --theme hacker</pre>
+<span class="expected">Expected:</span> <code>Revised: Revision Test v3</code><br>
+<span class="expected">Verify:</span> Open <code>http://localhost:8000/revision-test/</code> in browser. Should now display with the hacker theme (black bg, green text, scanlines).
+</div>
+
+<h3>4.5 Verify Updated Timestamp in List</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>uv run flubpub list</pre>
+<span class="expected">Expected:</span> The "revision-test" entry should show an UPDATED column with the current date followed by <code>*</code> (indicating it differs from the created date).
+</div>
+
+<h3>4.6 Revise Non-Existent Page</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>echo "test" &gt; /tmp/dummy.html
+uv run flubpub revise nonexistent-slug /tmp/dummy.html</pre>
+<span class="expected">Expected:</span> Error message containing "Page not found".
+</div>
+
+<hr>
+
+<h2 id="feature4">5. Feature 4: CRUD Management Interface</h2>
+
+<p>This feature completes the full Create-Read-Update-Delete cycle.</p>
+
+<h3>5.1 Create (Push)</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>echo "&lt;p&gt;CRUD test page&lt;/p&gt;" &gt; /tmp/crud-test.html
+uv run flubpub push /tmp/crud-test.html --title "CRUD Test" --slug crud-test</pre>
+<span class="expected">Expected:</span> <code>Published: CRUD Test</code>
+</div>
+
+<h3>5.2 Read (List)</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>uv run flubpub list</pre>
+<span class="expected">Expected:</span> Table with columns SLUG, TITLE, CREATED, UPDATED. The "crud-test" entry should appear with its creation date. UPDATED column should be blank (no revision yet).
+</div>
+
+<h3>5.3 Read (Get Single)</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>uv run flubpub get crud-test</pre>
+<span class="expected">Expected output format:</span>
+<pre>Title: CRUD Test
+Slug: crud-test
+Created: 2026-04-13T...
+Updated: 2026-04-13T...
+URL: /crud-test/
+Content-Type: html
+---
+&lt;p&gt;CRUD test page&lt;/p&gt;</pre>
+</div>
+
+<h3>5.4 Update (Revise)</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>echo "&lt;p&gt;Updated CRUD content&lt;/p&gt;" &gt; /tmp/crud-test-v2.html
+uv run flubpub revise crud-test /tmp/crud-test-v2.html --title "CRUD Test Updated"</pre>
+<span class="expected">Expected:</span> <code>Revised: CRUD Test Updated</code><br>
+<span class="expected">Verify:</span> <code>uv run flubpub get crud-test</code> shows new title and content.
+</div>
+
+<h3>5.5 Delete</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>uv run flubpub delete crud-test</pre>
+<span class="expected">Expected:</span> <code>Deleted: crud-test</code><br>
+<span class="expected">Verify:</span> <code>uv run flubpub list</code> should no longer include "crud-test".<br>
+<span class="expected">Verify:</span> <code>uv run flubpub get crud-test</code> should return "Page not found".
+</div>
+
+<h3>5.6 Delete Non-Existent Page</h3>
+<div class="step">
+<span class="step-num">Step:</span>
+<pre>uv run flubpub delete nonexistent-slug</pre>
+<span class="expected">Expected:</span> Error message containing "Page not found".
+</div>
+
+<h3>5.7 Full API Verification (curl)</h3>
+<div class="step">
+<span class="step-num">Step:</span> Verify the REST API directly:
+<pre># Create
+curl -X POST http://localhost:8000/api/pages \
+  -H "Content-Type: application/json" \
+  -d '{"title":"API Test","content":"&lt;p&gt;Hello&lt;/p&gt;","slug":"api-test"}'
+
+# Read list
+curl http://localhost:8000/api/pages
+
+# Read single
+curl http://localhost:8000/api/pages/api-test
+
+# Update
+curl -X PUT http://localhost:8000/api/pages/api-test \
+  -H "Content-Type: application/json" \
+  -d '{"content":"&lt;p&gt;Updated&lt;/p&gt;"}'
+
+# Delete
+curl -X DELETE http://localhost:8000/api/pages/api-test</pre>
+<span class="expected">Expected:</span> Each returns appropriate JSON. Create returns 200 with page data. Read returns page details. Update returns updated metadata. Delete returns <code>{"deleted":"api-test"}</code>.
+</div>
+
+<hr>
+
+<h2 id="cleanup">6. Cleanup</h2>
+
+<p>After testing, clean up the test pages:</p>
+
+<pre>for slug in geocities-demo academic-demo hacker-demo angelfire-demo web-ring-demo \
+            default-demo no-theme-demo main-document sub-page simple revision-test; do
+  uv run flubpub delete "$slug" 2>/dev/null
+done
+rm -rf /tmp/flubpub-md-test /tmp/theme-test.html /tmp/rev-test*.html /tmp/crud-test*.html /tmp/simple.md /tmp/dummy.html</pre>
+
+<hr>
+
+<p class="footer">
+  This page is part of the <a href="/">flubpub</a> project documentation.<br>
+  Generated: 2026-04-13. No authentication required &mdash; access controlled via SSH key for deployment.<br>
+  Best viewed with any browser. Optimized for 800&times;600.
+</p>
+
+</body>
+</html>

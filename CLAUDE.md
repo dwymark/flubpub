@@ -15,14 +15,19 @@ uv run flubpub serve
 # Push a page (server must be running)
 uv run flubpub push mypage.html --title "My Page"
 uv run flubpub push mypage.html --theme geocities  # themed page
+uv run flubpub push mypage.html --theme hacker --color-scheme midnight  # theme + color scheme
 uv run flubpub push doc.md  # auto-scans for local images/links
 uv run flubpub list
 uv run flubpub get my-slug
 uv run flubpub revise my-slug updated-page.html --title "New Title" --theme hacker
 uv run flubpub delete my-slug
 
-# Point CLI at production
+# Point CLI at production (HTTP API)
 uv run flubpub --server http://danielwymark.com push page.html
+
+# Point CLI at production (SSH, no HTTP API needed)
+uv run flubpub --remote root@danielwymark.com push page.html
+uv run flubpub --remote root@danielwymark.com list
 
 # Build the 11ty site manually
 cd site && npx @11ty/eleventy
@@ -36,10 +41,11 @@ REMOTE_USER=root REMOTE_HOST=danielwymark.com bash deploy/deploy.sh
 **Data flow:** CLI → POST /api/pages → server writes page file to `site/src/pages/` → server runs `npx @11ty/eleventy` in `site/` → static HTML appears in `site/_site/` → nginx serves `_site/` directly, proxies `/api/` and `/health` to uvicorn.
 
 **Python package** (`src/flubpub/`):
-- `cli.py` — Click CLI (push, list, get, revise, delete, serve), uses httpx sync client. Scans .md files for local image/link references and uploads them.
-- `server.py` — FastAPI app; full CRUD (POST/GET/PUT/DELETE), Jinja2 theme rendering, asset upload, triggers 11ty rebuilds, mounts `_site/` as static files
+- `cli.py` — Click CLI (push, list, get, revise, delete, serve), uses httpx sync client. Scans .md files for local image/link references and uploads them. Supports `--remote user@host` for SSH-based access (scp+ssh, no HTTP API needed).
+- `server.py` — FastAPI app; full CRUD (POST/GET/PUT/DELETE), Jinja2 theme rendering, color scheme injection, asset upload, triggers 11ty rebuilds, mounts `_site/` as static files
 - `models.py` — Pydantic models: PageCreate, PageUpdate, PageMeta, PageResponse, PageDetail
-- `themes/` — Jinja2 HTML templates for per-page theming (default, geocities, academic, hacker, angelfire, web-ring)
+- `colors.py` — Named color schemes (clean, neon, midnight, terminal, starfield, parchment) as CSS custom property dicts. Default scheme mapping per theme.
+- `themes/` — Jinja2 HTML templates using CSS custom properties for colors (6 themes: default, geocities, academic, hacker, angelfire, web-ring). Any color scheme can be paired with any theme.
 
 **Static site** (`site/`): 11ty project. `eleventy.config.js` defines a `pages` collection from `src/pages/*.md` and `*.html` sorted newest-first. `src/index.njk` renders the chronological list. Assets in `src/assets/` are passed through.
 

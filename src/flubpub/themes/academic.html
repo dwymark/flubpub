@@ -6,8 +6,8 @@
   <title>{{ title }}</title>
   <style>
     body {
-      background: #000040;
-      color: #e0e0e0;
+      background: var(--bg);
+      color: var(--fg);
       font-family: "Times New Roman", Times, serif;
       font-size: 14px;
       line-height: 1.5;
@@ -15,14 +15,15 @@
       margin: 0 auto;
       padding: 1rem;
     }
-    h1, h2, h3 { color: #ffff99; font-family: "Times New Roman", Times, serif; }
+    h1, h2, h3 { color: var(--heading); font-family: "Times New Roman", Times, serif; }
     h1 { font-size: 1.5em; }
-    a { color: #6699ff; }
-    a:visited { color: #9966cc; }
-    hr { border: none; border-top: 1px solid #446; margin: 1rem 0; }
+    a { color: var(--link); }
+    a:visited { color: var(--link-visited); }
+    hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+    code, pre { background: var(--code-bg); color: var(--code-fg); }
     .footer {
       margin-top: 2rem; padding-top: 0.5rem;
-      border-top: 1px solid #446; font-size: 12px; color: #888;
+      border-top: 1px solid var(--border); font-size: 12px; color: var(--footer-fg, #888);
     }
   </style>
 </head>

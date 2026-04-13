@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, PackageLoader
 
+from flubpub.colors import DEFAULT_SCHEMES, available_color_schemes, color_scheme_css, get_color_scheme
 from flubpub.models import PageCreate, PageDetail, PageResponse, PageUpdate
 
 logger = logging.getLogger(__name__)
@@ -31,16 +32,27 @@ def available_themes() -> list[str]:
     return [f.stem for f in THEMES_DIR.glob("*.html")]
 
 
-def render_themed_page(theme: str, slug: str, title: str, content: str, date: str) -> str:
+def resolve_color_scheme(theme: str, color_scheme: str | None) -> str:
+    return color_scheme or DEFAULT_SCHEMES.get(theme, "clean")
+
+
+def render_themed_page(theme: str, slug: str, title: str, content: str, date: str,
+                       color_scheme: str | None = None) -> str:
     template = jinja_env.get_template(f"{theme}.html")
-    return template.render(title=title, content=content, date=date, slug=slug)
+    html = template.render(title=title, content=content, date=date, slug=slug)
+    scheme = resolve_color_scheme(theme, color_scheme)
+    css_block = color_scheme_css(scheme)
+    # Inject color scheme CSS vars right after <head>
+    html = html.replace("<head>", f"<head>\n  {css_block}", 1)
+    return html
 
 
-def write_page_file(slug: str, title: str, content: str, date: str, theme: str | None) -> None:
+def write_page_file(slug: str, title: str, content: str, date: str,
+                    theme: str | None, color_scheme: str | None = None) -> None:
     """Write the page file (.html for themed, .md for unthemed). Cleans up the other format."""
     old_md, old_html = PAGES_DIR / f"{slug}.md", PAGES_DIR / f"{slug}.html"
     if theme:
-        rendered = render_themed_page(theme, slug, title, content, date)
+        rendered = render_themed_page(theme, slug, title, content, date, color_scheme)
         fm = f'---\ntitle: "{title}"\ndate: "{date}"\nlayout: false\n---\n{rendered}\n'
         old_html.write_text(fm)
         old_md.unlink(missing_ok=True)
@@ -102,11 +114,15 @@ def create_page(body: PageCreate):
     if theme and theme not in available_themes():
         raise HTTPException(status_code=400, detail=f"Unknown theme: {theme}")
 
+    cs = body.color_scheme
+    if cs and cs not in available_color_schemes():
+        raise HTTPException(status_code=400, detail=f"Unknown color scheme: {cs}")
+
     now = datetime.now(timezone.utc)
     content = body.content
     if theme and body.content_type == "markdown":
         content = f'<div class="markdown-content">{content}</div>'
-    write_page_file(slug, body.title, content, now.isoformat(), theme)
+    write_page_file(slug, body.title, content, now.isoformat(), theme, cs)
 
     pages = load_pages(DATA_DIR)
     pages = [p for p in pages if p["slug"] != slug]  # replace on re-create
@@ -116,6 +132,7 @@ def create_page(body: PageCreate):
         "created_at": now.isoformat(),
         "updated_at": now.isoformat(),
         **({"theme": theme} if theme else {}),
+        **({"color_scheme": cs} if cs else {}),
     }
     pages.append(entry)
     save_pages(DATA_DIR, pages)
@@ -183,6 +200,10 @@ def update_page(slug: str, body: PageUpdate):
     if theme and theme not in available_themes():
         raise HTTPException(status_code=400, detail=f"Unknown theme: {theme}")
 
+    cs = body.color_scheme if body.color_scheme is not None else entry.get("color_scheme")
+    if cs and cs not in available_color_schemes():
+        raise HTTPException(status_code=400, detail=f"Unknown color scheme: {cs}")
+
     title = body.title or entry["title"]
     if body.content is not None:
         content = body.content
@@ -194,7 +215,7 @@ def update_page(slug: str, body: PageUpdate):
         content = parts[2].strip() if len(parts) >= 3 else raw
 
     now = datetime.now(timezone.utc)
-    write_page_file(slug, title, content, entry["created_at"], theme)
+    write_page_file(slug, title, content, entry["created_at"], theme, cs)
 
     entry["title"] = title
     entry["updated_at"] = now.isoformat()
@@ -202,6 +223,10 @@ def update_page(slug: str, body: PageUpdate):
         entry["theme"] = theme
     elif "theme" in entry:
         del entry["theme"]
+    if cs:
+        entry["color_scheme"] = cs
+    elif "color_scheme" in entry:
+        del entry["color_scheme"]
     save_pages(DATA_DIR, pages)
 
     rebuild_site(SITE_DIR)
@@ -227,6 +252,11 @@ def delete_page(slug: str):
 @app.get("/api/themes")
 def list_themes():
     return available_themes()
+
+
+@app.get("/api/color-schemes")
+def list_color_schemes():
+    return available_color_schemes()
 
 
 if __name__ == "__main__":

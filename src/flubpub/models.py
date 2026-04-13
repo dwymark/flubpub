@@ -8,6 +8,7 @@ class PageCreate(BaseModel):
     content: str
     content_type: str = "html"
     theme: str | None = None
+    color_scheme: str | None = None
 
 
 class PageMeta(BaseModel):
@@ -22,6 +23,7 @@ class PageUpdate(BaseModel):
     content: str | None = None
     content_type: str | None = None
     theme: str | None = None
+    color_scheme: str | None = None
 
 
 class PageResponse(PageMeta):

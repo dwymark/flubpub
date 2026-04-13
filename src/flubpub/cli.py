@@ -1,6 +1,8 @@
 import re
 import sys
 import json
+import shlex
+import subprocess
 import click
 import httpx
 from pathlib import Path
@@ -87,12 +89,57 @@ def rewrite_refs(content: str, slug: str, image_paths: list[Path], linked_mds: l
     return content
 
 
+REMOTE_FLUBPUB_DIR = "/opt/flubpub"
+REMOTE_TMP_PREFIX = "/tmp/flubpub-upload-"
+
+
+def _ssh_run(remote: str, cmd: str) -> subprocess.CompletedProcess:
+    result = subprocess.run(["ssh", remote, cmd], capture_output=True, text=True)
+    if result.returncode != 0:
+        click.echo(f"SSH error: {result.stderr.strip()}", err=True)
+        sys.exit(1)
+    return result
+
+
+def _scp_to(remote: str, local_path: Path, remote_path: str):
+    result = subprocess.run(
+        ["scp", str(local_path), f"{remote}:{remote_path}"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        click.echo(f"SCP error: {result.stderr.strip()}", err=True)
+        sys.exit(1)
+
+
+def _remote_cleanup(remote: str):
+    _ssh_run(remote, f"rm -f {REMOTE_TMP_PREFIX}*")
+
+
+def _remote_flubpub(remote: str, args: str):
+    """Run a flubpub CLI command on the remote and print output."""
+    cmd = f"cd {REMOTE_FLUBPUB_DIR} && uv run flubpub {args}"
+    result = _ssh_run(remote, cmd)
+    if result.stdout:
+        click.echo(result.stdout.strip())
+
+
+def _upload_file_and_refs(remote: str, file_path: Path):
+    """SCP a file (and its local refs if .md) to the remote tmp dir."""
+    _scp_to(remote, file_path, f"{REMOTE_TMP_PREFIX}{file_path.name}")
+    if file_path.suffix.lower() == ".md":
+        images, linked_mds = collect_all_refs(file_path)
+        for ref in images + linked_mds:
+            _scp_to(remote, ref, f"{REMOTE_TMP_PREFIX}{ref.name}")
+
+
 @click.group()
 @click.option("--server", default="http://localhost:8000", show_default=True, help="Server base URL")
+@click.option("--remote", default=None, help="SSH remote (e.g. root@host). Bypasses HTTP API.")
 @click.pass_context
-def cli(ctx, server):
+def cli(ctx, server, remote):
     ctx.ensure_object(dict)
     ctx.obj["server"] = server
+    ctx.obj["remote"] = remote
 
 
 @cli.command()
@@ -100,14 +147,29 @@ def cli(ctx, server):
 @click.option("--title", default=None, help="Page title")
 @click.option("--slug", default=None, help="URL slug")
 @click.option("--theme", default=None, help="Theme name (geocities, academic, hacker, angelfire, web-ring)")
+@click.option("--color-scheme", default=None, help="Color scheme (clean, neon, midnight, terminal, starfield, parchment)")
 @click.pass_context
-def push(ctx, file_path, title, slug, theme):
+def push(ctx, file_path, title, slug, theme, color_scheme):
     """Push a file to the server as a published page."""
     path = Path(file_path)
     content = path.read_text()
 
     if not title:
         title = path.stem.replace("-", " ").replace("_", " ").title()
+
+    remote = ctx.obj.get("remote")
+    if remote:
+        _upload_file_and_refs(remote, path)
+        args = f"push {shlex.quote(REMOTE_TMP_PREFIX + path.name)} --title {shlex.quote(title)}"
+        if slug:
+            args += f" --slug {shlex.quote(slug)}"
+        if theme:
+            args += f" --theme {shlex.quote(theme)}"
+        if color_scheme:
+            args += f" --color-scheme {shlex.quote(color_scheme)}"
+        _remote_flubpub(remote, args)
+        _remote_cleanup(remote)
+        return
 
     suffix = path.suffix.lower()
     content_type = "markdown" if suffix == ".md" else "html"
@@ -151,6 +213,16 @@ def push(ctx, file_path, title, slug, theme):
             linked_content = md.read_text()
             # Rewrite refs in linked pages too
             sub_imgs, sub_links = scan_local_refs(md)
+            for img in sub_imgs:
+                with open(img, "rb") as f:
+                    resp = client.post(
+                        f"{server}/api/assets/{linked_slug}",
+                        files={"file": (img.name, f)},
+                    )
+                if not resp.is_success:
+                    click.echo(f"Error uploading {img.name}: {resp.text}", err=True)
+                    sys.exit(1)
+                click.echo(f"Uploaded asset: {img.name} (for {linked_slug})")
             linked_content = rewrite_refs(linked_content, linked_slug, sub_imgs, sub_links)
             resp = client.post(
                 f"{server}/api/pages",
@@ -170,6 +242,8 @@ def push(ctx, file_path, title, slug, theme):
             body["slug"] = slug
         if theme:
             body["theme"] = theme
+        if color_scheme:
+            body["color_scheme"] = color_scheme
 
         resp = client.post(f"{server}/api/pages", json=body)
 
@@ -186,6 +260,11 @@ def push(ctx, file_path, title, slug, theme):
 @click.pass_context
 def list_pages(ctx):
     """List published pages."""
+    remote = ctx.obj.get("remote")
+    if remote:
+        _remote_flubpub(remote, "list")
+        return
+
     with httpx.Client() as client:
         resp = client.get(f"{ctx.obj['server']}/api/pages")
 
@@ -213,6 +292,11 @@ def list_pages(ctx):
 @click.pass_context
 def get(ctx, slug):
     """Get full details of a published page by slug."""
+    remote = ctx.obj.get("remote")
+    if remote:
+        _remote_flubpub(remote, f"get {shlex.quote(slug)}")
+        return
+
     with httpx.Client() as client:
         resp = client.get(f"{ctx.obj['server']}/api/pages/{slug}")
 
@@ -236,10 +320,26 @@ def get(ctx, slug):
 @click.argument("file_path")
 @click.option("--title", default=None, help="New page title")
 @click.option("--theme", default=None, help="Theme name (geocities, academic, hacker, angelfire, web-ring)")
+@click.option("--color-scheme", default=None, help="Color scheme (clean, neon, midnight, terminal, starfield, parchment)")
 @click.pass_context
-def revise(ctx, slug, file_path, title, theme):
+def revise(ctx, slug, file_path, title, theme, color_scheme):
     """Update an existing page with new content."""
     path = Path(file_path)
+
+    remote = ctx.obj.get("remote")
+    if remote:
+        _upload_file_and_refs(remote, path)
+        args = f"revise {shlex.quote(slug)} {shlex.quote(REMOTE_TMP_PREFIX + path.name)}"
+        if title:
+            args += f" --title {shlex.quote(title)}"
+        if theme:
+            args += f" --theme {shlex.quote(theme)}"
+        if color_scheme:
+            args += f" --color-scheme {shlex.quote(color_scheme)}"
+        _remote_flubpub(remote, args)
+        _remote_cleanup(remote)
+        return
+
     content = path.read_text()
     suffix = path.suffix.lower()
     content_type = "markdown" if suffix == ".md" else "html"
@@ -249,6 +349,8 @@ def revise(ctx, slug, file_path, title, theme):
         body["title"] = title
     if theme:
         body["theme"] = theme
+    if color_scheme:
+        body["color_scheme"] = color_scheme
 
     with httpx.Client() as client:
         resp = client.put(f"{ctx.obj['server']}/api/pages/{slug}", json=body)
@@ -267,6 +369,11 @@ def revise(ctx, slug, file_path, title, theme):
 @click.pass_context
 def delete(ctx, slug):
     """Delete a published page by slug."""
+    remote = ctx.obj.get("remote")
+    if remote:
+        _remote_flubpub(remote, f"delete {shlex.quote(slug)}")
+        return
+
     with httpx.Client() as client:
         resp = client.delete(f"{ctx.obj['server']}/api/pages/{slug}")
 

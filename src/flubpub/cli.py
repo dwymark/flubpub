@@ -61,12 +61,65 @@ def list_pages(ctx):
         click.echo("No pages published yet.")
         return
 
-    col_w = (20, 30, 12)
-    click.echo(f"{'SLUG':<{col_w[0]}}{'TITLE':<{col_w[1]}}{'DATE':<{col_w[2]}}")
+    col_w = (20, 30, 12, 12)
+    click.echo(f"{'SLUG':<{col_w[0]}}{'TITLE':<{col_w[1]}}{'CREATED':<{col_w[2]}}{'UPDATED':<{col_w[3]}}")
     click.echo("-" * sum(col_w))
     for p in pages:
-        date = p["created_at"][:10]
-        click.echo(f"{p['slug']:<{col_w[0]}}{p['title']:<{col_w[1]}}{date:<{col_w[2]}}")
+        created = p["created_at"][:10]
+        updated = p["updated_at"][:10]
+        updated_col = f"{updated}*" if updated != created else ""
+        click.echo(f"{p['slug']:<{col_w[0]}}{p['title']:<{col_w[1]}}{created:<{col_w[2]}}{updated_col:<{col_w[3]}}")
+
+
+@cli.command()
+@click.argument("slug")
+@click.pass_context
+def get(ctx, slug):
+    """Get full details of a published page by slug."""
+    with httpx.Client() as client:
+        resp = client.get(f"{ctx.obj['server']}/api/pages/{slug}")
+
+    if not resp.is_success:
+        click.echo(f"Error: {resp.text}", err=True)
+        sys.exit(1)
+
+    d = resp.json()
+    click.echo(f"Title: {d['title']}")
+    click.echo(f"Slug: {d['slug']}")
+    click.echo(f"Created: {d['created_at']}")
+    click.echo(f"Updated: {d['updated_at']}")
+    click.echo(f"URL: {d['url']}")
+    click.echo(f"Content-Type: {d['content_type']}")
+    click.echo("---")
+    click.echo(d["content"])
+
+
+@cli.command()
+@click.argument("slug")
+@click.argument("file_path")
+@click.option("--title", default=None, help="New page title")
+@click.pass_context
+def revise(ctx, slug, file_path, title):
+    """Update an existing page with new content."""
+    path = Path(file_path)
+    content = path.read_text()
+    suffix = path.suffix.lower()
+    content_type = "markdown" if suffix == ".md" else "html"
+
+    body = {"content": content, "content_type": content_type}
+    if title:
+        body["title"] = title
+
+    with httpx.Client() as client:
+        resp = client.put(f"{ctx.obj['server']}/api/pages/{slug}", json=body)
+
+    if resp.is_success:
+        data = resp.json()
+        click.echo(f"Revised: {data['title']}")
+        click.echo(data["url"])
+    else:
+        click.echo(f"Error: {resp.text}", err=True)
+        sys.exit(1)
 
 
 @cli.command()

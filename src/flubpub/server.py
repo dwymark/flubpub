@@ -11,7 +11,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
-from flubpub.models import PageCreate, PageResponse
+from flubpub.models import PageCreate, PageDetail, PageResponse, PageUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,59 @@ def list_pages():
     pages = load_pages(DATA_DIR)
     pages.sort(key=lambda p: p["created_at"], reverse=True)
     return [PageResponse(**p, url=f"/{p['slug']}/") for p in pages]
+
+
+@app.get("/api/pages/{slug}", response_model=PageDetail)
+def get_page(slug: str):
+    pages = load_pages(DATA_DIR)
+    entry = next((p for p in pages if p["slug"] == slug), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    md_path = PAGES_DIR / f"{slug}.md"
+    if not md_path.exists():
+        raise HTTPException(status_code=404, detail="Page file not found")
+
+    raw = md_path.read_text()
+    # Strip YAML frontmatter
+    parts = raw.split("---", 2)
+    content = parts[2].strip() if len(parts) >= 3 else raw
+
+    ext = md_path.suffix.lstrip(".")
+    content_type = "markdown" if ext == "md" else ext or "markdown"
+
+    return PageDetail(**entry, url=f"/{slug}/", content=content, content_type=content_type)
+
+
+@app.put("/api/pages/{slug}", response_model=PageResponse)
+def update_page(slug: str, body: PageUpdate):
+    pages = load_pages(DATA_DIR)
+    entry = next((p for p in pages if p["slug"] == slug), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    md_path = PAGES_DIR / f"{slug}.md"
+    if not md_path.exists():
+        raise HTTPException(status_code=404, detail="Page file not found")
+
+    title = body.title or entry["title"]
+    if body.content is not None:
+        content = body.content
+    else:
+        raw = md_path.read_text()
+        parts = raw.split("---", 2)
+        content = parts[2].strip() if len(parts) >= 3 else raw
+
+    now = datetime.now(timezone.utc)
+    frontmatter = f'---\ntitle: "{title}"\ndate: "{entry["created_at"]}"\n---\n{content}\n'
+    md_path.write_text(frontmatter)
+
+    entry["title"] = title
+    entry["updated_at"] = now.isoformat()
+    save_pages(DATA_DIR, pages)
+
+    rebuild_site(SITE_DIR)
+    return PageResponse(**entry, url=f"/{slug}/")
 
 
 @app.delete("/api/pages/{slug}")

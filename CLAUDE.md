@@ -15,6 +15,8 @@ uv run flubpub serve
 # Push a page (server must be running)
 uv run flubpub push mypage.html --title "My Page"
 uv run flubpub list
+uv run flubpub get my-slug
+uv run flubpub revise my-slug updated-page.html --title "New Title"
 uv run flubpub delete my-slug
 
 # Point CLI at production
@@ -32,9 +34,9 @@ REMOTE_USER=root REMOTE_HOST=danielwymark.com bash deploy/deploy.sh
 **Data flow:** CLI → POST /api/pages → server writes `site/src/pages/{slug}.md` with YAML frontmatter → server runs `npx @11ty/eleventy` in `site/` → static HTML appears in `site/_site/` → nginx serves `_site/` directly, proxies `/api/` and `/health` to uvicorn.
 
 **Python package** (`src/flubpub/`):
-- `cli.py` — Click CLI, uses httpx sync client to talk to the server
-- `server.py` — FastAPI app; page CRUD, triggers 11ty rebuilds, mounts `_site/` as static files (via lifespan so the directory exists first)
-- `models.py` — Pydantic models: PageCreate, PageMeta, PageResponse
+- `cli.py` — Click CLI (push, list, get, revise, delete, serve), uses httpx sync client
+- `server.py` — FastAPI app; full CRUD (POST/GET/PUT/DELETE), triggers 11ty rebuilds, mounts `_site/` as static files
+- `models.py` — Pydantic models: PageCreate, PageUpdate, PageMeta, PageResponse, PageDetail
 
 **Static site** (`site/`): 11ty project. `eleventy.config.js` defines a `pages` collection from `src/pages/*.md` sorted newest-first. `src/index.njk` renders the chronological list.
 

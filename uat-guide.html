@@ -153,15 +153,12 @@ Document revision: 2026-04-13 &middot; Classification: Internal</p>
 
 <p>Previously, when pushing a markdown file that linked to sub-pages containing images, the sub-page images were never uploaded. URLs were rewritten to <code>/assets/{sub-slug}/img.png</code> but the files didn't exist on the server. This is now fixed.</p>
 
-<h3>2.1 Setup Test Files</h3>
+<h3>2.1 Setup and Push</h3>
 <p class="note">Prerequisite: a real PNG image at <code>~/Downloads/FirstPainting.png</code> (any valid PNG will do).</p>
 <pre>mkdir -p /tmp/flubpub-img-test/pics
-
-# Use a real image for both main and sub-page
 cp ~/Downloads/FirstPainting.png /tmp/flubpub-img-test/main-photo.png
 cp ~/Downloads/FirstPainting.png /tmp/flubpub-img-test/pics/sub-photo.png
 
-# Create a sub-page with its own image
 cat > /tmp/flubpub-img-test/gallery.md &lt;&lt;'EOF'
 # Gallery
 
@@ -170,7 +167,6 @@ Here is the gallery image:
 ![Sub Photo](pics/sub-photo.png)
 EOF
 
-# Create main page linking to the sub-page and its own image
 cat > /tmp/flubpub-img-test/album.md &lt;&lt;'EOF'
 # Photo Album
 
@@ -179,58 +175,32 @@ Main photo:
 ![Main Photo](main-photo.png)
 
 See also the [Gallery](gallery.md) for more.
-EOF</pre>
+EOF
 
-<h3>2.2 Push and Verify Sub-Page Images Upload</h3>
-<div class="step">
-<span class="step-num">Step:</span>
-<pre>cd /tmp/flubpub-img-test
+cd /tmp/flubpub-img-test
 uv run --project ~/projects/flubpub flubpub push album.md --title "Photo Album"</pre>
-<span class="expected">Expected output:</span>
-<pre>Local references found:
-  Images:
-    ./main-photo.png
-  Linked pages:
-    ./gallery.md
-
-These files will be uploaded. Continue? [y/N]</pre>
-Type <code>y</code> and press Enter.<br><br>
-<span class="expected">Expected:</span> Should see:
+<div class="step">
+<span class="expected">Expected:</span> Prompts with local references found (images + linked pages). Type <code>y</code>. Output should include:
 <pre>Uploaded asset: main-photo.png
 Uploaded asset: sub-photo.png (for gallery)
 Pushed linked page: gallery
-Published: Photo Album
-/photo-album/</pre>
-<p class="note">Key verification: the line <code>Uploaded asset: sub-photo.png (for gallery)</code> confirms the fix. Previously this upload was missing entirely.</p>
+Published: Photo Album</pre>
+<p class="note">Key verification: <code>Uploaded asset: sub-photo.png (for gallery)</code> confirms the fix. Previously this upload was missing.</p>
 </div>
 
-<h3>2.3 Verify Sub-Page Image Is Accessible</h3>
+<h3>2.2 Verify Assets and Rendering</h3>
+<pre>curl -s -o /dev/null -w "main-photo: %{http_code}\n" http://localhost:8000/assets/photo-album/main-photo.png
+curl -s -o /dev/null -w "sub-photo:  %{http_code}\n" http://localhost:8000/assets/gallery/sub-photo.png
+uv run flubpub get photo-album
+uv run flubpub get gallery</pre>
 <div class="step">
-<span class="step-num">Step:</span> Check that the sub-page image was uploaded under the sub-page's slug.<br>
-<pre>curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/assets/gallery/sub-photo.png</pre>
-<span class="expected">Expected:</span> HTTP status <code>200</code>
+<span class="expected">Expected:</span> Both assets return HTTP <code>200</code>. <code>photo-album</code> content contains <code>![Main Photo](/assets/photo-album/main-photo.png)</code> and <code>[Gallery](/gallery/)</code>. <code>gallery</code> content contains <code>![Sub Photo](/assets/gallery/sub-photo.png)</code>.
 </div>
 
-<h3>2.4 Verify Main Page Image Is Accessible</h3>
+<h3>2.3 Browser Verification</h3>
 <div class="step">
-<span class="step-num">Step:</span>
-<pre>curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/assets/photo-album/main-photo.png</pre>
-<span class="expected">Expected:</span> HTTP status <code>200</code>
-</div>
-
-<h3>2.5 Verify Rewritten URLs in Content</h3>
-<div class="step">
-<span class="step-num">Step:</span>
-<pre>uv run flubpub get photo-album</pre>
-<span class="expected">Expected:</span> Content contains <code>![Main Photo](/assets/photo-album/main-photo.png)</code> and <code>[Gallery](/gallery/)</code>.<br><br>
-<pre>uv run flubpub get gallery</pre>
-<span class="expected">Expected:</span> Content contains <code>![Sub Photo](/assets/gallery/sub-photo.png)</code>.
-</div>
-
-<h3>2.6 Verify Images Render in Browser</h3>
-<div class="step">
-<span class="step-num">Step:</span> Open <code>http://localhost:8000/photo-album/</code> and <code>http://localhost:8000/gallery/</code> in a browser.<br>
-<span class="expected">Expected:</span> Both pages render with their images visible (not broken image icons).
+Open <code>http://localhost:8000/photo-album/</code> and <code>http://localhost:8000/gallery/</code> in a browser.<br>
+<span class="expected">Expected:</span> Both pages render with visible images (not broken icons).
 </div>
 
 <hr>
@@ -239,60 +209,40 @@ Published: Photo Album
 
 <p>Color palettes are now independent of layout themes. Each theme has a default color scheme, but you can mix any color scheme with any theme.</p>
 
-<h3>3.1 List Available Color Schemes</h3>
-<div class="step">
-<span class="step-num">Step:</span>
-<pre>curl http://localhost:8000/api/color-schemes</pre>
-<span class="expected">Expected:</span> JSON array: <code>["clean","neon","midnight","terminal","starfield","parchment"]</code>
-</div>
+<h3>3.1 API and Default Behavior</h3>
+<pre>curl http://localhost:8000/api/color-schemes
 
-<h3>3.2 Push with Default Color Scheme (Unchanged Appearance)</h3>
-<div class="step">
-<span class="step-num">Step:</span> Push a page with a theme but no explicit color scheme.<br>
-<pre>echo "&lt;p&gt;Testing default colors&lt;/p&gt;" > /tmp/cs-test.html
+echo "&lt;p&gt;Testing default colors&lt;/p&gt;" > /tmp/cs-test.html
 uv run flubpub push /tmp/cs-test.html --title "Hacker Default" --slug cs-hacker-default --theme hacker</pre>
-<span class="expected">Expected:</span> Open <code>http://localhost:8000/cs-hacker-default/</code>. Should look identical to the pre-refactor hacker theme: black background, green monospace text, scanline overlay.
+<div class="step">
+<span class="expected">Expected:</span> API returns <code>["clean","neon","midnight","terminal","starfield","parchment"]</code>. Open <code>http://localhost:8000/cs-hacker-default/</code> &mdash; should look identical to the pre-refactor hacker theme: black background, green monospace text, scanline overlay.
 </div>
 
-<h3>3.3 Push with Cross-Theme Color Scheme</h3>
+<h3>3.2 Cross-Theme Color Combinations</h3>
+<pre>uv run flubpub push /tmp/cs-test.html --title "Hacker Midnight" --slug cs-hacker-midnight --theme hacker --color-scheme midnight
+uv run flubpub push /tmp/cs-test.html --title "Geocities Terminal" --slug cs-geo-terminal --theme geocities --color-scheme terminal
+uv run flubpub push /tmp/cs-test.html --title "Academic Starfield" --slug cs-acad-starfield --theme academic --color-scheme starfield</pre>
 <div class="step">
-<span class="step-num">Step:</span> Use the hacker layout with the midnight (academic) color scheme.<br>
-<pre>uv run flubpub push /tmp/cs-test.html --title "Hacker Midnight" --slug cs-hacker-midnight --theme hacker --color-scheme midnight</pre>
-<span class="expected">Expected:</span> Open <code>http://localhost:8000/cs-hacker-midnight/</code>. Should have the hacker layout (ASCII box, scanlines, monospace) but with midnight colors: navy background (#000040), light gray text (#e0e0e0), yellow headings (#ffff99).
+<span class="expected">Verify in browser:</span>
+<ul>
+  <li><code>/cs-hacker-midnight/</code> &mdash; Hacker layout (ASCII box, scanlines, monospace) with midnight colors (navy bg #000040, gray text, yellow headings)</li>
+  <li><code>/cs-geo-terminal/</code> &mdash; Geocities layout (marquee, visitor counter, badges) with terminal colors (black bg, bright green text)</li>
+  <li><code>/cs-acad-starfield/</code> &mdash; Academic layout (minimal, serif) with starfield colors (deep blue bg, light blue text, gold headings)</li>
+</ul>
 </div>
 
-<h3>3.4 Push with Multiple Cross-Combinations</h3>
-<div class="step">
-<span class="step-num">Step 1 &mdash; Geocities layout + terminal colors:</span>
-<pre>uv run flubpub push /tmp/cs-test.html --title "Geocities Terminal" --slug cs-geo-terminal --theme geocities --color-scheme terminal</pre>
-<span class="expected">Verify:</span> Open in browser. Geocities layout (marquee, visitor counter, badges) with terminal colors (black bg, bright green text).<br><br>
-
-<span class="step-num">Step 2 &mdash; Academic layout + starfield colors:</span>
-<pre>uv run flubpub push /tmp/cs-test.html --title "Academic Starfield" --slug cs-acad-starfield --theme academic --color-scheme starfield</pre>
-<span class="expected">Verify:</span> Academic layout (minimal, serif) with starfield colors (deep blue bg, light blue text, gold headings).
-</div>
-
-<h3>3.5 Revise with Color Scheme Change</h3>
-<div class="step">
-<span class="step-num">Step:</span>
+<h3>3.3 Revise Color Scheme and Verify CSS Variables</h3>
 <pre>echo "&lt;p&gt;Now with neon colors&lt;/p&gt;" > /tmp/cs-test-v2.html
-uv run flubpub revise cs-hacker-default /tmp/cs-test-v2.html --color-scheme neon</pre>
-<span class="expected">Expected:</span> <code>Revised: Hacker Default</code><br>
-<span class="expected">Verify:</span> Open <code>http://localhost:8000/cs-hacker-default/</code>. Should now have neon colors (dark purple bg, yellow text) with hacker layout.
+uv run flubpub revise cs-hacker-default /tmp/cs-test-v2.html --color-scheme neon
+curl -s http://localhost:8000/cs-hacker-midnight/ | head -10</pre>
+<div class="step">
+<span class="expected">Expected:</span> Revise prints <code>Revised: Hacker Default</code>. Open <code>/cs-hacker-default/</code> &mdash; neon colors (dark purple bg, yellow text) with hacker layout. The curl output should contain a <code>&lt;style&gt;:root { --bg: #000040; --fg: #e0e0e0; ... }&lt;/style&gt;</code> block near the top of <code>&lt;head&gt;</code>.
 </div>
 
-<h3>3.6 Invalid Color Scheme Name</h3>
-<div class="step">
-<span class="step-num">Step:</span>
+<h3>3.4 Invalid Color Scheme</h3>
 <pre>uv run flubpub push /tmp/cs-test.html --title "Bad Scheme" --slug bad-scheme --theme default --color-scheme nonexistent</pre>
-<span class="expected">Expected:</span> Error message containing <code>Unknown color scheme: nonexistent</code>.
-</div>
-
-<h3>3.7 View Page Source to Verify CSS Variables</h3>
 <div class="step">
-<span class="step-num">Step:</span>
-<pre>curl -s http://localhost:8000/cs-hacker-midnight/ | head -10</pre>
-<span class="expected">Expected:</span> Should contain a <code>&lt;style&gt;:root { --bg: #000040; --fg: #e0e0e0; ... }&lt;/style&gt;</code> block near the top of the <code>&lt;head&gt;</code>.
+<span class="expected">Expected:</span> Error containing <code>Unknown color scheme: nonexistent</code>.
 </div>
 
 <hr>
@@ -301,72 +251,44 @@ uv run flubpub revise cs-hacker-default /tmp/cs-test-v2.html --color-scheme neon
 
 <p>The <code>--remote</code> option bypasses the HTTP API entirely, using <code>scp</code> + <code>ssh</code> to manage pages on a remote server. Requires SSH key access.</p>
 
-<p class="note">Note: These tests require SSH access to a remote host with flubpub installed at <code>/opt/flubpub/</code>. Substitute your own <code>user@host</code>. If no remote is available, verify the CLI accepts the option and produces the expected SSH command structure.</p>
+<p class="note">Note: These tests require SSH access to a remote host with flubpub installed at <code>/opt/flubpub/</code>. Substitute your own <code>user@host</code>. If no remote is available, verify the CLI accepts the option with <code>uv run flubpub --help</code>.</p>
 
-<h3>4.1 Verify --remote Option Exists</h3>
-<div class="step">
-<span class="step-num">Step:</span>
-<pre>uv run flubpub --help</pre>
-<span class="expected">Expected:</span> Output includes <code>--remote TEXT  SSH remote (e.g. root@host). Bypasses HTTP API.</code>
-</div>
-
-<h3>4.2 Remote Push (HTML)</h3>
-<div class="step">
-<span class="step-num">Step:</span>
+<h3>4.1 Remote CRUD Cycle</h3>
 <pre>echo "&lt;p&gt;Pushed via SSH&lt;/p&gt;" > /tmp/ssh-test.html
-uv run flubpub --remote root@danielwymark.com push /tmp/ssh-test.html --title "SSH Test" --slug ssh-test</pre>
-<span class="expected">Expected:</span> SCP copies the file, SSH runs <code>flubpub push</code> on the remote. Output shows <code>Published: SSH Test</code> and the URL.
+
+# Push, list, get
+uv run flubpub --remote root@danielwymark.com push /tmp/ssh-test.html --title "SSH Test" --slug ssh-test
+uv run flubpub --remote root@danielwymark.com list
+uv run flubpub --remote root@danielwymark.com get ssh-test
+
+# Revise
+echo "&lt;p&gt;Revised via SSH&lt;/p&gt;" > /tmp/ssh-test-v2.html
+uv run flubpub --remote root@danielwymark.com revise ssh-test /tmp/ssh-test-v2.html --title "SSH Test Revised"
+
+# Delete
+uv run flubpub --remote root@danielwymark.com delete ssh-test</pre>
+<div class="step">
+<span class="expected">Expected:</span> Push prints <code>Published: SSH Test</code>. List includes "ssh-test". Get shows page details. Revise prints <code>Revised: SSH Test Revised</code>. Delete prints <code>Deleted: ssh-test</code>.
 </div>
 
-<h3>4.3 Remote List</h3>
+<h3>4.2 Remote Push with Theme + Color Scheme</h3>
+<pre>uv run flubpub --remote root@danielwymark.com push /tmp/ssh-test.html \
+  --title "SSH Themed" --slug ssh-themed --theme geocities --color-scheme terminal
+uv run flubpub --remote root@danielwymark.com delete ssh-themed</pre>
 <div class="step">
-<span class="step-num">Step:</span>
-<pre>uv run flubpub --remote root@danielwymark.com list</pre>
-<span class="expected">Expected:</span> Shows the page listing from the remote server, including "ssh-test".
+<span class="expected">Expected:</span> Page published on remote with geocities layout and terminal colors. Then deleted.
 </div>
 
-<h3>4.4 Remote Get</h3>
-<div class="step">
-<span class="step-num">Step:</span>
-<pre>uv run flubpub --remote root@danielwymark.com get ssh-test</pre>
-<span class="expected">Expected:</span> Shows page details from the remote server.
-</div>
-
-<h3>4.5 Remote Revise</h3>
-<div class="step">
-<span class="step-num">Step:</span>
-<pre>echo "&lt;p&gt;Revised via SSH&lt;/p&gt;" > /tmp/ssh-test-v2.html
-uv run flubpub --remote root@danielwymark.com revise ssh-test /tmp/ssh-test-v2.html --title "SSH Test Revised"</pre>
-<span class="expected">Expected:</span> <code>Revised: SSH Test Revised</code>
-</div>
-
-<h3>4.6 Remote Push with Theme and Color Scheme</h3>
-<div class="step">
-<span class="step-num">Step:</span>
-<pre>uv run flubpub --remote root@danielwymark.com push /tmp/ssh-test.html --title "SSH Themed" --slug ssh-themed --theme geocities --color-scheme terminal</pre>
-<span class="expected">Expected:</span> Page published on remote with geocities layout and terminal color scheme.
-</div>
-
-<h3>4.7 Remote Push Markdown with Local Refs</h3>
-<div class="step">
-<span class="step-num">Step:</span> Using the test files from Feature 1 setup:<br>
+<h3>4.3 Remote Push Markdown with Local Refs</h3>
 <pre>cd /tmp/flubpub-img-test
 uv run --project ~/projects/flubpub flubpub --remote root@danielwymark.com push album.md --title "Remote Album"</pre>
-<span class="expected">Expected:</span> SCP copies <code>album.md</code>, <code>main-photo.png</code>, <code>gallery.md</code>, and <code>sub-photo.png</code> to the remote. The remote <code>flubpub push</code> handles the rest.
+<div class="step">
+<span class="expected">Expected:</span> SCP copies <code>album.md</code>, <code>main-photo.png</code>, <code>gallery.md</code>, and <code>sub-photo.png</code> to the remote. Remote <code>flubpub push</code> handles the rest.
 </div>
 
-<h3>4.8 Remote Delete</h3>
-<div class="step">
-<span class="step-num">Step:</span>
-<pre>uv run flubpub --remote root@danielwymark.com delete ssh-test
-uv run flubpub --remote root@danielwymark.com delete ssh-themed</pre>
-<span class="expected">Expected:</span> <code>Deleted: ssh-test</code> and <code>Deleted: ssh-themed</code>
-</div>
-
-<h3>4.9 Remote with Invalid Host</h3>
-<div class="step">
-<span class="step-num">Step:</span>
+<h3>4.4 Invalid Host</h3>
 <pre>uv run flubpub --remote nobody@nonexistent.invalid list</pre>
+<div class="step">
 <span class="expected">Expected:</span> <code>SSH error:</code> followed by connection failure message.
 </div>
 

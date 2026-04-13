@@ -1,0 +1,18 @@
+---
+layout: base.njk
+title: flubpub
+---
+<h1>flubpub</h1>
+
+{% if collections.pages.length %}
+<ul>
+  {% for page in collections.pages %}
+  <li>
+    <a href="{{ page.url }}">{{ page.data.title }}</a>
+    &mdash; <time>{{ page.date | readableDate }}</time>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No pages yet.</p>
+{% endif %}

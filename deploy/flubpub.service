@@ -1,0 +1,17 @@
+[Unit]
+Description=flubpub web server
+After=network.target
+
+[Service]
+Type=simple
+User=flubpub
+Group=flubpub
+WorkingDirectory=/opt/flubpub
+ExecStart=/opt/flubpub/.venv/bin/uvicorn flubpub.server:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+Environment=FLUBPUB_DATA_DIR=/opt/flubpub/data
+Environment=FLUBPUB_SITE_DIR=/opt/flubpub/site
+
+[Install]
+WantedBy=multi-user.target

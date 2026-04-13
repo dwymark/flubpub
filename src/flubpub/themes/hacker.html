@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <style>
+    @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+    body {
+      background: #000; color: #00ff00;
+      font-family: "Courier New", Courier, monospace;
+      max-width: 700px; margin: 0 auto; padding: 1rem;
+      line-height: 1.6; font-size: 14px;
+    }
+    body::before {
+      content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
+      pointer-events: none; z-index: 999;
+    }
+    h1, h2, h3 {
+      text-transform: uppercase; letter-spacing: 0.15em;
+      text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff0044;
+    }
+    a { color: #00ffff; }
+    a:hover { color: #ff00ff; }
+    hr { border: none; border-top: 1px solid #003300; margin: 1rem 0; }
+    .cursor { animation: blink 1s step-end infinite; }
+    .ascii-box { white-space: pre; font-size: 13px; margin-bottom: 1rem; }
+    .footer { margin-top: 2rem; color: #006600; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="ascii-box">+--[ {{ title }} ]-------------------------------+</div>
+  <h1>{{ title }} <span class="cursor">_</span></h1>
+  <hr>
+  <div>
+    {{ content }}
+  </div>
+  <div class="footer">
+    <hr>
+    <p>// EOF &mdash; <a href="/">return to index</a></p>
+  </div>
+</body>
+</html>

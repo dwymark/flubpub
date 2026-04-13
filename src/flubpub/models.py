@@ -7,6 +7,7 @@ class PageCreate(BaseModel):
     slug: str | None = None
     content: str
     content_type: str = "html"
+    theme: str | None = None
 
 
 class PageMeta(BaseModel):

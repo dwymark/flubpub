@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <style>
+    @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+    @keyframes color-cycle {
+      0% { color: #f00; } 14% { color: #f80; } 28% { color: #ff0; }
+      42% { color: #0f0; } 57% { color: #08f; } 71% { color: #80f; }
+      85% { color: #f08; } 100% { color: #f00; }
+    }
+    @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+    body {
+      background-color: #1a1a2e;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.015' numOctaves='3' seed='5'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' fill='%231a1a2e'/%3E%3Crect width='200' height='200' filter='url(%23m)' opacity='0.12'/%3E%3C/svg%3E");
+      color: #ffcc00;
+      font-family: "Comic Sans MS", "Chalkboard SE", cursive;
+      margin: 0; padding: 0;
+    }
+    .marquee-bar {
+      background: navy; overflow: hidden; padding: 8px 0; margin-bottom: 16px;
+    }
+    .marquee-text {
+      display: inline-block; white-space: nowrap; color: #ffcc00;
+      font-size: 1.1rem; animation: marquee 12s linear infinite;
+    }
+    .container { max-width: 700px; margin: 0 auto; padding: 1rem; }
+    .header { text-align: center; margin-bottom: 1rem; }
+    h1 { animation: color-cycle 4s linear infinite; font-size: 2rem; margin: 0.5rem 0; }
+    hr { background: linear-gradient(90deg, #f00, #f80, #ff0, #0f0, #08f, #80f, #f08); height: 4px; border: none; margin: 1rem 0; }
+    a { color: #ff6600; }
+    a:visited { color: #ff6600; }
+    .content { text-align: left; line-height: 1.6; }
+    .visitor-counter {
+      display: inline-block; background: #111; color: #0f0; border: 2px inset #444;
+      font-family: monospace; padding: 4px 12px; margin: 12px 0; font-size: 1.1rem;
+    }
+    .badges { text-align: center; margin-top: 1rem; }
+    .badge {
+      display: inline-block; border: 1px solid #666; background: #333;
+      color: #0f0; font-family: monospace; font-size: 10px;
+      padding: 2px 6px; margin: 2px; width: 88px; height: 31px;
+      line-height: 27px; text-align: center;
+    }
+    .new { animation: blink 1s step-end infinite; color: #f00; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="marquee-bar">
+    <span class="marquee-text">Welcome to my page!!! You are visitor number 00{{ (date | string)[-4:] if date else '0042' }}!! Enjoy your stay!! <span class="new">NEW!</span></span>
+  </div>
+  <div class="container">
+    <div class="header">
+      <h1>{{ title }}</h1>
+      <hr>
+      <div class="visitor-counter">Visitors: 001337</div>
+    </div>
+    <div class="content">
+      {{ content }}
+    </div>
+    <hr>
+    <div class="badges">
+      <div class="badge">MADE WITH NOTEPAD</div>
+      <div class="badge">BEST VIEWED 800x600</div>
+    </div>
+    <p style="text-align:center;"><a href="/">Back to flubpub</a></p>
+  </div>
+</body>
+</html>

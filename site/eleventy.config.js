@@ -7,9 +7,11 @@ module.exports = function(eleventyConfig) {
 
   eleventyConfig.addCollection("pages", function(collectionApi) {
     return collectionApi
-      .getFilteredByGlob("src/pages/*.md")
+      .getFilteredByGlob(["src/pages/*.md", "src/pages/*.html"])
       .sort((a, b) => b.date - a.date);
   });
+
+  eleventyConfig.addPassthroughCopy("src/assets");
 
   return {
     dir: {

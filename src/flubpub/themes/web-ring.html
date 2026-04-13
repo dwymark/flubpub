@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <style>
+    @keyframes wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
+    body {
+      background-color: #e8e8e0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Cpath d='M0 16L16 0M-2 2L2 -2M14 18L18 14' stroke='%23d0d0c8' stroke-width='0.5'/%3E%3C/svg%3E");
+      color: #333; font-family: "Times New Roman", Times, serif; font-size: 14px;
+      margin: 0; padding: 0;
+    }
+    .container { max-width: 700px; margin: 0 auto; padding: 1rem; }
+    .topnav {
+      font-family: Verdana, sans-serif; font-size: 12px;
+      text-align: center; margin-bottom: 1rem;
+    }
+    .topnav a { color: #0000cc; margin: 0 6px; }
+    .topnav a:visited { color: #660099; }
+    hr { border: none; border-top: 2px solid #ccc; border-bottom: 2px solid #888; margin: 1rem 0; }
+    .under-construction {
+      border: 3px dashed #cc9900; background: #ffffee; padding: 10px;
+      text-align: center; margin-bottom: 1rem;
+      font-family: "Comic Sans MS", cursive; font-size: 13px; color: #663300;
+    }
+    .wiggle { display: inline-block; animation: wiggle 0.5s ease-in-out infinite; }
+    h1 { color: #333; }
+    a { color: #0000cc; }
+    a:visited { color: #660099; }
+    .content { line-height: 1.6; }
+    .webring {
+      font-family: Verdana, sans-serif; font-size: 11px;
+      text-align: center; background: #d0d0d0; border: 1px solid #999;
+      padding: 6px; margin-top: 2rem;
+    }
+    .webring a { color: #0000cc; }
+    .badges { text-align: center; margin-top: 1rem; }
+    .badge {
+      display: inline-block; border: 1px solid #888; background: #ddd;
+      color: #333; font-family: monospace; font-size: 10px;
+      padding: 2px 6px; margin: 2px; width: 88px; height: 31px;
+      line-height: 27px; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topnav">
+      <a href="/">Home</a> | <a href="/">Index</a> | <a href="/">Links</a> | <a href="/">About</a>
+    </div>
+    <hr>
+    <div class="under-construction">
+      <span class="wiggle">&#128679;</span> UNDER CONSTRUCTION <span class="wiggle">&#128679;</span>
+    </div>
+    <h1>{{ title }}</h1>
+    <hr>
+    <div class="content">
+      {{ content }}
+    </div>
+    <hr>
+    <div class="webring">
+      &larr; Previous | <strong>The Flubpub Ring</strong> | Next &rarr;
+    </div>
+    <div class="badges">
+      <div class="badge">MADE WITH NOTEPAD</div>
+    </div>
+  </div>
+</body>
+</html>

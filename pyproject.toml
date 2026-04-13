@@ -9,6 +9,7 @@ dependencies = [
     "click",
     "python-multipart",
     "pyyaml",
+    "jinja2",
 ]
 
 [project.scripts]

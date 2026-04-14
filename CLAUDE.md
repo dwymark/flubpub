@@ -33,7 +33,7 @@ uv run flubpub --remote root@danielwymark.com list
 cd site && npx @11ty/eleventy
 
 # Deploy to production VPS
-REMOTE_USER=root REMOTE_HOST=danielwymark.com bash deploy/deploy.sh
+REMOTE_HOST=danielwymark.com bash deploy/deploy.sh
 ```
 
 ## Architecture

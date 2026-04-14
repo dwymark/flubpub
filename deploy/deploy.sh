@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REMOTE_USER=${REMOTE_USER:-flubpub}
+REMOTE_USER=${REMOTE_USER:-root}
 REMOTE_HOST=${REMOTE_HOST:?REMOTE_HOST must be set}
 REMOTE_DIR=${REMOTE_DIR:-/opt/flubpub}
 
@@ -31,9 +31,6 @@ if ! command -v uv &>/dev/null; then
   export PATH="\$HOME/.local/bin:\$PATH"
 fi
 
-# Create service user if not already present
-id flubpub &>/dev/null || useradd --system --no-create-home flubpub
-
 mkdir -p ${REMOTE_DIR}/data ${REMOTE_DIR}/site/src/pages
 
 # Set up virtualenv and install the wheel
@@ -44,9 +41,6 @@ uv pip install --quiet --force-reinstall --python ${REMOTE_DIR}/.venv/bin/python
 cd ${REMOTE_DIR}/site
 npm ci
 npx @11ty/eleventy
-
-# Fix ownership so the service user can write data and rebuild the site
-chown -R flubpub:flubpub ${REMOTE_DIR}
 
 # Install and enable the systemd service
 cp ${REMOTE_DIR}/deploy/flubpub.service /etc/systemd/system/

@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-User=flubpub
-Group=flubpub
+User=root
+Group=root
 WorkingDirectory=/opt/flubpub
 ExecStart=/opt/flubpub/.venv/bin/uvicorn flubpub.server:app --host 127.0.0.1 --port 8000
 Restart=on-failure

@@ -25,14 +25,20 @@ echo "Running remote setup..."
 ssh "${REMOTE_USER}@${REMOTE_HOST}" bash <<DEPLOY
 set -euo pipefail
 
+# Install uv if not present
+if ! command -v uv &>/dev/null; then
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="\$HOME/.local/bin:\$PATH"
+fi
+
 # Create service user if not already present
 id flubpub &>/dev/null || useradd --system --no-create-home flubpub
 
 mkdir -p ${REMOTE_DIR}/data ${REMOTE_DIR}/site/src/pages
 
 # Set up virtualenv and install the wheel
-python3 -m venv ${REMOTE_DIR}/.venv
-${REMOTE_DIR}/.venv/bin/pip install --quiet --force-reinstall ${REMOTE_DIR}/dist/*.whl
+uv venv ${REMOTE_DIR}/.venv
+uv pip install --quiet --force-reinstall --python ${REMOTE_DIR}/.venv/bin/python ${REMOTE_DIR}/dist/*.whl
 
 # Build the 11ty static site on the server
 cd ${REMOTE_DIR}/site

@@ -117,7 +117,7 @@ def _remote_cleanup(remote: str):
 
 def _remote_flubpub(remote: str, args: str):
     """Run a flubpub CLI command on the remote and print output."""
-    cmd = f"cd {REMOTE_FLUBPUB_DIR} && uv run flubpub {args}"
+    cmd = f'PATH="$HOME/.local/bin:$PATH" && cd {REMOTE_FLUBPUB_DIR} && uv run flubpub {args}'
     result = _ssh_run(remote, cmd)
     if result.stdout:
         click.echo(result.stdout.strip())

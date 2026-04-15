@@ -6,6 +6,7 @@ import subprocess
 import click
 import httpx
 from pathlib import Path
+from bs4 import BeautifulSoup
 
 
 def _slugify(text: str) -> str:
@@ -13,80 +14,201 @@ def _slugify(text: str) -> str:
 
 
 IMG_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
-LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)]+\.md)\)")
+LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)]+\.(?:md|html))\)")
+
+HTML_ASSET_ATTRS = [
+    ("img", "src"),
+    ("source", "src"),
+    ("video", "src"),
+    ("audio", "src"),
+    ("link", "href"),
+    ("script", "src"),
+    ("iframe", "src"),
+]
+
+PAGE_SUFFIXES = {".md", ".html"}
+
+REMOTE_SKIP_SCHEMES = ("http://", "https://", "//", "#", "mailto:", "data:", "javascript:")
 
 
-def scan_local_refs(md_path: Path) -> tuple[list[Path], list[Path]]:
+def _strip_ref(ref: str) -> str:
+    return ref.split("#", 1)[0].split("?", 1)[0]
+
+
+def _is_local_ref(ref: str) -> bool:
+    if not ref:
+        return False
+    return not ref.startswith(REMOTE_SKIP_SCHEMES)
+
+
+def _scan_md(md_path: Path) -> tuple[list[Path], list[Path]]:
     content = md_path.read_text()
     base = md_path.parent
-    images, linked = [], []
+    assets, sub_pages = [], []
     for _, src in IMG_RE.findall(content):
-        if src.startswith(("http://", "https://")):
+        if not _is_local_ref(src):
             continue
-        p = (base / src).resolve()
+        p = (base / _strip_ref(src)).resolve()
         if p.is_file():
-            images.append(p)
+            assets.append(p)
     for _, href in LINK_RE.findall(content):
-        if href.startswith(("http://", "https://")):
+        if not _is_local_ref(href):
             continue
-        p = (base / href).resolve()
+        p = (base / _strip_ref(href)).resolve()
         if p.is_file():
-            linked.append(p)
-    return images, linked
+            sub_pages.append(p)
+    return assets, sub_pages
+
+
+def _scan_html(html_path: Path) -> tuple[list[Path], list[Path]]:
+    content = html_path.read_text()
+    base = html_path.parent
+    soup = BeautifulSoup(content, "html.parser")
+    assets, sub_pages = [], []
+
+    def add_local(ref: str, into: list[Path]) -> None:
+        if not _is_local_ref(ref):
+            return
+        p = (base / _strip_ref(ref)).resolve()
+        if p.is_file():
+            into.append(p)
+
+    for tag_name, attr in HTML_ASSET_ATTRS:
+        for tag in soup.find_all(tag_name):
+            add_local(tag.get(attr) or "", assets)
+
+    for tag in soup.find_all("a"):
+        href = tag.get("href") or ""
+        if not _is_local_ref(href):
+            continue
+        p = (base / _strip_ref(href)).resolve()
+        if not p.is_file():
+            continue
+        if p.suffix.lower() in PAGE_SUFFIXES:
+            sub_pages.append(p)
+
+    url_re = re.compile(r"url\(\s*['\"]?([^'\")]+)['\"]?\s*\)")
+    for style in soup.find_all("style"):
+        for m in url_re.findall(style.get_text()):
+            add_local(m, assets)
+    for tag in soup.find_all(style=True):
+        for m in url_re.findall(tag["style"]):
+            add_local(m, assets)
+
+    return assets, sub_pages
+
+
+def scan_local_refs(path: Path) -> tuple[list[Path], list[Path]]:
+    suffix = path.suffix.lower()
+    if suffix == ".md":
+        return _scan_md(path)
+    if suffix == ".html":
+        return _scan_html(path)
+    return [], []
 
 
 def collect_all_refs(entry_path: Path) -> tuple[list[Path], list[Path]]:
     visited: set[Path] = set()
-    all_images: list[Path] = []
-    all_linked: list[Path] = []
-    image_set: set[Path] = set()
-    linked_set: set[Path] = set()
+    all_assets: list[Path] = []
+    all_sub_pages: list[Path] = []
+    asset_set: set[Path] = set()
+    sub_set: set[Path] = set()
 
     def _walk(p: Path):
         rp = p.resolve()
         if rp in visited:
             return
         visited.add(rp)
-        imgs, links = scan_local_refs(p)
-        for img in imgs:
-            if img not in image_set:
-                image_set.add(img)
-                all_images.append(img)
-        for lnk in links:
-            if lnk not in linked_set:
-                linked_set.add(lnk)
-                all_linked.append(lnk)
-            _walk(lnk)
+        assets, subs = scan_local_refs(p)
+        for a in assets:
+            if a not in asset_set:
+                asset_set.add(a)
+                all_assets.append(a)
+        for s in subs:
+            if s not in sub_set:
+                sub_set.add(s)
+                all_sub_pages.append(s)
+            _walk(s)
 
     _walk(entry_path)
-    # Remove the entry file itself from linked list
     entry_resolved = entry_path.resolve()
-    all_linked = [p for p in all_linked if p != entry_resolved]
-    return all_images, all_linked
+    all_sub_pages = [p for p in all_sub_pages if p != entry_resolved]
+    return all_assets, all_sub_pages
 
 
-def rewrite_refs(content: str, slug: str, image_paths: list[Path], linked_mds: list[Path]) -> str:
-    img_map = {p: f"/assets/{slug}/{p.name}" for p in image_paths}
-    link_map = {p: f"/{_slugify(p.stem)}/" for p in linked_mds}
+def _rewrite_md(content: str, slug: str, asset_paths: list[Path], sub_paths: list[Path]) -> str:
+    img_map = {p: f"/assets/{slug}/{p.name}" for p in asset_paths}
+    link_map = {p: f"/{_slugify(p.stem)}/" for p in sub_paths}
 
     def replace_img(m):
         alt, src = m.group(1), m.group(2)
-        # Try to match against known image paths
         for orig, rewritten in img_map.items():
-            if orig.name == Path(src).name:
+            if orig.name == Path(_strip_ref(src)).name:
                 return f"![{alt}]({rewritten})"
         return m.group(0)
 
     def replace_link(m):
         text, href = m.group(1), m.group(2)
         for orig, rewritten in link_map.items():
-            if orig.name == Path(href).name:
+            if orig.name == Path(_strip_ref(href)).name:
                 return f"[{text}]({rewritten})"
         return m.group(0)
 
     content = IMG_RE.sub(replace_img, content)
     content = LINK_RE.sub(replace_link, content)
     return content
+
+
+def _rewrite_html(content: str, slug: str, asset_paths: list[Path], sub_paths: list[Path]) -> str:
+    asset_by_name = {p.name: f"/assets/{slug}/{p.name}" for p in asset_paths}
+    page_by_name = {p.name: f"/{_slugify(p.stem)}/" for p in sub_paths}
+
+    soup = BeautifulSoup(content, "html.parser")
+    replacements: dict[str, str] = {}
+
+    for tag_name, attr in HTML_ASSET_ATTRS:
+        for tag in soup.find_all(tag_name):
+            ref = tag.get(attr) or ""
+            if not _is_local_ref(ref):
+                continue
+            name = Path(_strip_ref(ref)).name
+            if name in asset_by_name:
+                replacements[ref] = asset_by_name[name]
+
+    for tag in soup.find_all("a"):
+        href = tag.get("href") or ""
+        if not _is_local_ref(href):
+            continue
+        name = Path(_strip_ref(href)).name
+        if name in page_by_name:
+            replacements[href] = page_by_name[name]
+
+    url_re = re.compile(r"url\(\s*(['\"]?)([^'\")]+)\1\s*\)")
+
+    def _rewrite_url(m):
+        quote, ref = m.group(1), m.group(2)
+        if not _is_local_ref(ref):
+            return m.group(0)
+        name = Path(_strip_ref(ref)).name
+        if name not in asset_by_name:
+            return m.group(0)
+        return f"url({quote}{asset_by_name[name]}{quote})"
+
+    content = url_re.sub(_rewrite_url, content)
+
+    # Prefer longer keys first to avoid partial-overlap rewrites.
+    for old in sorted(replacements, key=len, reverse=True):
+        new = replacements[old]
+        content = content.replace(f'"{old}"', f'"{new}"')
+        content = content.replace(f"'{old}'", f"'{new}'")
+    return content
+
+
+def rewrite_refs(content: str, slug: str, asset_paths: list[Path], sub_paths: list[Path],
+                 mode: str = "md") -> str:
+    if mode == "html":
+        return _rewrite_html(content, slug, asset_paths, sub_paths)
+    return _rewrite_md(content, slug, asset_paths, sub_paths)
 
 
 REMOTE_FLUBPUB_DIR = "/opt/flubpub"
@@ -124,11 +246,11 @@ def _remote_flubpub(remote: str, args: str):
 
 
 def _upload_file_and_refs(remote: str, file_path: Path):
-    """SCP a file (and its local refs if .md) to the remote tmp dir."""
+    """SCP a file (and its local refs if .md/.html) to the remote tmp dir."""
     _scp_to(remote, file_path, f"{REMOTE_TMP_PREFIX}{file_path.name}")
-    if file_path.suffix.lower() == ".md":
-        images, linked_mds = collect_all_refs(file_path)
-        for ref in images + linked_mds:
+    if file_path.suffix.lower() in (".md", ".html"):
+        assets, sub_pages = collect_all_refs(file_path)
+        for ref in assets + sub_pages:
             _scp_to(remote, ref, f"{REMOTE_TMP_PREFIX}{ref.name}")
 
 
@@ -172,72 +294,85 @@ def push(ctx, file_path, title, slug, theme, color_scheme):
         return
 
     suffix = path.suffix.lower()
-    content_type = "markdown" if suffix == ".md" else "html"
+    if suffix == ".md":
+        main_content_type = "markdown"
+    elif suffix == ".html" and theme:
+        main_content_type = "html"
+    elif suffix == ".html":
+        main_content_type = "html_raw"
+    else:
+        main_content_type = "html"
 
     page_slug = slug or _slugify(title)
-    images, linked_mds = [], []
+    assets, sub_pages = [], []
 
-    if suffix == ".md":
-        images, linked_mds = collect_all_refs(path)
-        if images or linked_mds:
+    if suffix in (".md", ".html"):
+        assets, sub_pages = collect_all_refs(path)
+        if assets or sub_pages:
             click.echo("Local references found:")
-            if images:
-                click.echo("  Images:")
-                for img in images:
-                    click.echo(f"    ./{img.relative_to(path.parent.resolve())}")
-            if linked_mds:
+            if assets:
+                click.echo("  Assets:")
+                for a in assets:
+                    click.echo(f"    ./{a.relative_to(path.parent.resolve())}")
+            if sub_pages:
                 click.echo("  Linked pages:")
-                for md in linked_mds:
-                    click.echo(f"    ./{md.relative_to(path.parent.resolve())}")
+                for s in sub_pages:
+                    click.echo(f"    ./{s.relative_to(path.parent.resolve())}")
             click.echo()
             click.confirm("These files will be uploaded. Continue?", abort=True)
 
     server = ctx.obj["server"]
     with httpx.Client() as client:
-        # Upload assets first
-        for img in images:
-            with open(img, "rb") as f:
+        for asset in assets:
+            with open(asset, "rb") as f:
                 resp = client.post(
                     f"{server}/api/assets/{page_slug}",
-                    files={"file": (img.name, f)},
+                    files={"file": (asset.name, f)},
                 )
             if not resp.is_success:
-                click.echo(f"Error uploading {img.name}: {resp.text}", err=True)
+                click.echo(f"Error uploading {asset.name}: {resp.text}", err=True)
                 sys.exit(1)
-            click.echo(f"Uploaded asset: {img.name}")
+            click.echo(f"Uploaded asset: {asset.name}")
 
-        # Push linked pages first
-        for md in linked_mds:
-            linked_title = md.stem.replace("-", " ").replace("_", " ").title()
-            linked_slug = _slugify(md.stem)
-            linked_content = md.read_text()
-            # Rewrite refs in linked pages too
-            sub_imgs, sub_links = scan_local_refs(md)
-            for img in sub_imgs:
-                with open(img, "rb") as f:
+        for sub in sub_pages:
+            sub_title = sub.stem.replace("-", " ").replace("_", " ").title()
+            sub_slug = _slugify(sub.stem)
+            sub_content = sub.read_text()
+            sub_suffix = sub.suffix.lower()
+            sub_mode = "html" if sub_suffix == ".html" else "md"
+            sub_ct = "html_raw" if sub_suffix == ".html" else "markdown"
+
+            sub_assets, sub_links = scan_local_refs(sub)
+            for asset in sub_assets:
+                with open(asset, "rb") as f:
                     resp = client.post(
-                        f"{server}/api/assets/{linked_slug}",
-                        files={"file": (img.name, f)},
+                        f"{server}/api/assets/{sub_slug}",
+                        files={"file": (asset.name, f)},
                     )
                 if not resp.is_success:
-                    click.echo(f"Error uploading {img.name}: {resp.text}", err=True)
+                    click.echo(f"Error uploading {asset.name}: {resp.text}", err=True)
                     sys.exit(1)
-                click.echo(f"Uploaded asset: {img.name} (for {linked_slug})")
-            linked_content = rewrite_refs(linked_content, linked_slug, sub_imgs, sub_links)
+                click.echo(f"Uploaded asset: {asset.name} (for {sub_slug})")
+            sub_content = rewrite_refs(sub_content, sub_slug, sub_assets, sub_links, mode=sub_mode)
             resp = client.post(
                 f"{server}/api/pages",
-                json={"title": linked_title, "content": linked_content, "slug": linked_slug, "content_type": "markdown"},
+                json={
+                    "title": sub_title,
+                    "content": sub_content,
+                    "slug": sub_slug,
+                    "content_type": sub_ct,
+                },
             )
             if not resp.is_success:
-                click.echo(f"Error pushing {md.name}: {resp.text}", err=True)
+                click.echo(f"Error pushing {sub.name}: {resp.text}", err=True)
                 sys.exit(1)
-            click.echo(f"Pushed linked page: {linked_slug}")
+            click.echo(f"Pushed linked page: {sub_slug}")
 
-        # Rewrite refs in main content and push
-        if images or linked_mds:
-            content = rewrite_refs(content, page_slug, images, linked_mds)
+        if assets or sub_pages:
+            main_mode = "html" if suffix == ".html" else "md"
+            content = rewrite_refs(content, page_slug, assets, sub_pages, mode=main_mode)
 
-        body = {"title": title, "content": content, "content_type": content_type}
+        body = {"title": title, "content": content, "content_type": main_content_type}
         if slug:
             body["slug"] = slug
         if theme:
@@ -342,7 +477,14 @@ def revise(ctx, slug, file_path, title, theme, color_scheme):
 
     content = path.read_text()
     suffix = path.suffix.lower()
-    content_type = "markdown" if suffix == ".md" else "html"
+    if suffix == ".md":
+        content_type = "markdown"
+    elif suffix == ".html" and theme:
+        content_type = "html"
+    elif suffix == ".html":
+        content_type = "html_raw"
+    else:
+        content_type = "html"
 
     body = {"content": content, "content_type": content_type}
     if title:
@@ -379,6 +521,89 @@ def delete(ctx, slug):
 
     if resp.is_success:
         click.echo(f"Deleted: {slug}")
+    else:
+        click.echo(f"Error: {resp.text}", err=True)
+        sys.exit(1)
+
+
+INDEX_ASSETS_SLUG = "flubpub-index"
+
+
+@cli.command(name="set-index")
+@click.argument("file_path")
+@click.pass_context
+def set_index(ctx, file_path):
+    """Install a custom HTML file as the site index.
+
+    Scans the file for local assets (imgs, css, js, fonts, url() refs), uploads
+    them to /assets/flubpub-index/, and rewrites paths. A <script type=
+    "application/json" id="flubpub-pages"></script> tag in the file is filled
+    with the current pages list at every rebuild.
+    """
+    path = Path(file_path)
+    if path.suffix.lower() != ".html":
+        click.echo("Index must be an .html file", err=True)
+        sys.exit(1)
+
+    remote = ctx.obj.get("remote")
+    if remote:
+        _upload_file_and_refs(remote, path)
+        args = f"set-index {shlex.quote(REMOTE_TMP_PREFIX + path.name)}"
+        _remote_flubpub(remote, args)
+        _remote_cleanup(remote)
+        return
+
+    content = path.read_text()
+    assets, sub_pages = scan_local_refs(path)
+    if sub_pages:
+        click.echo("Note: <a href> links to local .md/.html are ignored for the index.")
+
+    if assets:
+        click.echo("Local assets found:")
+        for a in assets:
+            click.echo(f"  ./{a.relative_to(path.parent.resolve())}")
+        click.echo()
+        click.confirm("These files will be uploaded. Continue?", abort=True)
+
+    server = ctx.obj["server"]
+    with httpx.Client() as client:
+        for asset in assets:
+            with open(asset, "rb") as f:
+                resp = client.post(
+                    f"{server}/api/assets/{INDEX_ASSETS_SLUG}",
+                    files={"file": (asset.name, f)},
+                )
+            if not resp.is_success:
+                click.echo(f"Error uploading {asset.name}: {resp.text}", err=True)
+                sys.exit(1)
+            click.echo(f"Uploaded asset: {asset.name}")
+
+        if assets:
+            content = rewrite_refs(content, INDEX_ASSETS_SLUG, assets, [], mode="html")
+
+        resp = client.post(f"{server}/api/index", json={"content": content})
+
+    if resp.is_success:
+        click.echo("Custom index installed.")
+    else:
+        click.echo(f"Error: {resp.text}", err=True)
+        sys.exit(1)
+
+
+@cli.command(name="unset-index")
+@click.pass_context
+def unset_index(ctx):
+    """Remove the custom index and restore the default."""
+    remote = ctx.obj.get("remote")
+    if remote:
+        _remote_flubpub(remote, "unset-index")
+        return
+
+    with httpx.Client() as client:
+        resp = client.delete(f"{ctx.obj['server']}/api/index")
+
+    if resp.is_success:
+        click.echo("Custom index removed.")
     else:
         click.echo(f"Error: {resp.text}", err=True)
         sys.exit(1)

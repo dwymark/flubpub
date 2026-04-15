@@ -11,6 +11,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, PackageLoader
+from pydantic import BaseModel
 
 from flubpub.colors import DEFAULT_SCHEMES, available_color_schemes, color_scheme_css, get_color_scheme
 from flubpub.models import PageCreate, PageDetail, PageResponse, PageUpdate
@@ -24,6 +25,8 @@ PAGES_JSON = DATA_DIR / "pages.json"
 SITE_OUTPUT = SITE_DIR / "_site"
 ASSETS_DIR = SITE_DIR / "src" / "assets"
 THEMES_DIR = Path(__file__).parent / "themes"
+CUSTOM_INDEX_SRC = DATA_DIR / "custom_index.html"
+INDEX_PAGES_MARKER_ID = "flubpub-pages"
 
 jinja_env = Environment(loader=PackageLoader("flubpub", "themes"))
 
@@ -48,12 +51,18 @@ def render_themed_page(theme: str, slug: str, title: str, content: str, date: st
 
 
 def write_page_file(slug: str, title: str, content: str, date: str,
-                    theme: str | None, color_scheme: str | None = None) -> None:
-    """Write the page file (.html for themed, .md for unthemed). Cleans up the other format."""
+                    theme: str | None, color_scheme: str | None = None,
+                    content_type: str = "markdown") -> None:
+    """Write the page file. Themed → Jinja2 wrap + .html, raw HTML → .html verbatim,
+    otherwise .md. Cleans up the other format on each write."""
     old_md, old_html = PAGES_DIR / f"{slug}.md", PAGES_DIR / f"{slug}.html"
     if theme:
         rendered = render_themed_page(theme, slug, title, content, date, color_scheme)
         fm = f'---\ntitle: "{title}"\ndate: "{date}"\nlayout: false\n---\n{rendered}\n'
+        old_html.write_text(fm)
+        old_md.unlink(missing_ok=True)
+    elif content_type == "html_raw":
+        fm = f'---\ntitle: "{title}"\ndate: "{date}"\nlayout: false\n---\n{content}\n'
         old_html.write_text(fm)
         old_md.unlink(missing_ok=True)
     else:
@@ -73,6 +82,37 @@ def rebuild_site(site_dir: Path) -> None:
         logger.warning("npx not found; skipping 11ty build")
     except subprocess.CalledProcessError as e:
         logger.warning("11ty build failed: %s", e)
+    inject_custom_index()
+
+
+def inject_custom_index() -> None:
+    """If a custom index source exists, inject current pages data into its
+    marker script tag and write to _site/index.html, overriding 11ty's default."""
+    if not CUSTOM_INDEX_SRC.exists():
+        return
+    try:
+        html = CUSTOM_INDEX_SRC.read_text()
+    except OSError as e:
+        logger.warning("Could not read custom index source: %s", e)
+        return
+
+    pages = load_pages(DATA_DIR)
+    pages.sort(key=lambda p: p["created_at"], reverse=True)
+    pages_with_url = [{**p, "url": f"/{p['slug']}/"} for p in pages]
+    payload = json.dumps(pages_with_url, indent=2, default=str)
+
+    marker_pattern = re.compile(
+        rf'(<script[^>]*id=["\']{re.escape(INDEX_PAGES_MARKER_ID)}["\'][^>]*>)(.*?)(</script>)',
+        re.DOTALL,
+    )
+    if marker_pattern.search(html):
+        html = marker_pattern.sub(lambda m: f"{m.group(1)}{payload}{m.group(3)}", html, count=1)
+    else:
+        logger.info("Custom index has no <script id=%s> marker; writing as-is",
+                    INDEX_PAGES_MARKER_ID)
+
+    SITE_OUTPUT.mkdir(parents=True, exist_ok=True)
+    (SITE_OUTPUT / "index.html").write_text(html)
 
 
 def load_pages(data_dir: Path) -> list[dict]:
@@ -122,7 +162,8 @@ def create_page(body: PageCreate):
     content = body.content
     if theme and body.content_type == "markdown":
         content = f'<div class="markdown-content">{content}</div>'
-    write_page_file(slug, body.title, content, now.isoformat(), theme, cs)
+    write_page_file(slug, body.title, content, now.isoformat(), theme, cs,
+                    content_type=body.content_type)
 
     pages = load_pages(DATA_DIR)
     pages = [p for p in pages if p["slug"] != slug]  # replace on re-create
@@ -133,6 +174,7 @@ def create_page(body: PageCreate):
         "updated_at": now.isoformat(),
         **({"theme": theme} if theme else {}),
         **({"color_scheme": cs} if cs else {}),
+        **({"content_type": body.content_type} if body.content_type == "html_raw" else {}),
     }
     pages.append(entry)
     save_pages(DATA_DIR, pages)
@@ -178,7 +220,10 @@ def get_page(slug: str):
     content = parts[2].strip() if len(parts) >= 3 else raw
 
     ext = page_path.suffix.lstrip(".")
-    content_type = "markdown" if ext == "md" else ext or "markdown"
+    if entry.get("content_type") == "html_raw":
+        content_type = "html_raw"
+    else:
+        content_type = "markdown" if ext == "md" else ext or "markdown"
 
     return PageDetail(**entry, url=f"/{slug}/", content=content, content_type=content_type)
 
@@ -204,10 +249,14 @@ def update_page(slug: str, body: PageUpdate):
     if cs and cs not in available_color_schemes():
         raise HTTPException(status_code=400, detail=f"Unknown color scheme: {cs}")
 
+    content_type = body.content_type or entry.get("content_type") or (
+        "html_raw" if page_path.suffix == ".html" and not theme else "markdown"
+    )
+
     title = body.title or entry["title"]
     if body.content is not None:
         content = body.content
-        if theme and body.content_type == "markdown":
+        if theme and content_type == "markdown":
             content = f'<div class="markdown-content">{content}</div>'
     else:
         raw = page_path.read_text()
@@ -215,7 +264,8 @@ def update_page(slug: str, body: PageUpdate):
         content = parts[2].strip() if len(parts) >= 3 else raw
 
     now = datetime.now(timezone.utc)
-    write_page_file(slug, title, content, entry["created_at"], theme, cs)
+    write_page_file(slug, title, content, entry["created_at"], theme, cs,
+                    content_type=content_type)
 
     entry["title"] = title
     entry["updated_at"] = now.isoformat()
@@ -227,6 +277,10 @@ def update_page(slug: str, body: PageUpdate):
         entry["color_scheme"] = cs
     elif "color_scheme" in entry:
         del entry["color_scheme"]
+    if content_type == "html_raw":
+        entry["content_type"] = "html_raw"
+    elif "content_type" in entry:
+        del entry["content_type"]
     save_pages(DATA_DIR, pages)
 
     rebuild_site(SITE_DIR)
@@ -247,6 +301,26 @@ def delete_page(slug: str):
 
     rebuild_site(SITE_DIR)
     return {"deleted": slug}
+
+
+class IndexBody(BaseModel):
+    content: str
+
+
+@app.post("/api/index")
+def set_custom_index(body: IndexBody):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    CUSTOM_INDEX_SRC.write_text(body.content)
+    rebuild_site(SITE_DIR)
+    return {"status": "ok", "marker": INDEX_PAGES_MARKER_ID}
+
+
+@app.delete("/api/index")
+def clear_custom_index():
+    if CUSTOM_INDEX_SRC.exists():
+        CUSTOM_INDEX_SRC.unlink()
+    rebuild_site(SITE_DIR)
+    return {"status": "ok"}
 
 
 @app.get("/api/themes")

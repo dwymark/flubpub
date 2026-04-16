@@ -5,3 +5,7 @@ dist/
 *.egg-info/
 node_modules/
 _site/
+data/
+site/src/assets/
+site/src/pages/*.md
+site/src/pages/*.html

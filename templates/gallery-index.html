@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Quiet Notebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gallery-index.css">
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<main class="page">
+
+  <header class="masthead">
+    <h1 class="brand">The Quiet Notebook</h1>
+    <div class="tagline">essays · experiments · marginalia</div>
+  </header>
+
+  <section class="grid"></section>
+
+  <footer class="page-footer">
+    <span>a flubpub gallery</span>
+    <span>since 2025</span>
+  </footer>
+
+</main>
+
+<!-- flubpub fills this tag with the current pages payload at every rebuild.
+     Leave id="flubpub-pages" and the type attribute untouched. -->
+<script type="application/json" id="flubpub-pages">[]</script>
+
+<script src="gallery-shader.js"></script>
+<script src="gallery-tiles.js"></script>
+
+</body>
+</html>

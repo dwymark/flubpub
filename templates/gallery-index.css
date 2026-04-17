@@ -1,0 +1,182 @@
+/* The Quiet Notebook — gallery index for flubpub.
+   Chrome CSS for masthead, tile grid, and card frame. Per-post visual
+   content lives inside each tile's <svg>, not here. */
+
+:root {
+  --paper:   #f4efe6;
+  --ink:     #1a1a1e;
+  --muted:   #8a8579;
+  --gutter:  28px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a12;
+  color: var(--paper);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  display: block;
+}
+
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 40px 120px;
+}
+
+/* ─── Masthead ─────────────────────────────────────── */
+
+header.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 72px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(244, 239, 230, 0.15);
+}
+
+.masthead .brand {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 34px;
+  letter-spacing: -0.01em;
+  color: rgba(244, 239, 230, 0.94);
+  margin: 0;
+}
+
+.masthead .tagline {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(244, 239, 230, 0.5);
+}
+
+/* ─── Grid ─────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--gutter);
+}
+
+.grid .empty {
+  grid-column: 1 / -1;
+  padding: 80px 0;
+  text-align: center;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 22px;
+  color: rgba(244, 239, 230, 0.55);
+}
+
+.tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  text-decoration: none;
+  transition: transform 260ms cubic-bezier(.2,.7,.2,1),
+              box-shadow 260ms cubic-bezier(.2,.7,.2,1);
+  box-shadow:
+    0  1px  2px rgba(0,0,0,0.25),
+    0 10px 40px rgba(0,0,0,0.28);
+}
+
+.tile:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0  1px  2px rgba(0,0,0,0.25),
+    0 22px 54px rgba(0,0,0,0.40);
+}
+
+.tile .kicker {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.tile .visual {
+  flex: 1;
+  margin: 14px -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 0;
+}
+.tile .visual svg { width: 100%; height: 100%; display: block; }
+
+.tile .title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  margin: 0;
+  color: var(--ink);
+}
+.tile .tag-row {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* Per-tile accent — one small bit of color on an otherwise restrained card.
+   Stands in for the "one extracted dominant hue" the card-construction skill
+   will eventually write into each post's tile metadata. */
+.tile[data-accent="rust"] { --tile-accent: #c44a2a; }
+.tile[data-accent="teal"] { --tile-accent: #3a6e6e; }
+.tile[data-accent="sand"] { --tile-accent: #b08a55; }
+.tile[data-accent="ink"]  { --tile-accent: #2b2b2e; }
+.tile[data-accent="moss"] { --tile-accent: #5b6b3a; }
+.tile[data-accent="plum"] { --tile-accent: #6b3a5b; }
+
+.tile .swatch {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--tile-accent, #888);
+  margin-right: 7px;
+  vertical-align: middle;
+  transform: translateY(-1px);
+}
+
+/* ─── Footer ───────────────────────────────────────── */
+
+footer.page-footer {
+  margin-top: 96px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(244, 239, 230, 0.15);
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(244, 239, 230, 0.45);
+}

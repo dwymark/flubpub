@@ -33,7 +33,7 @@ html, body {
 .page {
   position: relative;
   z-index: 1;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 80px 40px 120px;
 }
@@ -70,7 +70,10 @@ header.masthead {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  /* 380px minimum tile width ensures room for long titles like
+     "The Fisher–Frobenius Coincidence" at 22px without wrapping.
+     At 1400px max-width this yields 3 columns × ~421px each. */
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: var(--gutter);
 }
 

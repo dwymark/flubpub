@@ -102,9 +102,11 @@ Copy `assets/viewer-template.html` to `.cards/S/viewer.html`. The template is se
 The viewer reads two inline JSON payloads. After copying, substitute both placeholders:
 
 - `/* CONCEPTS_JSON */` inside `<script id="concepts">` — the exact JSON from `concepts.json`.
-- `/* META_JSON */` inside `<script id="meta">` — an object `{ "slug": "S", "title": "…", "brief": "…plain text of brief.md…" }`.
+- `/* META_JSON */` inside `<script id="meta">` — an object `{ "slug": "S", "title": "…", "brief": "…plain text of brief.md…", "post_url": "http://localhost:8000/S/" }`. `post_url` is optional; when omitted, the viewer defaults to `http://localhost:8000/<slug>/` (the local `flubpub serve` default).
 
 Keep both script tags and their `type="application/json"` attributes intact.
+
+**Serve, do not file://.** The viewer must be loaded over HTTP so the stylesheet at `../../templates/gallery-index.css` resolves and so the post-link works. Start a server at the repo root (`python3 -m http.server 8801` run in background) and open `http://localhost:8801/.cards/S/viewer.html`. The flubpub server must also be running on port 8000 for the "view post" link to resolve.
 
 The viewer shows:
 - Post title + link to the live page.

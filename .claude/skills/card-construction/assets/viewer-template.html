@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card concepts — review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../templates/gallery-index.css">
+<style>
+  /* Viewer chrome — the gallery CSS handles the tiles themselves. */
+  body {
+    background: #1b1820;
+    color: #e8e4dc;
+    font-family: Inter, system-ui, sans-serif;
+    padding: 32px 48px 64px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  body::before { content: none; } /* suppress gallery's canvas reservation if any */
+  canvas#bg { display: none; }
+  .page { padding: 0; }
+  .masthead { margin-bottom: 24px; }
+  .viewer-head h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 34px; font-style: italic; font-weight: 500;
+    margin: 0 0 6px;
+  }
+  .viewer-head .meta {
+    color: #8a8579; font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .viewer-head .meta a { color: inherit; text-decoration: underline; }
+  .controls {
+    display: flex; gap: 16px; align-items: center;
+    margin: 20px 0 32px;
+    padding: 12px 16px;
+    border: 1px solid #3a3640;
+    border-radius: 4px;
+  }
+  .controls label { font-size: 13px; user-select: none; }
+  .controls input[type="checkbox"] { margin-right: 6px; }
+  .brief {
+    margin: 16px 0 32px;
+    padding: 16px 20px;
+    border-left: 2px solid #3a3640;
+    background: #241f28;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+  .brief summary {
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8a8579;
+  }
+  .brief[open] summary { margin-bottom: 12px; }
+  .deck {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+  @media (max-width: 1100px) { .deck { grid-template-columns: 1fr; } }
+  .concept { display: flex; flex-direction: column; gap: 14px; }
+  .concept-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .concept-id {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic; font-size: 28px; font-weight: 500;
+  }
+  .concept-accent {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #8a8579;
+    text-transform: lowercase;
+  }
+  .tile-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 320px;
+  }
+  .tile-frame .tile {
+    position: absolute; inset: 0;
+    pointer-events: none; /* don't chase links in the viewer */
+  }
+  .anno-overlay {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    display: none;
+  }
+  .tile-frame.show-anno .anno-overlay { display: block; }
+  .anno-badge {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background: #f6f0e4;
+    color: #1a1a1e;
+    border: 1px solid #1a1a1e;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+  }
+  .rationale {
+    font-size: 13px;
+    line-height: 1.55;
+    color: #d4cfc5;
+    border-top: 1px solid #3a3640;
+    padding-top: 12px;
+  }
+  .legend {
+    display: none;
+    font-size: 12px;
+    line-height: 1.5;
+    font-family: 'Inter', sans-serif;
+  }
+  .concept.show-anno .legend { display: block; }
+  .legend ol { margin: 0; padding-left: 0; list-style: none; counter-reset: leg; }
+  .legend li {
+    counter-increment: leg;
+    padding: 6px 0 6px 28px;
+    position: relative;
+    border-bottom: 1px dotted #3a3640;
+  }
+  .legend li::before {
+    content: attr(data-anno);
+    position: absolute; left: 0; top: 6px;
+    background: #f6f0e4; color: #1a1a1e;
+    border: 1px solid #1a1a1e;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty-note {
+    color: #8a8579; font-style: italic;
+    padding: 32px 0;
+  }
+</style>
+</head>
+<body>
+
+<header class="viewer-head">
+  <h1 id="post-title">Card concepts</h1>
+  <div class="meta">
+    <span id="post-slug"></span>
+    · <a id="post-link" href="#" target="_blank">view post</a>
+  </div>
+</header>
+
+<details class="brief">
+  <summary>Brief</summary>
+  <div id="brief-body">(brief loads from brief.md — paste in during instantiation)</div>
+</details>
+
+<div class="controls">
+  <label><input type="checkbox" id="toggle-anno"> Show annotations</label>
+  <span class="meta" style="color:#8a8579">Numbered badges overlay each concept's annotated elements.</span>
+</div>
+
+<section class="deck" id="deck">
+  <div class="empty-note">No concepts loaded.</div>
+</section>
+
+<!-- The skill writes both of these at instantiation time. -->
+<script type="application/json" id="concepts">/* CONCEPTS_JSON */</script>
+<script type="application/json" id="meta">/* META_JSON */</script>
+
+<script>
+(function () {
+  const ACCENTS = {
+    rust: '#c44a2a', teal: '#3a6e6e', sand: '#b08a55',
+    ink:  '#2b2b2e', moss: '#5b6b3a', plum: '#6b3a5b',
+  };
+
+  function escapeHTML (s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  function parseJSON (id, fallback) {
+    const el = document.getElementById(id);
+    if (!el) return fallback;
+    const raw = (el.textContent || '').trim();
+    if (!raw || raw.startsWith('/*')) return fallback;
+    try { return JSON.parse(raw); } catch { return fallback; }
+  }
+
+  function renderTile (concept) {
+    const accent = ACCENTS[concept.accent] ? concept.accent : 'ink';
+    const kicker = concept.kicker || 'Concept';
+    const tags   = concept.tags || '';
+    // Reuse the gallery's tile markup exactly.
+    return `
+      <div class="tile" data-accent="${escapeHTML(accent)}">
+        <div class="kicker">
+          <span><span class="swatch"></span>${escapeHTML(kicker)}</span>
+          <span>concept ${escapeHTML(concept.id)}</span>
+        </div>
+        <div class="visual">${concept.svg || ''}</div>
+        <h2 class="title">${escapeHTML(concept.title || '')}</h2>
+        ${tags ? `<div class="tag-row">${escapeHTML(tags)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  function renderLegend (concept) {
+    if (!concept.annotations || !concept.annotations.length) {
+      return '<div class="legend"><em>No annotations.</em></div>';
+    }
+    const items = concept.annotations
+      .slice()
+      .sort((a, b) => a.id - b.id)
+      .map(a => `<li data-anno="${escapeHTML(a.id)}">${escapeHTML(a.label)}</li>`)
+      .join('');
+    return `<div class="legend"><ol>${items}</ol></div>`;
+  }
+
+  function layBadges (frame) {
+    const overlay = frame.querySelector('.anno-overlay');
+    if (!overlay) return;
+    overlay.innerHTML = '';
+    const svg = frame.querySelector('svg');
+    if (!svg) return;
+    const svgRect = svg.getBoundingClientRect();
+    const frameRect = frame.getBoundingClientRect();
+    const annotated = svg.querySelectorAll('[data-anno-id]');
+    annotated.forEach(el => {
+      let bbox;
+      try { bbox = el.getBBox(); } catch { return; }
+      // Map bbox centre in SVG user space → pixel coords within frame.
+      const vb = svg.viewBox.baseVal;
+      const sx = svgRect.width  / (vb.width  || 160);
+      const sy = svgRect.height / (vb.height || 160);
+      const cx = (bbox.x + bbox.width  / 2) * sx + (svgRect.left - frameRect.left);
+      const cy = (bbox.y + bbox.height / 2) * sy + (svgRect.top  - frameRect.top);
+      const badge = document.createElement('div');
+      badge.className = 'anno-badge';
+      badge.style.left = cx + 'px';
+      badge.style.top  = cy + 'px';
+      badge.textContent = el.getAttribute('data-anno-id');
+      overlay.appendChild(badge);
+    });
+  }
+
+  function render () {
+    const data = parseJSON('concepts', null);
+    const meta = parseJSON('meta', {});
+    if (meta.title) {
+      document.getElementById('post-title').textContent = `Card concepts — ${meta.title}`;
+    }
+    if (meta.slug) {
+      document.getElementById('post-slug').textContent = meta.slug;
+      const link = document.getElementById('post-link');
+      link.href = `/${meta.slug}/`;
+    }
+    if (meta.brief) {
+      document.getElementById('brief-body').textContent = meta.brief;
+    }
+
+    const deck = document.getElementById('deck');
+    if (!data || !Array.isArray(data.concepts) || data.concepts.length === 0) {
+      deck.innerHTML = '<div class="empty-note">No concepts loaded.</div>';
+      return;
+    }
+
+    deck.innerHTML = data.concepts.map(c => {
+      const withTitle = Object.assign({}, c, { title: meta.title || '' });
+      return `
+        <article class="concept" data-id="${escapeHTML(c.id)}">
+          <div class="concept-head">
+            <span class="concept-id">Concept ${escapeHTML(c.id)}</span>
+            <span class="concept-accent">${escapeHTML(c.accent || '')}</span>
+          </div>
+          <div class="tile-frame">
+            ${renderTile(withTitle)}
+            <div class="anno-overlay"></div>
+          </div>
+          ${renderLegend(c)}
+          <div class="rationale">${escapeHTML(c.rationale || '')}</div>
+        </article>
+      `;
+    }).join('');
+
+    // Position badges once painted.
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.tile-frame').forEach(layBadges);
+    });
+  }
+
+  function toggleAnno (on) {
+    document.querySelectorAll('.tile-frame').forEach(f => {
+      f.classList.toggle('show-anno', on);
+    });
+    document.querySelectorAll('.concept').forEach(c => {
+      c.classList.toggle('show-anno', on);
+    });
+    if (on) {
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.tile-frame').forEach(layBadges);
+      });
+    }
+  }
+
+  document.getElementById('toggle-anno').addEventListener('change', e => {
+    toggleAnno(e.target.checked);
+  });
+  window.addEventListener('resize', () => {
+    if (document.getElementById('toggle-anno').checked) {
+      document.querySelectorAll('.tile-frame').forEach(layBadges);
+    }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', render);
+  } else {
+    render();
+  }
+})();
+</script>
+
+</body>
+</html>

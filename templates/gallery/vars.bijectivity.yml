@@ -1,0 +1,10 @@
+# Template variables for gallery-index.html, rendered at `flubpub set-index` time.
+# Usage:
+#   uv run flubpub set-index templates/gallery-index.html \
+#     --vars templates/bijectivity.vars.yml
+
+site_title: Bijectivity
+brand: Bijectivity.net
+tagline: a personal math blog · varied in topic, format, and depth
+footer_left: Bijectivity.net
+footer_right: since 2026

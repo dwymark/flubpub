@@ -1,6 +1,5 @@
-/* The Quiet Notebook — gallery index for flubpub.
-   Chrome CSS for masthead, tile grid, and card frame. Per-post visual
-   content lives inside each tile's <svg>, not here. */
+/* flubpub gallery index — chrome CSS for masthead, tile grid, and card frame.
+   Per-post visual content lives inside each tile's <svg>, not here. */
 
 :root {
   --paper:   #f4efe6;

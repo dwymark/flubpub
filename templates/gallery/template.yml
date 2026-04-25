@@ -1,0 +1,11 @@
+name: gallery
+description: Square-tile grid with fBm shader backdrop and hand-composed SVG visuals.
+data:
+  required: [title, slug, url]
+  optional: [tile, theme, color_scheme, created_at]
+vars:
+  - { name: site_title,   default: "The Quiet Notebook" }
+  - { name: brand,        default: "The Quiet Notebook" }
+  - { name: tagline,      default: "essays · experiments · marginalia" }
+  - { name: footer_left,  default: "a flubpub gallery" }
+  - { name: footer_right, default: "since 2025" }

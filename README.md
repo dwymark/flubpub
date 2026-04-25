@@ -11,7 +11,8 @@ hand-composed tiles (optional).
 ```bash
 uv run flubpub serve                             # local server
 uv run flubpub push page.md --title "My Page"    # publish
-uv run flubpub set-index templates/gallery-index.html  # optional gallery front page
+uv run flubpub set-index templates/gallery/index.html  # optional gallery front page
+uv run flubpub set-index templates/gallery/index.html --vars templates/gallery/vars.bijectivity.yml  # …with branding
 uv run flubpub --remote root@host push page.md   # SSH remote, no HTTP exposed
 ```
 
@@ -74,11 +75,11 @@ flowchart LR
         D2 --> D3["Browser displays<br/>the list. No JS."]
     end
 
-    subgraph galleryMode[Gallery: templates/gallery-index.html]
+    subgraph galleryMode[Gallery: templates/gallery/index.html]
         direction TB
         G1["GET /"] --> G2["index.html shell with<br/>empty .grid + #flubpub-pages JSON"]
-        G2 --> G3["gallery-tiles.js parses payload<br/>builds one tile per page"]
-        G2 --> G4["gallery-shader.js runs<br/>WebGL fBm background"]
+        G2 --> G3["tiles.js parses payload<br/>builds one tile per page"]
+        G2 --> G4["shader.js runs<br/>WebGL fBm background"]
     end
 ```
 
@@ -104,10 +105,11 @@ Where each tunable lives:
 | --- | --- | --- |
 | Which pages appear | `data/pages.json` (managed by CLI) | Source of truth in both modes |
 | Sort order | `server.py:inject_custom_index` | Fixed to `created_at` desc |
-| Masthead / footer text | `templates/gallery-index.html` | Edit + re-run `set-index` |
+| Masthead / footer text | Jinja vars (`site_title`, `brand`, `tagline`, `footer_left`, `footer_right`) | Pass a YAML file via `set-index --vars path.yml`; see `templates/gallery/vars.bijectivity.yml` for an example |
+| Template structure (markup itself) | `templates/gallery/index.html` | Edit + re-run `set-index` |
 | Per-tile accent, SVG, kicker, tags | `tile: {…}` on a page's entry in `pages.json` | Optional; defaults fill in when absent |
-| Fallback monogram + accent-from-slug-hash | `templates/gallery-tiles.js` | Edit + re-run `set-index` |
-| Shader, tile chrome, grid min-width (260px) | `templates/gallery-index.css`, `gallery-shader.js` | Edit + re-run `set-index` |
+| Fallback monogram + accent-from-slug-hash | `templates/gallery/tiles.js` | Edit + re-run `set-index` |
+| Shader, tile chrome, grid min-width (260px) | `templates/gallery/index.css`, `templates/gallery/shader.js` | Edit + re-run `set-index` |
 | Revert to default | `flubpub unset-index` | Deletes `custom_index.html`; 11ty output wins again |
 
 The key architectural distinction: the default index is a build artifact of

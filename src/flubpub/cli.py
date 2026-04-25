@@ -2,11 +2,15 @@ import re
 import sys
 import json
 import shlex
+import shutil
 import subprocess
+import tempfile
 import click
 import httpx
+import yaml
 from pathlib import Path
 from bs4 import BeautifulSoup
+from jinja2 import Template
 
 
 def _slugify(text: str) -> str:
@@ -303,6 +307,9 @@ def push(ctx, file_path, title, slug, theme, color_scheme):
     else:
         main_content_type = "html"
 
+    if suffix == ".html" and content.lstrip().startswith("<!--FLUBPUB"):
+        click.echo("Detected index page (template will hydrate from #flubpub-pages)")
+
     page_slug = slug or _slugify(title)
     assets, sub_pages = [], []
 
@@ -529,31 +536,67 @@ def delete(ctx, slug):
 INDEX_ASSETS_SLUG = "flubpub-index"
 
 
+def _load_template_vars(vars_path: Path | None) -> dict:
+    if not vars_path:
+        return {}
+    data = yaml.safe_load(vars_path.read_text()) or {}
+    if not isinstance(data, dict):
+        click.echo(
+            f"Vars file must be a YAML mapping; got {type(data).__name__}",
+            err=True,
+        )
+        sys.exit(1)
+    return data
+
+
+def _render_index_template(content: str, variables: dict) -> str:
+    """Render an index HTML file through Jinja2. A template with no Jinja
+    tags round-trips unchanged, so this is safe to call unconditionally."""
+    return Template(content).render(**variables)
+
+
 @cli.command(name="set-index")
 @click.argument("file_path")
+@click.option("--vars", "vars_file", default=None,
+              type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="YAML file with Jinja variables (brand, tagline, etc).")
 @click.pass_context
-def set_index(ctx, file_path):
+def set_index(ctx, file_path, vars_file):
     """Install a custom HTML file as the site index.
 
-    Scans the file for local assets (imgs, css, js, fonts, url() refs), uploads
-    them to /assets/flubpub-index/, and rewrites paths. A <script type=
-    "application/json" id="flubpub-pages"></script> tag in the file is filled
-    with the current pages list at every rebuild.
+    The file is rendered as a Jinja2 template (defaults apply when no --vars
+    is given), then scanned for local assets (imgs, css, js, fonts, url()
+    refs), which are uploaded to /assets/flubpub-index/ with paths rewritten.
+    A <script type="application/json" id="flubpub-pages"></script> marker in
+    the file is filled with the current pages list at every rebuild.
     """
     path = Path(file_path)
     if path.suffix.lower() != ".html":
         click.echo("Index must be an .html file", err=True)
         sys.exit(1)
 
+    variables = _load_template_vars(vars_file)
+    rendered = _render_index_template(path.read_text(), variables)
+
     remote = ctx.obj.get("remote")
     if remote:
-        _upload_file_and_refs(remote, path)
-        args = f"set-index {shlex.quote(REMOTE_TMP_PREFIX + path.name)}"
-        _remote_flubpub(remote, args)
-        _remote_cleanup(remote)
+        # Tempfile lives in the source dir so its asset refs still resolve
+        # locally. Remote set-index re-runs Jinja — idempotent.
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=path.parent, prefix=".rendered-",
+            suffix=".html", delete=False,
+        ) as tf:
+            tf.write(rendered)
+            rendered_path = Path(tf.name)
+        try:
+            _upload_file_and_refs(remote, rendered_path)
+            args = f"set-index {shlex.quote(REMOTE_TMP_PREFIX + rendered_path.name)}"
+            _remote_flubpub(remote, args)
+            _remote_cleanup(remote)
+        finally:
+            rendered_path.unlink(missing_ok=True)
         return
 
-    content = path.read_text()
     assets, sub_pages = scan_local_refs(path)
     if sub_pages:
         click.echo("Note: <a href> links to local .md/.html are ignored for the index.")
@@ -579,9 +622,9 @@ def set_index(ctx, file_path):
             click.echo(f"Uploaded asset: {asset.name}")
 
         if assets:
-            content = rewrite_refs(content, INDEX_ASSETS_SLUG, assets, [], mode="html")
+            rendered = rewrite_refs(rendered, INDEX_ASSETS_SLUG, assets, [], mode="html")
 
-        resp = client.post(f"{server}/api/index", json={"content": content})
+        resp = client.post(f"{server}/api/index", json={"content": rendered})
 
     if resp.is_success:
         click.echo("Custom index installed.")
@@ -607,6 +650,170 @@ def unset_index(ctx):
     else:
         click.echo(f"Error: {resp.text}", err=True)
         sys.exit(1)
+
+
+def _find_templates_dir() -> Path | None:
+    """Locate the templates/ directory. Prefer CWD; fall back to the bundled
+    location alongside the installed package."""
+    cwd_dir = Path("templates")
+    if cwd_dir.is_dir():
+        return cwd_dir.resolve()
+
+    import flubpub
+    pkg_root = Path(flubpub.__file__).resolve().parent.parent.parent
+    bundled = pkg_root / "templates"
+    if bundled.is_dir():
+        return bundled
+    return None
+
+
+def _read_template_meta(template_dir: Path) -> dict:
+    meta_path = template_dir / "template.yml"
+    if not meta_path.is_file():
+        return {}
+    try:
+        data = yaml.safe_load(meta_path.read_text()) or {}
+    except yaml.YAMLError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _template_default_vars(meta: dict) -> dict:
+    """Extract a {name: default} mapping from a template.yml's `vars` list."""
+    defaults: dict = {}
+    for entry in meta.get("vars") or []:
+        if isinstance(entry, dict) and "name" in entry:
+            defaults[entry["name"]] = entry.get("default")
+    return defaults
+
+
+@cli.command(name="list-index-templates")
+def list_index_templates():
+    """List available index templates discovered under templates/."""
+    templates_dir = _find_templates_dir()
+    if templates_dir is None:
+        click.echo("No templates/ directory found in CWD or alongside the package.")
+        return
+
+    rows: list[tuple[str, str]] = []
+    for sub in sorted(p for p in templates_dir.iterdir() if p.is_dir()):
+        if not (sub / "index.html").is_file():
+            continue
+        meta = _read_template_meta(sub)
+        name = meta.get("name") or sub.name
+        desc = (meta.get("description") or "").strip().replace("\n", " ")
+        if len(desc) > 60:
+            desc = desc[:57] + "..."
+        rows.append((name, desc))
+
+    if not rows:
+        click.echo(f"No templates found under {templates_dir}.")
+        return
+
+    name_w = max(len("NAME"), max(len(r[0]) for r in rows))
+    click.echo(f"{'NAME':<{name_w}}  {'DESCRIPTION'}")
+    click.echo("-" * (name_w + 2 + 60))
+    for name, desc in rows:
+        click.echo(f"{name:<{name_w}}  {desc}")
+
+
+@cli.command(name="new-index")
+@click.option("--template", "template_name", required=True,
+              help="Template name (folder under templates/)")
+@click.option("--slug", default=None,
+              help="Slug hint (used as a Jinja var if the template references it)")
+@click.option("--vars", "vars_file", default=None,
+              type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="YAML file with Jinja variables to merge over template defaults")
+@click.option("--output", "output_path", default=None,
+              type=click.Path(dir_okay=False, path_type=Path),
+              help="Write rendered HTML here (default: stdout)")
+@click.option("--copy-assets", is_flag=True, default=False,
+              help="Copy template's other files (CSS/JS/etc) next to --output")
+def new_index(template_name, slug, vars_file, output_path, copy_assets):
+    """Generate a working index file from a template (local-only operation)."""
+    templates_dir = _find_templates_dir()
+    if templates_dir is None:
+        click.echo("No templates/ directory found in CWD or alongside the package.", err=True)
+        sys.exit(1)
+
+    template_dir = templates_dir / template_name
+    template_html = template_dir / "index.html"
+    if not template_html.is_file():
+        click.echo(f"Template '{template_name}' not found at {template_html}", err=True)
+        sys.exit(1)
+
+    meta = _read_template_meta(template_dir)
+    variables = _template_default_vars(meta)
+    variables.update(_load_template_vars(vars_file))
+    if slug and "slug" not in variables:
+        variables["slug"] = slug
+
+    rendered = _render_index_template(template_html.read_text(), variables)
+
+    if copy_assets and not output_path:
+        click.echo("--copy-assets requires --output.", err=True)
+        sys.exit(1)
+
+    if output_path:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(rendered)
+        click.echo(f"Wrote {output_path}")
+        if copy_assets:
+            dest_dir = output_path.parent
+            for item in template_dir.iterdir():
+                if item.name in ("index.html", "template.yml"):
+                    continue
+                target = dest_dir / item.name
+                if item.is_dir():
+                    shutil.copytree(item, target, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(item, target)
+                click.echo(f"Copied asset: {item.name}")
+    else:
+        click.echo(rendered)
+
+
+@cli.command(name="index-payload")
+@click.argument("slug")
+@click.pass_context
+def index_payload_cmd(ctx, slug):
+    """Print the filtered/sorted JSON payload an index page would render."""
+    remote = ctx.obj.get("remote")
+    if remote:
+        _remote_flubpub(remote, f"index-payload {shlex.quote(slug)}")
+        return
+
+    from flubpub.index_payload import build_index_payload
+    from flubpub.models import IndexSpec
+
+    server = ctx.obj["server"]
+    with httpx.Client() as client:
+        resp = client.get(f"{server}/api/pages/{slug}")
+        if not resp.is_success:
+            click.echo(f"Error: {resp.text}", err=True)
+            sys.exit(1)
+        entry = resp.json()
+
+        if entry.get("content_type") != "index":
+            click.echo(f"Page '{slug}' is not an index page (content_type={entry.get('content_type')!r}).", err=True)
+            sys.exit(1)
+
+        index_block = entry.get("index") or {}
+        try:
+            spec = IndexSpec(**index_block)
+        except Exception as e:
+            click.echo(f"Could not build IndexSpec from entry: {e}", err=True)
+            sys.exit(1)
+
+        all_resp = client.get(f"{server}/api/pages")
+        if not all_resp.is_success:
+            click.echo(f"Error fetching page list: {all_resp.text}", err=True)
+            sys.exit(1)
+        all_pages = all_resp.json()
+
+    payload = build_index_payload(spec, all_pages, self_slug=slug)
+    click.echo(json.dumps(payload, indent=2, default=str))
 
 
 @cli.command()

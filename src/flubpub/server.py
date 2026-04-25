@@ -14,7 +14,12 @@ from jinja2 import Environment, PackageLoader
 from pydantic import BaseModel
 
 from flubpub.colors import DEFAULT_SCHEMES, available_color_schemes, color_scheme_css, get_color_scheme
-from flubpub.models import PageCreate, PageDetail, PageResponse, PageUpdate
+from flubpub.index_payload import (
+    build_index_payload,
+    parse_index_spec_from_html,
+    substitute_pages_marker,
+)
+from flubpub.models import IndexSpec, PageCreate, PageDetail, PageResponse, PageUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -85,34 +90,52 @@ def rebuild_site(site_dir: Path) -> None:
     inject_custom_index()
 
 
+def _inject_marker(html: str, spec: IndexSpec, all_pages: list[dict], self_slug: str) -> str:
+    """Substitute the #flubpub-pages marker in `html` with the personalized
+    payload for `spec`. Matches the prior formatting (json.dumps indent=2)."""
+    payload = build_index_payload(spec, all_pages, self_slug)
+    payload_json = json.dumps(payload, indent=2, default=str)
+    return substitute_pages_marker(html, payload_json)
+
+
+def inject_index_pages() -> None:
+    """For every index page (content_type=='index' in pages.json, plus the
+    legacy root index backed by data/custom_index.html), substitute the
+    #flubpub-pages marker with that page's personalized payload and write the
+    result back to _site."""
+    all_pages = load_pages(DATA_DIR)
+
+    for entry in all_pages:
+        if entry.get("content_type") != "index":
+            continue
+        out_path = SITE_OUTPUT / entry["slug"] / "index.html"
+        if not out_path.exists():
+            continue
+        try:
+            spec = IndexSpec(**(entry.get("index") or {}))
+        except Exception as e:
+            logger.warning("Bad index spec for %s: %s", entry["slug"], e)
+            continue
+        html = out_path.read_text()
+        html = _inject_marker(html, spec, all_pages, self_slug=entry["slug"])
+        out_path.write_text(html)
+
+    if CUSTOM_INDEX_SRC.exists():
+        try:
+            html = CUSTOM_INDEX_SRC.read_text()
+        except OSError as e:
+            logger.warning("Could not read custom index source: %s", e)
+            return
+        SITE_OUTPUT.mkdir(parents=True, exist_ok=True)
+        # Sorted-newest-first matches today's behavior; an empty IndexSpec
+        # already yields that ordering via build_index_payload.
+        html = _inject_marker(html, IndexSpec(), all_pages, self_slug="")
+        (SITE_OUTPUT / "index.html").write_text(html)
+
+
 def inject_custom_index() -> None:
-    """If a custom index source exists, inject current pages data into its
-    marker script tag and write to _site/index.html, overriding 11ty's default."""
-    if not CUSTOM_INDEX_SRC.exists():
-        return
-    try:
-        html = CUSTOM_INDEX_SRC.read_text()
-    except OSError as e:
-        logger.warning("Could not read custom index source: %s", e)
-        return
-
-    pages = load_pages(DATA_DIR)
-    pages.sort(key=lambda p: p["created_at"], reverse=True)
-    pages_with_url = [{**p, "url": f"/{p['slug']}/"} for p in pages]
-    payload = json.dumps(pages_with_url, indent=2, default=str)
-
-    marker_pattern = re.compile(
-        rf'(<script[^>]*id=["\']{re.escape(INDEX_PAGES_MARKER_ID)}["\'][^>]*>)(.*?)(</script>)',
-        re.DOTALL,
-    )
-    if marker_pattern.search(html):
-        html = marker_pattern.sub(lambda m: f"{m.group(1)}{payload}{m.group(3)}", html, count=1)
-    else:
-        logger.info("Custom index has no <script id=%s> marker; writing as-is",
-                    INDEX_PAGES_MARKER_ID)
-
-    SITE_OUTPUT.mkdir(parents=True, exist_ok=True)
-    (SITE_OUTPUT / "index.html").write_text(html)
+    """Backwards-compat alias. Existing callers keep working."""
+    inject_index_pages()
 
 
 def load_pages(data_dir: Path) -> list[dict]:
@@ -158,12 +181,28 @@ def create_page(body: PageCreate):
     if cs and cs not in available_color_schemes():
         raise HTTPException(status_code=400, detail=f"Unknown color scheme: {cs}")
 
-    now = datetime.now(timezone.utc)
+    # Detect index page from a leading <!--FLUBPUB ...--> comment in the
+    # content. The in-file comment is authoritative: it overrides body.index
+    # and forces content_type=index. The comment is stripped before storage.
     content = body.content
-    if theme and body.content_type == "markdown":
-        content = f'<div class="markdown-content">{content}</div>'
-    write_page_file(slug, body.title, content, now.isoformat(), theme, cs,
-                    content_type=body.content_type)
+    content_type = body.content_type
+    parsed_spec, stripped = parse_index_spec_from_html(content)
+    index_spec = body.index
+    if parsed_spec is not None:
+        index_spec = parsed_spec
+        content = stripped
+        content_type = "index"
+
+    now = datetime.now(timezone.utc)
+    if content_type == "index":
+        # Index pages are themeless raw HTML — 11ty will pass them through.
+        write_page_file(slug, body.title, content, now.isoformat(),
+                        theme=None, color_scheme=None, content_type="html_raw")
+    else:
+        if theme and content_type == "markdown":
+            content = f'<div class="markdown-content">{content}</div>'
+        write_page_file(slug, body.title, content, now.isoformat(), theme, cs,
+                        content_type=content_type)
 
     pages = load_pages(DATA_DIR)
     pages = [p for p in pages if p["slug"] != slug]  # replace on re-create
@@ -172,9 +211,15 @@ def create_page(body: PageCreate):
         "slug": slug,
         "created_at": now.isoformat(),
         "updated_at": now.isoformat(),
-        **({"theme": theme} if theme else {}),
-        **({"color_scheme": cs} if cs else {}),
-        **({"content_type": body.content_type} if body.content_type == "html_raw" else {}),
+        **({"theme": theme} if theme and content_type != "index" else {}),
+        **({"color_scheme": cs} if cs and content_type != "index" else {}),
+        **({"content_type": content_type}
+           if content_type in ("html_raw", "index") else {}),
+        **({"index": index_spec.model_dump()} if index_spec else {}),
+        **({"parent": body.parent} if body.parent else {}),
+        **({"excerpt": body.excerpt} if body.excerpt else {}),
+        **({"tags": body.tags} if body.tags else {}),
+        **({"tile": body.tile} if body.tile else {}),
     }
     pages.append(entry)
     save_pages(DATA_DIR, pages)
@@ -254,18 +299,33 @@ def update_page(slug: str, body: PageUpdate):
     )
 
     title = body.title or entry["title"]
+    index_spec = body.index
     if body.content is not None:
         content = body.content
-        if theme and content_type == "markdown":
+        # Re-parse FLUBPUB comment on update; in-file is authoritative.
+        parsed_spec, stripped = parse_index_spec_from_html(content)
+        if parsed_spec is not None:
+            index_spec = parsed_spec
+            content = stripped
+            content_type = "index"
+        if content_type != "index" and theme and content_type == "markdown":
             content = f'<div class="markdown-content">{content}</div>'
     else:
         raw = page_path.read_text()
         parts = raw.split("---", 2)
         content = parts[2].strip() if len(parts) >= 3 else raw
 
+    if content_type == "index":
+        theme = None
+        cs = None
+
     now = datetime.now(timezone.utc)
-    write_page_file(slug, title, content, entry["created_at"], theme, cs,
-                    content_type=content_type)
+    if content_type == "index":
+        write_page_file(slug, title, content, entry["created_at"],
+                        theme=None, color_scheme=None, content_type="html_raw")
+    else:
+        write_page_file(slug, title, content, entry["created_at"], theme, cs,
+                        content_type=content_type)
 
     entry["title"] = title
     entry["updated_at"] = now.isoformat()
@@ -277,10 +337,32 @@ def update_page(slug: str, body: PageUpdate):
         entry["color_scheme"] = cs
     elif "color_scheme" in entry:
         del entry["color_scheme"]
-    if content_type == "html_raw":
-        entry["content_type"] = "html_raw"
+    if content_type in ("html_raw", "index"):
+        entry["content_type"] = content_type
     elif "content_type" in entry:
         del entry["content_type"]
+    if index_spec is not None:
+        entry["index"] = index_spec.model_dump()
+    if body.parent is not None:
+        if body.parent:
+            entry["parent"] = body.parent
+        else:
+            entry.pop("parent", None)
+    if body.excerpt is not None:
+        if body.excerpt:
+            entry["excerpt"] = body.excerpt
+        else:
+            entry.pop("excerpt", None)
+    if body.tags is not None:
+        if body.tags:
+            entry["tags"] = body.tags
+        else:
+            entry.pop("tags", None)
+    if body.tile is not None:
+        if body.tile:
+            entry["tile"] = body.tile
+        else:
+            entry.pop("tile", None)
     save_pages(DATA_DIR, pages)
 
     rebuild_site(SITE_DIR)

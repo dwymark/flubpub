@@ -1,0 +1,177 @@
+:root {
+  --paper: #f7f3ec;
+  --ink: #1a1a1e;
+  --muted: rgba(26, 26, 30, 0.6);
+  --faint: rgba(26, 26, 30, 0.4);
+  --hairline: rgba(0, 0, 0, 0.06);
+  --accent-default: #888;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 64px 32px 96px;
+}
+
+.masthead {
+  margin-bottom: 64px;
+  text-align: center;
+}
+
+.brand {
+  font-style: italic;
+  font-weight: 500;
+  font-size: 32px;
+  margin: 0 0 8px;
+  letter-spacing: 0.01em;
+}
+
+.tagline {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 15px;
+}
+
+.entries {
+  display: block;
+}
+
+.entry {
+  position: relative;
+  display: block;
+  padding-top: 24px;
+  border-top: 1px solid var(--hairline);
+  margin-bottom: 8px;
+}
+
+.entry:first-child {
+  border-top: none;
+}
+
+.margin {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.margin-title {
+  font-style: italic;
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--muted);
+  text-decoration: none;
+  display: block;
+  transition: color 150ms ease;
+}
+
+.margin-title:hover { color: var(--ink); }
+
+.margin-date {
+  display: block;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--faint);
+  margin-top: 4px;
+}
+
+.body {
+  display: block;
+  color: var(--ink);
+}
+
+.body p {
+  margin: 0;
+}
+
+.dropcap {
+  display: none;
+}
+
+.placeholder {
+  font-style: italic;
+  color: var(--faint);
+}
+
+.asterisk {
+  font-size: 0.8em;
+  color: var(--faint);
+  text-decoration: none;
+  margin-left: 4px;
+  transition: color 150ms ease;
+}
+
+.asterisk:hover { color: var(--ink); }
+
+.empty {
+  font-style: italic;
+  color: var(--muted);
+  padding: 48px 0;
+  text-align: center;
+}
+
+.page-footer {
+  margin-top: 96px;
+  padding-top: 24px;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--faint);
+}
+
+/* Per-entry accent for drop cap. */
+.entry[data-accent="rust"] { --accent: #c44a2a; }
+.entry[data-accent="teal"] { --accent: #3a6e6e; }
+.entry[data-accent="sand"] { --accent: #b08a55; }
+.entry[data-accent="ink"]  { --accent: #2b2b2e; }
+.entry[data-accent="moss"] { --accent: #5b6b3a; }
+.entry[data-accent="plum"] { --accent: #6b3a5b; }
+
+@media (min-width: 800px) {
+  .page {
+    max-width: 920px;
+  }
+
+  .entry {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    column-gap: 40px;
+    padding-top: 24px;
+  }
+
+  .margin {
+    text-align: right;
+    position: sticky;
+    top: 80px;
+    align-self: start;
+    margin-bottom: 0;
+  }
+
+  .body {
+    max-width: 600px;
+  }
+
+  .dropcap {
+    display: block;
+    float: left;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-style: italic;
+    font-size: 36px;
+    line-height: 1;
+    padding-right: 8px;
+    padding-top: 4px;
+    color: var(--accent, var(--accent-default));
+  }
+}

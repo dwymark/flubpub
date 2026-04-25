@@ -1,0 +1,11 @@
+name: marginalia
+description: Reading view — excerpts as flowing prose, titles pinned in the margin, drop caps in accent color.
+data:
+  required: [title, slug, url, excerpt]
+  optional: [tile.accent, tags, created_at]
+vars:
+  - { name: site_title,   default: "Marginalia" }
+  - { name: brand,        default: "" }
+  - { name: tagline,      default: "" }
+  - { name: footer_left,  default: "" }
+  - { name: footer_right, default: "" }

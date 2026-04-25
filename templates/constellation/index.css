@@ -1,0 +1,117 @@
+:root {
+  --bg-top: #04060f;
+  --bg-bot: #0a0a18;
+  --fg: rgba(255, 255, 255, 0.85);
+  --muted: rgba(255, 255, 255, 0.45);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bot) 100%);
+  color: var(--fg);
+  font-family: "Inter", system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+.page {
+  position: relative;
+  min-height: 100vh;
+  padding: 48px 32px 32px;
+}
+
+.masthead {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.brand {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+}
+
+.tagline {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.sky {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bg-stars,
+.constellation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: block;
+  will-change: transform;
+}
+
+.bg-stars { pointer-events: none; }
+.constellation { pointer-events: auto; }
+
+.constellation .star {
+  cursor: pointer;
+}
+
+.constellation .star circle {
+  transition: r 200ms ease;
+}
+
+.constellation .star text {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 11px;
+  fill: #fff;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: left center;
+  transition: opacity 200ms ease, transform 200ms ease;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 2px;
+}
+
+.constellation .star:hover text,
+.constellation .star:focus text {
+  opacity: 1;
+  transform: scale(1.02);
+}
+
+.constellation .edge {
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.page-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  margin-top: auto;
+  padding-top: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-stars,
+  .constellation { transition: none !important; }
+  .constellation .star text { opacity: 0.6; }
+  .constellation .star:hover text { transform: none; }
+}

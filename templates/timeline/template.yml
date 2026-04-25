@@ -1,0 +1,11 @@
+name: timeline
+description: Vertical timeline — posts pinned at proportional time positions, year markers in italic.
+data:
+  required: [title, slug, url, created_at]
+  optional: [tile.accent, tags]
+vars:
+  - { name: site_title,   default: "Timeline" }
+  - { name: brand,        default: "" }
+  - { name: tagline,      default: "" }
+  - { name: footer_left,  default: "" }
+  - { name: footer_right, default: "" }

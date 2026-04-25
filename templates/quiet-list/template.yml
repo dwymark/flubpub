@@ -1,0 +1,11 @@
+name: quiet-list
+description: Radically minimal — italic-serif titles, hairline rules, one accent dot per entry.
+data:
+  required: [title, slug, url, created_at]
+  optional: [tile.accent, tags, excerpt]
+vars:
+  - { name: site_title,   default: "Quiet List" }
+  - { name: brand,        default: "" }
+  - { name: tagline,      default: "" }
+  - { name: footer_left,  default: "" }
+  - { name: footer_right, default: "" }

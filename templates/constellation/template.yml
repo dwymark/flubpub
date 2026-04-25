@@ -1,0 +1,11 @@
+name: constellation
+description: Starfield — posts as hash-positioned stars, faint tag edges, parallax scroll.
+data:
+  required: [title, slug, url]
+  optional: [tags, created_at, tile.accent]
+vars:
+  - { name: site_title,   default: "Constellation" }
+  - { name: brand,        default: "" }
+  - { name: tagline,      default: "" }
+  - { name: footer_left,  default: "" }
+  - { name: footer_right, default: "" }

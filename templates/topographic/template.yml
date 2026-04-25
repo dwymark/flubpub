@@ -1,0 +1,11 @@
+name: topographic
+description: Posts as benchmark markers on an fBm topographic-map backdrop. Contour lines drift slowly.
+data:
+  required: [title, slug, url]
+  optional: [tags, created_at]
+vars:
+  - { name: site_title,   default: "Topographic" }
+  - { name: brand,        default: "" }
+  - { name: tagline,      default: "" }
+  - { name: footer_left,  default: "" }
+  - { name: footer_right, default: "" }

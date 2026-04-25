@@ -1,0 +1,125 @@
+:root {
+  --bg: #0a0a12;
+  --fg: #e8e2d3;
+  --muted: rgba(232, 226, 211, 0.55);
+  --branch: rgba(232, 226, 211, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  min-height: 100vh;
+}
+
+.page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 24px 24px;
+}
+
+.masthead {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.brand {
+  font-size: 22px;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  margin: 0 0 4px;
+  color: var(--fg);
+}
+
+.tagline {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  font-style: italic;
+}
+
+.canvas {
+  flex: 1;
+  position: relative;
+  min-height: 70vh;
+}
+
+.mindmap {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.mindmap .branch {
+  fill: none;
+  stroke: var(--branch);
+  stroke-width: 0.8;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+.mindmap .node {
+  cursor: pointer;
+  transition: opacity 200ms ease, transform 200ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.mindmap .node text {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 13px;
+  fill: var(--fg);
+  dominant-baseline: middle;
+  transition: fill 200ms ease;
+}
+
+.mindmap .node.root text {
+  font-size: 24px;
+  font-style: italic;
+  text-anchor: middle;
+  fill: var(--fg);
+}
+
+.mindmap .node .accent-dot {
+  pointer-events: none;
+}
+
+.mindmap.has-hover .branch { opacity: 0.18; }
+.mindmap.has-hover .branch.lit { opacity: 1; }
+.mindmap.has-hover .node { opacity: 0.4; }
+.mindmap.has-hover .node.lit { opacity: 1; }
+
+.mindmap .node.hovered { transform: scale(1.1); }
+
+.empty-note {
+  font-style: italic;
+  fill: var(--muted);
+  font-size: 14px;
+  text-anchor: middle;
+}
+
+.page-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  font-style: italic;
+  padding-top: 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mindmap .node,
+  .mindmap .branch,
+  .mindmap .node text { transition: none !important; }
+  .mindmap .node.hovered { transform: none; }
+}

@@ -1,0 +1,11 @@
+name: mindmap
+description: Radial mindmap — site root at center, posts branching by `parent:` metadata.
+data:
+  required: [title, slug, url]
+  optional: [parent, tile.accent, tags]
+vars:
+  - { name: site_title,   default: "Mindmap" }
+  - { name: brand,        default: "" }
+  - { name: tagline,      default: "" }
+  - { name: footer_left,  default: "" }
+  - { name: footer_right, default: "" }

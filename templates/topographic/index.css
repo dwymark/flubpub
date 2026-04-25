@@ -1,0 +1,135 @@
+:root {
+  --parchment: #f0e9d8;
+  --ink: #1d1d24;
+  --moss: #5b6b3a;
+  --muted: rgba(29, 29, 36, 0.55);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--parchment);
+  color: var(--ink);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  min-height: 100vh;
+}
+
+.page {
+  position: relative;
+  min-height: 100vh;
+  padding: 48px 32px 32px;
+}
+
+.masthead {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.brand {
+  font-size: 24px;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+}
+
+.tagline {
+  font-size: 12px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.terrain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.contours,
+.markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: block;
+}
+
+.contours {
+  pointer-events: none;
+  will-change: transform;
+}
+
+.contours path {
+  fill: none;
+  stroke: var(--moss);
+  stroke-width: 0.6;
+  stroke-opacity: 0.32;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.markers { pointer-events: auto; }
+
+.markers .marker { cursor: pointer; }
+
+.markers .marker .glyph {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 8px;
+  fill: rgba(232, 226, 211, 0.85);
+  paint-order: stroke;
+  stroke: rgba(29, 29, 36, 0.6);
+  stroke-width: 0.6px;
+}
+
+.markers .marker .label {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 11px;
+  fill: var(--ink);
+  transform-box: fill-box;
+  transform-origin: left center;
+  transition: transform 180ms ease, fill 180ms ease;
+}
+
+.markers .marker .elev {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  fill: var(--moss);
+  fill-opacity: 0;
+  transition: fill-opacity 180ms ease;
+}
+
+.markers .marker:hover .label,
+.markers .marker:focus .label {
+  transform: scale(1.1);
+  fill: #000;
+}
+
+.markers .marker:hover .elev,
+.markers .marker:focus .elev {
+  fill-opacity: 0.7;
+}
+
+.page-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  margin-top: auto;
+  padding-top: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contours { transition: none !important; transform: none !important; }
+}

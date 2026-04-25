@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ site_title | default("Constellation") }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<main class="page">
+
+  {% if brand or tagline %}
+  <header class="masthead">
+    {% if brand %}<h1 class="brand">{{ brand }}</h1>{% endif %}
+    {% if tagline %}<div class="tagline">{{ tagline }}</div>{% endif %}
+  </header>
+  {% endif %}
+
+  <section class="sky">
+    <svg id="bg-stars" class="bg-stars" aria-hidden="true"></svg>
+    <svg id="constellation" class="constellation" aria-label="post constellation"></svg>
+  </section>
+
+  {% if footer_left or footer_right %}
+  <footer class="page-footer">
+    <span>{{ footer_left | default("") }}</span>
+    <span>{{ footer_right | default("") }}</span>
+  </footer>
+  {% endif %}
+
+</main>
+
+<!-- flubpub fills this tag with the current pages payload at every rebuild.
+     Leave id="flubpub-pages" and the type attribute untouched. -->
+<script type="application/json" id="flubpub-pages">[]</script>
+
+<script src="script.js"></script>
+
+</body>
+</html>

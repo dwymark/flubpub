@@ -1,0 +1,11 @@
+name: voronoi-map
+description: Posts as Voronoi cells — territorial layout, hash-positioned sites, hover-lift cells.
+data:
+  required: [title, slug, url]
+  optional: [tile.accent, tags, created_at]
+vars:
+  - { name: site_title,   default: "Voronoi Map" }
+  - { name: brand,        default: "" }
+  - { name: tagline,      default: "" }
+  - { name: footer_left,  default: "" }
+  - { name: footer_right, default: "" }

@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 import json
@@ -232,6 +233,48 @@ def _parse_remote(spec: str) -> tuple[str, str]:
     return spec, DEFAULT_REMOTE_DIR
 
 
+SITES_CONFIG_PATH = Path.home() / ".config" / "flubpub" / "sites.toml"
+
+
+def _load_sites_config() -> dict:
+    """Read the sites registry. Returns {} if absent or unreadable."""
+    if not SITES_CONFIG_PATH.is_file():
+        return {}
+    import tomllib
+    try:
+        return tomllib.loads(SITES_CONFIG_PATH.read_text())
+    except tomllib.TOMLDecodeError as e:
+        click.echo(f"Warning: could not parse {SITES_CONFIG_PATH}: {e}", err=True)
+        return {}
+
+
+def _resolve_remote(remote: str | None, site: str | None) -> str | None:
+    """Resolve --remote / --site / default-from-config / FLUBPUB_SITE env into
+    a concrete remote spec. Returns None for local-HTTP mode."""
+    if remote:
+        return remote
+    site = site or os.environ.get("FLUBPUB_SITE")
+    cfg = _load_sites_config()
+    if not site:
+        site = cfg.get("default")
+    if not site:
+        return None
+    sites = cfg.get("sites") or {}
+    entry = sites.get(site)
+    if not entry:
+        click.echo(
+            f"Site '{site}' not found in {SITES_CONFIG_PATH}. "
+            f"Configured sites: {', '.join(sites) or '(none)'}",
+            err=True,
+        )
+        sys.exit(1)
+    spec = entry.get("remote") if isinstance(entry, dict) else None
+    if not spec:
+        click.echo(f"Site '{site}' has no 'remote' key.", err=True)
+        sys.exit(1)
+    return spec
+
+
 def _ssh_run(remote: str, cmd: str) -> subprocess.CompletedProcess:
     result = subprocess.run(["ssh", remote, cmd], capture_output=True, text=True)
     if result.returncode != 0:
@@ -273,13 +316,18 @@ def _upload_file_and_refs(remote: str, file_path: Path):
 
 @click.group()
 @click.option("--server", default="http://localhost:8000", show_default=True, help="Server base URL")
-@click.option("--remote", default=None, help="SSH remote (e.g. root@host). Bypasses HTTP API.")
+@click.option("--remote", default=None,
+              help="SSH remote (e.g. root@host[:/abs/path]). Overrides --site.")
+@click.option("--site", default=None,
+              help="Site key from ~/.config/flubpub/sites.toml. "
+                   "Falls back to FLUBPUB_SITE env or [default].")
 @click.pass_context
-def cli(ctx, server, remote):
+def cli(ctx, server, remote, site):
     ctx.ensure_object(dict)
     ctx.obj["server"] = server
-    if remote:
-        host, remote_dir = _parse_remote(remote)
+    resolved = _resolve_remote(remote, site)
+    if resolved:
+        host, remote_dir = _parse_remote(resolved)
         ctx.obj["remote"] = host
         ctx.obj["remote_dir"] = remote_dir
     else:
@@ -842,3 +890,84 @@ def serve(host, port):
     """Start the flubpub server."""
     import uvicorn
     uvicorn.run("flubpub.server:app", host=host, port=port)
+
+
+@cli.group()
+def sites():
+    """Manage the sites registry at ~/.config/flubpub/sites.toml."""
+
+
+def _save_sites_config(cfg: dict) -> None:
+    SITES_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lines: list[str] = []
+    if "default" in cfg:
+        lines.append(f'default = "{cfg["default"]}"\n')
+    for key, entry in (cfg.get("sites") or {}).items():
+        lines.append(f'\n[sites.{key}]\n')
+        for k, v in entry.items():
+            lines.append(f'{k} = "{v}"\n')
+    SITES_CONFIG_PATH.write_text("".join(lines))
+
+
+@sites.command(name="list")
+def sites_list():
+    """List configured sites."""
+    cfg = _load_sites_config()
+    site_map = cfg.get("sites") or {}
+    if not site_map:
+        click.echo(f"No sites configured. Edit {SITES_CONFIG_PATH} or run `flubpub sites add`.")
+        return
+    default = cfg.get("default")
+    width = max(len("KEY"), max(len(k) for k in site_map))
+    click.echo(f"{'KEY':<{width}}  REMOTE")
+    click.echo("-" * (width + 2 + 50))
+    for key, entry in site_map.items():
+        marker = "*" if key == default else " "
+        click.echo(f"{marker} {key:<{width-2}}  {entry.get('remote', '(missing)')}")
+    if default:
+        click.echo(f"\n(* = default)")
+
+
+@sites.command(name="add")
+@click.argument("key")
+@click.argument("remote_spec")
+@click.option("--default", "make_default", is_flag=True, default=False,
+              help="Also set this site as the default.")
+def sites_add(key, remote_spec, make_default):
+    """Add or update a site entry. REMOTE_SPEC is e.g. root@host:/opt/flubpub-key."""
+    cfg = _load_sites_config()
+    cfg.setdefault("sites", {})[key] = {"remote": remote_spec}
+    if make_default or "default" not in cfg:
+        cfg["default"] = key
+    _save_sites_config(cfg)
+    click.echo(f"Site '{key}' → {remote_spec}")
+    if cfg.get("default") == key:
+        click.echo(f"(default)")
+
+
+@sites.command(name="set-default")
+@click.argument("key")
+def sites_set_default(key):
+    """Set the default site key."""
+    cfg = _load_sites_config()
+    if key not in (cfg.get("sites") or {}):
+        click.echo(f"Site '{key}' not configured.", err=True)
+        sys.exit(1)
+    cfg["default"] = key
+    _save_sites_config(cfg)
+    click.echo(f"Default → {key}")
+
+
+@sites.command(name="remove")
+@click.argument("key")
+def sites_remove(key):
+    """Remove a site entry."""
+    cfg = _load_sites_config()
+    if key not in (cfg.get("sites") or {}):
+        click.echo(f"Site '{key}' not configured.", err=True)
+        sys.exit(1)
+    del cfg["sites"][key]
+    if cfg.get("default") == key:
+        cfg.pop("default", None)
+    _save_sites_config(cfg)
+    click.echo(f"Removed '{key}'.")

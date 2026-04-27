@@ -10,11 +10,31 @@ hand-composed tiles (optional).
 
 ```bash
 uv run flubpub serve                             # local server
-uv run flubpub push page.md --title "My Page"    # publish
+uv run flubpub push page.md --title "My Page"    # publish locally
 uv run flubpub set-index templates/gallery/index.html  # optional gallery front page
 uv run flubpub set-index templates/gallery/index.html --vars templates/gallery/vars.bijectivity.yml  # …with branding
-uv run flubpub --remote root@host push page.md   # SSH remote, no HTTP exposed
 ```
+
+### Multi-install (one VPS, several domains)
+
+flubpub supports running multiple installs side by side, one per domain.
+Configure each as a named "site" in `~/.config/flubpub/sites.toml`, then
+deploy and publish via `--site KEY`:
+
+```bash
+uv run flubpub sites add dwm root@host:/opt/flubpub-dwm \
+    --server-name danielwymark.com --port 8001 --default
+uv run flubpub sites add bj  root@host:/opt/flubpub-bj \
+    --server-name bijectivity.net --port 8002
+
+uv run flubpub deploy --site dwm                 # stand up the install
+uv run flubpub --site bj push notes.md           # publish to bj
+uv run flubpub list                              # uses default site
+```
+
+The Python package contains no site-specific names — keys live entirely in
+your config. `--remote root@host:/abs/path` is still available as a raw
+escape hatch; `flubpub serve` still runs locally for previewing.
 
 See [`CLAUDE.md`](CLAUDE.md) for the full command surface and architecture.
 

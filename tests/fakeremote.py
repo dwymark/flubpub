@@ -28,6 +28,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import shlex
 import shutil
 import stat
 import sys
@@ -61,9 +62,16 @@ class FakeRemote:
       verbose:  if True, shims print a one-line summary to stderr per call.
     """
 
-    def __init__(self, prefix: str = "/opt/flubpub", verbose: bool = False):
+    # Default stubs installed when stub_system_commands=True. Each is a
+    # no-op shim that logs to the transcript. `uv` and `rsync` get their
+    # own dedicated shims with side effects; everything below is pure log.
+    DEFAULT_STUBS = ("systemctl", "nginx", "npm", "npx", "curl", "uv")
+
+    def __init__(self, prefix: str = "/opt/flubpub", verbose: bool = False,
+                 stub_system_commands: bool = False):
         self.prefix = prefix
         self.verbose = verbose or os.environ.get("FAKE_REMOTE_VERBOSE") == "1"
+        self.stub_system_commands = stub_system_commands
         self._tmp: Path | None = None
         self._installs: dict[str, Path] = {}
 
@@ -78,6 +86,10 @@ class FakeRemote:
         self.actual_prefix = self._tmp / "inst" / Path(self.prefix).name  # e.g. <tmp>/inst/flubpub
         self._write_shim("ssh", PROJECT_ROOT / "tests" / "_ssh_shim.py")
         self._write_shim("scp", PROJECT_ROOT / "tests" / "_scp_shim.py")
+        self._write_shim("rsync", PROJECT_ROOT / "tests" / "_rsync_shim.py")
+        if self.stub_system_commands:
+            for name in self.DEFAULT_STUBS:
+                self._write_shim(name, PROJECT_ROOT / "tests" / "_cmd_shim.py")
         return self
 
     def __exit__(self, *exc):
@@ -134,6 +146,16 @@ class FakeRemote:
     def install_path(self, key: str) -> Path:
         return self._installs[key]
 
+    def make_etc(self) -> Path:
+        """Create a fake /etc tree with the directories deploy.sh writes into.
+        Returned path is suitable for ETC=<path> when invoking deploy.sh."""
+        assert self._tmp is not None
+        etc = self._tmp / "etc"
+        (etc / "systemd" / "system").mkdir(parents=True, exist_ok=True)
+        (etc / "nginx" / "sites-available").mkdir(parents=True, exist_ok=True)
+        (etc / "nginx" / "sites-enabled").mkdir(parents=True, exist_ok=True)
+        return etc
+
     def remote_spec(self, key: str, host: str = "root@fake.invalid") -> str:
         """Return the `--remote` value that targets the named install."""
         return f"{host}:{self.prefix}-{key}"
@@ -160,9 +182,13 @@ class FakeRemote:
             return
         t0 = entries[0].ts
         file.write(f"\n=== transcript ({len(entries)} call(s), prefix={self.prefix}) ===\n")
+        op_color = {
+            "ssh": "\033[36m", "scp": "\033[35m",
+            "rsync": "\033[33m", "cmd": "\033[32m",
+        }
         for i, e in enumerate(entries, 1):
             rel_t = e.ts - t0
-            color = "\033[36m" if e.op == "ssh" else "\033[35m"
+            color = op_color.get(e.op, "")
             head = f"{color}{i:>2}. [{rel_t:5.2f}s] {e.op}→{e.host}\033[0m"
             tail = f"\033[2m({e.duration_ms}ms, rc={e.rc})\033[0m"
             file.write(f"  {head} {tail}\n")
@@ -174,22 +200,33 @@ class FakeRemote:
                     file.write(f"      → actual:   {parsed.get('actual_dir')}\n")
                     file.write(f"      args:       {parsed.get('args')}\n")
                 else:
-                    file.write(f"      cmd: {parsed.get('translated', e.raw.get('remote_cmd', ''))}\n")
-            else:
+                    cmd = parsed.get('translated', e.raw.get('remote_cmd', '')) or "(stdin heredoc)"
+                    file.write(f"      cmd: {cmd[:120]}{'...' if len(cmd) > 120 else ''}\n")
+            elif e.op == "scp":
                 srcs = ", ".join(os.path.basename(s) for s in e.raw.get("srcs", []))
                 file.write(f"      {srcs}  ({e.raw.get('bytes', 0)}B)\n")
                 file.write(f"      → {e.raw.get('translated_dst')}\n")
+            elif e.op == "rsync":
+                trans = e.raw.get("translations", [])
+                if trans:
+                    for src, dst in trans:
+                        file.write(f"      {src} → {dst}\n")
+                else:
+                    file.write(f"      argv: {' '.join(e.raw.get('argv', []))}\n")
+            elif e.op == "cmd":
+                file.write(f"      {e.raw.get('name', '?')} {' '.join(e.raw.get('args', []))}\n")
         file.write("=== end transcript ===\n")
 
     # ----- internals -----
 
     def _write_shim(self, name: str, source: Path) -> None:
         target = self._tmp / "bin" / name
-        # Wrapper that exec's the python shim, so we don't have to worry
-        # about shebang lines being honored on every system.
+        # Wrapper exports FAKE_CMD_NAME so the python shim can identify which
+        # command it was invoked as (sys.argv[0] would just be the .py path).
         wrapper = textwrap.dedent(f"""\
             #!/usr/bin/env bash
-            exec {sys.executable} {source} "$@"
+            export FAKE_CMD_NAME={shlex.quote(name)}
+            exec {shlex.quote(sys.executable)} {shlex.quote(str(source))} "$@"
         """)
         target.write_text(wrapper)
         target.chmod(target.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)

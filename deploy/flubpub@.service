@@ -1,0 +1,16 @@
+[Unit]
+Description=flubpub web server (%i)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/flubpub-%i
+EnvironmentFile=/opt/flubpub-%i/instance.env
+ExecStart=/opt/flubpub-%i/.venv/bin/uvicorn flubpub.server:app --host 127.0.0.1 --port ${FLUBPUB_PORT}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

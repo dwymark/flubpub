@@ -87,9 +87,27 @@ if m:
     else:
         proc = _Stub(stdout=f"[fake-flubpub] dir={actual_dir} args={args_str}\n")
 else:
-    proc = subprocess.run(["bash", "-c", translated], capture_output=True, text=True)
+    # Read the heredoc body (if any) and apply the same prefix translation
+    # to it that we did to remote_cmd — otherwise `cd /opt/flubpub-bj`
+    # inside the heredoc body would target a path the test process can't
+    # write to.
+    stdin_data = "" if sys.stdin.isatty() else sys.stdin.read()
+    stdin_translated = stdin_data.replace(PREFIX, ACTUAL)
+    proc = subprocess.run(
+        ["bash", "-c", translated],
+        input=stdin_translated,
+        stdout=sys.stdout, stderr=sys.stderr,
+        text=True,
+    )
     parsed_kind = "bash"
-    parsed = {"translated": translated}
+    parsed = {
+        "translated": translated,
+        "stdin_bytes": len(stdin_data),
+        "stdin_translated_bytes": len(stdin_translated),
+        # Capture (truncated) pre- and post- translation stdin for assertions.
+        "stdin_pre": stdin_data[:8192],
+        "stdin_post": stdin_translated[:8192],
+    }
 
 dt_ms = round((time.monotonic() - t0) * 1000, 1)
 
@@ -102,8 +120,8 @@ entry = {
     "parsed": parsed,
     "rc": proc.returncode,
     "duration_ms": dt_ms,
-    "stdout_len": len(proc.stdout),
-    "stderr_len": len(proc.stderr),
+    "stdout_len": len(proc.stdout) if proc.stdout is not None else 0,
+    "stderr_len": len(proc.stderr) if proc.stderr is not None else 0,
 }
 with open(TRANSCRIPT, "a") as f:
     f.write(json.dumps(entry) + "\n")
@@ -115,6 +133,8 @@ if VERBOSE:
         f"{parsed.get('args') or parsed.get('translated', '')}\n"
     )
 
-sys.stdout.write(proc.stdout)
-sys.stderr.write(proc.stderr)
+if proc.stdout is not None:
+    sys.stdout.write(proc.stdout)
+if proc.stderr is not None:
+    sys.stderr.write(proc.stderr)
 sys.exit(proc.returncode)

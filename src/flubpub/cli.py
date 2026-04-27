@@ -316,24 +316,11 @@ def _remote_flubpub(remote: str, remote_dir: str, args: str,
         click.echo(result.stdout.strip())
 
 
-def _upload_file_and_refs(remote: str, file_path: Path):
-    """SCP a file (and its local refs if .md/.html) to the remote tmp dir."""
-    _scp_to(remote, file_path, f"{REMOTE_TMP_PREFIX}{file_path.name}")
-    if file_path.suffix.lower() in (".md", ".html"):
-        assets, sub_pages = collect_all_refs(file_path)
-        for ref in assets + sub_pages:
-            _scp_to(remote, ref, f"{REMOTE_TMP_PREFIX}{ref.name}")
-
-
 def _upload_bundle_to_remote(remote: str, file_path: Path) -> str:
     """SCP a file plus its sibling assets into a fresh remote tempdir,
     preserving original basenames so the remote-side scan resolves relative
     refs correctly. Returns the remote path of the entry file. The dir
-    matches the flubpub-upload-* glob, so existing cleanup catches it.
-
-    This is the right shape for files with relative asset refs (CSS, JS,
-    images) — `_upload_file_and_refs` flattens everything into /tmp with
-    a prefix, which breaks relative resolution on the remote."""
+    matches the flubpub-upload-* glob, so existing cleanup catches it."""
     import uuid
     rdir = f"{REMOTE_TMP_PREFIX}dir-{uuid.uuid4().hex[:8]}"
     _ssh_run(remote, f"mkdir -p {shlex.quote(rdir)}")
@@ -385,8 +372,8 @@ def push(ctx, file_path, title, slug, theme, color_scheme):
 
     remote = ctx.obj.get("remote")
     if remote:
-        _upload_file_and_refs(remote, path)
-        args = f"push {shlex.quote(REMOTE_TMP_PREFIX + path.name)} --title {shlex.quote(title)}"
+        remote_path = _upload_bundle_to_remote(remote, path)
+        args = f"push {shlex.quote(remote_path)} --title {shlex.quote(title)}"
         if slug:
             args += f" --slug {shlex.quote(slug)}"
         if theme:
@@ -426,7 +413,8 @@ def push(ctx, file_path, title, slug, theme, color_scheme):
                 for s in sub_pages:
                     click.echo(f"    ./{s.relative_to(path.parent.resolve())}")
             click.echo()
-            click.confirm("These files will be uploaded. Continue?", abort=True)
+            if sys.stdin.isatty():
+                click.confirm("These files will be uploaded. Continue?", abort=True)
 
     server = ctx.obj["server"]
     with httpx.Client() as client:
@@ -570,8 +558,8 @@ def revise(ctx, slug, file_path, title, theme, color_scheme):
 
     remote = ctx.obj.get("remote")
     if remote:
-        _upload_file_and_refs(remote, path)
-        args = f"revise {shlex.quote(slug)} {shlex.quote(REMOTE_TMP_PREFIX + path.name)}"
+        remote_path = _upload_bundle_to_remote(remote, path)
+        args = f"revise {shlex.quote(slug)} {shlex.quote(remote_path)}"
         if title:
             args += f" --title {shlex.quote(title)}"
         if theme:

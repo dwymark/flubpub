@@ -296,7 +296,7 @@ def _scp_to(remote: str, local_path: Path, remote_path: str):
 
 
 def _remote_cleanup(remote: str):
-    _ssh_run(remote, f"rm -f {REMOTE_TMP_PREFIX}*")
+    _ssh_run(remote, f"rm -rf {REMOTE_TMP_PREFIX}*")
 
 
 def _remote_flubpub(remote: str, remote_dir: str, args: str,
@@ -323,6 +323,26 @@ def _upload_file_and_refs(remote: str, file_path: Path):
         assets, sub_pages = collect_all_refs(file_path)
         for ref in assets + sub_pages:
             _scp_to(remote, ref, f"{REMOTE_TMP_PREFIX}{ref.name}")
+
+
+def _upload_bundle_to_remote(remote: str, file_path: Path) -> str:
+    """SCP a file plus its sibling assets into a fresh remote tempdir,
+    preserving original basenames so the remote-side scan resolves relative
+    refs correctly. Returns the remote path of the entry file. The dir
+    matches the flubpub-upload-* glob, so existing cleanup catches it.
+
+    This is the right shape for files with relative asset refs (CSS, JS,
+    images) — `_upload_file_and_refs` flattens everything into /tmp with
+    a prefix, which breaks relative resolution on the remote."""
+    import uuid
+    rdir = f"{REMOTE_TMP_PREFIX}dir-{uuid.uuid4().hex[:8]}"
+    _ssh_run(remote, f"mkdir -p {shlex.quote(rdir)}")
+    _scp_to(remote, file_path, f"{rdir}/{file_path.name}")
+    if file_path.suffix.lower() in (".md", ".html"):
+        assets, sub_pages = collect_all_refs(file_path)
+        for ref in assets + sub_pages:
+            _scp_to(remote, ref, f"{rdir}/{ref.name}")
+    return f"{rdir}/{file_path.name}"
 
 
 @click.group()
@@ -669,8 +689,8 @@ def set_index(ctx, file_path, vars_file):
             tf.write(rendered)
             rendered_path = Path(tf.name)
         try:
-            _upload_file_and_refs(remote, rendered_path)
-            args = f"set-index {shlex.quote(REMOTE_TMP_PREFIX + rendered_path.name)}"
+            remote_path = _upload_bundle_to_remote(remote, rendered_path)
+            args = f"set-index {shlex.quote(remote_path)}"
             _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
             _remote_cleanup(remote)
         finally:
@@ -686,7 +706,8 @@ def set_index(ctx, file_path, vars_file):
         for a in assets:
             click.echo(f"  ./{a.relative_to(path.parent.resolve())}")
         click.echo()
-        click.confirm("These files will be uploaded. Continue?", abort=True)
+        if sys.stdin.isatty():
+            click.confirm("These files will be uploaded. Continue?", abort=True)
 
     server = ctx.obj["server"]
     with httpx.Client() as client:

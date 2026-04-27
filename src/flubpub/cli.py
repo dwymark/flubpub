@@ -215,8 +215,21 @@ def rewrite_refs(content: str, slug: str, asset_paths: list[Path], sub_paths: li
     return _rewrite_md(content, slug, asset_paths, sub_paths)
 
 
-REMOTE_FLUBPUB_DIR = "/opt/flubpub"
+DEFAULT_REMOTE_DIR = "/opt/flubpub"
 REMOTE_TMP_PREFIX = "/tmp/flubpub-upload-"
+
+
+def _parse_remote(spec: str) -> tuple[str, str]:
+    """Split `user@host[:/abs/path]` into (host, install_dir).
+
+    The path component is optional and must be absolute when present;
+    otherwise the legacy default is applied.
+    """
+    if ":" in spec:
+        host, _, path = spec.rpartition(":")
+        if path.startswith("/"):
+            return host, path
+    return spec, DEFAULT_REMOTE_DIR
 
 
 def _ssh_run(remote: str, cmd: str) -> subprocess.CompletedProcess:
@@ -241,9 +254,9 @@ def _remote_cleanup(remote: str):
     _ssh_run(remote, f"rm -f {REMOTE_TMP_PREFIX}*")
 
 
-def _remote_flubpub(remote: str, args: str):
+def _remote_flubpub(remote: str, remote_dir: str, args: str):
     """Run a flubpub CLI command on the remote and print output."""
-    cmd = f'PATH="$HOME/.local/bin:$PATH" && cd {REMOTE_FLUBPUB_DIR} && uv run flubpub {args}'
+    cmd = f'PATH="$HOME/.local/bin:$PATH" && cd {shlex.quote(remote_dir)} && uv run flubpub {args}'
     result = _ssh_run(remote, cmd)
     if result.stdout:
         click.echo(result.stdout.strip())
@@ -265,7 +278,13 @@ def _upload_file_and_refs(remote: str, file_path: Path):
 def cli(ctx, server, remote):
     ctx.ensure_object(dict)
     ctx.obj["server"] = server
-    ctx.obj["remote"] = remote
+    if remote:
+        host, remote_dir = _parse_remote(remote)
+        ctx.obj["remote"] = host
+        ctx.obj["remote_dir"] = remote_dir
+    else:
+        ctx.obj["remote"] = None
+        ctx.obj["remote_dir"] = DEFAULT_REMOTE_DIR
 
 
 @cli.command()
@@ -293,7 +312,7 @@ def push(ctx, file_path, title, slug, theme, color_scheme):
             args += f" --theme {shlex.quote(theme)}"
         if color_scheme:
             args += f" --color-scheme {shlex.quote(color_scheme)}"
-        _remote_flubpub(remote, args)
+        _remote_flubpub(remote, ctx.obj["remote_dir"], args)
         _remote_cleanup(remote)
         return
 
@@ -404,7 +423,7 @@ def list_pages(ctx):
     """List published pages."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, "list")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], "list")
         return
 
     with httpx.Client() as client:
@@ -436,7 +455,7 @@ def get(ctx, slug):
     """Get full details of a published page by slug."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, f"get {shlex.quote(slug)}")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], f"get {shlex.quote(slug)}")
         return
 
     with httpx.Client() as client:
@@ -478,7 +497,7 @@ def revise(ctx, slug, file_path, title, theme, color_scheme):
             args += f" --theme {shlex.quote(theme)}"
         if color_scheme:
             args += f" --color-scheme {shlex.quote(color_scheme)}"
-        _remote_flubpub(remote, args)
+        _remote_flubpub(remote, ctx.obj["remote_dir"], args)
         _remote_cleanup(remote)
         return
 
@@ -520,7 +539,7 @@ def delete(ctx, slug):
     """Delete a published page by slug."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, f"delete {shlex.quote(slug)}")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], f"delete {shlex.quote(slug)}")
         return
 
     with httpx.Client() as client:
@@ -591,7 +610,7 @@ def set_index(ctx, file_path, vars_file):
         try:
             _upload_file_and_refs(remote, rendered_path)
             args = f"set-index {shlex.quote(REMOTE_TMP_PREFIX + rendered_path.name)}"
-            _remote_flubpub(remote, args)
+            _remote_flubpub(remote, ctx.obj["remote_dir"], args)
             _remote_cleanup(remote)
         finally:
             rendered_path.unlink(missing_ok=True)
@@ -639,7 +658,7 @@ def unset_index(ctx):
     """Remove the custom index and restore the default."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, "unset-index")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], "unset-index")
         return
 
     with httpx.Client() as client:
@@ -781,7 +800,7 @@ def index_payload_cmd(ctx, slug):
     """Print the filtered/sorted JSON payload an index page would render."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, f"index-payload {shlex.quote(slug)}")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], f"index-payload {shlex.quote(slug)}")
         return
 
     from flubpub.index_payload import build_index_payload

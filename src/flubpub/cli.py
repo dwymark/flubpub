@@ -248,17 +248,18 @@ def _load_sites_config() -> dict:
         return {}
 
 
-def _resolve_remote(remote: str | None, site: str | None) -> str | None:
+def _resolve_remote(remote: str | None, site: str | None) -> tuple[str | None, int | None]:
     """Resolve --remote / --site / default-from-config / FLUBPUB_SITE env into
-    a concrete remote spec. Returns None for local-HTTP mode."""
+    a (remote_spec, port) tuple. Returns (None, None) for local-HTTP mode.
+    The port is taken from the registry when --site is used (or default)."""
     if remote:
-        return remote
+        return remote, None
     site = site or os.environ.get("FLUBPUB_SITE")
     cfg = _load_sites_config()
     if not site:
         site = cfg.get("default")
     if not site:
-        return None
+        return None, None
     sites = cfg.get("sites") or {}
     entry = sites.get(site)
     if not entry:
@@ -272,7 +273,8 @@ def _resolve_remote(remote: str | None, site: str | None) -> str | None:
     if not spec:
         click.echo(f"Site '{site}' has no 'remote' key.", err=True)
         sys.exit(1)
-    return spec
+    port = entry.get("port") if isinstance(entry, dict) else None
+    return spec, port
 
 
 def _ssh_run(remote: str, cmd: str) -> subprocess.CompletedProcess:
@@ -297,9 +299,18 @@ def _remote_cleanup(remote: str):
     _ssh_run(remote, f"rm -f {REMOTE_TMP_PREFIX}*")
 
 
-def _remote_flubpub(remote: str, remote_dir: str, args: str):
-    """Run a flubpub CLI command on the remote and print output."""
-    cmd = f'PATH="$HOME/.local/bin:$PATH" && cd {shlex.quote(remote_dir)} && uv run flubpub {args}'
+def _remote_flubpub(remote: str, remote_dir: str, args: str,
+                    remote_port: int | None = None):
+    """Run a flubpub CLI command on the remote and print output.
+
+    When `remote_port` is given, the remote CLI is told to talk to that port
+    instead of the default 8000 — required for multi-install hosts where
+    each site's uvicorn binds a different port."""
+    server_flag = f"--server http://localhost:{remote_port} " if remote_port else ""
+    cmd = (
+        f'PATH="$HOME/.local/bin:$PATH" && cd {shlex.quote(remote_dir)} '
+        f'&& uv run flubpub {server_flag}{args}'
+    )
     result = _ssh_run(remote, cmd)
     if result.stdout:
         click.echo(result.stdout.strip())
@@ -325,14 +336,16 @@ def _upload_file_and_refs(remote: str, file_path: Path):
 def cli(ctx, server, remote, site):
     ctx.ensure_object(dict)
     ctx.obj["server"] = server
-    resolved = _resolve_remote(remote, site)
-    if resolved:
-        host, remote_dir = _parse_remote(resolved)
+    resolved_spec, resolved_port = _resolve_remote(remote, site)
+    if resolved_spec:
+        host, remote_dir = _parse_remote(resolved_spec)
         ctx.obj["remote"] = host
         ctx.obj["remote_dir"] = remote_dir
+        ctx.obj["remote_port"] = resolved_port
     else:
         ctx.obj["remote"] = None
         ctx.obj["remote_dir"] = DEFAULT_REMOTE_DIR
+        ctx.obj["remote_port"] = None
 
 
 @cli.command()
@@ -360,7 +373,7 @@ def push(ctx, file_path, title, slug, theme, color_scheme):
             args += f" --theme {shlex.quote(theme)}"
         if color_scheme:
             args += f" --color-scheme {shlex.quote(color_scheme)}"
-        _remote_flubpub(remote, ctx.obj["remote_dir"], args)
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
         return
 
@@ -471,7 +484,7 @@ def list_pages(ctx):
     """List published pages."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, ctx.obj["remote_dir"], "list")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args="list")
         return
 
     with httpx.Client() as client:
@@ -503,7 +516,7 @@ def get(ctx, slug):
     """Get full details of a published page by slug."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, ctx.obj["remote_dir"], f"get {shlex.quote(slug)}")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=f"get {shlex.quote(slug)}")
         return
 
     with httpx.Client() as client:
@@ -545,7 +558,7 @@ def revise(ctx, slug, file_path, title, theme, color_scheme):
             args += f" --theme {shlex.quote(theme)}"
         if color_scheme:
             args += f" --color-scheme {shlex.quote(color_scheme)}"
-        _remote_flubpub(remote, ctx.obj["remote_dir"], args)
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
         return
 
@@ -587,7 +600,7 @@ def delete(ctx, slug):
     """Delete a published page by slug."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, ctx.obj["remote_dir"], f"delete {shlex.quote(slug)}")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=f"delete {shlex.quote(slug)}")
         return
 
     with httpx.Client() as client:
@@ -658,7 +671,7 @@ def set_index(ctx, file_path, vars_file):
         try:
             _upload_file_and_refs(remote, rendered_path)
             args = f"set-index {shlex.quote(REMOTE_TMP_PREFIX + rendered_path.name)}"
-            _remote_flubpub(remote, ctx.obj["remote_dir"], args)
+            _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
             _remote_cleanup(remote)
         finally:
             rendered_path.unlink(missing_ok=True)
@@ -706,7 +719,7 @@ def unset_index(ctx):
     """Remove the custom index and restore the default."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, ctx.obj["remote_dir"], "unset-index")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args="unset-index")
         return
 
     with httpx.Client() as client:
@@ -848,7 +861,7 @@ def index_payload_cmd(ctx, slug):
     """Print the filtered/sorted JSON payload an index page would render."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, ctx.obj["remote_dir"], f"index-payload {shlex.quote(slug)}")
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=f"index-payload {shlex.quote(slug)}")
         return
 
     from flubpub.index_payload import build_index_payload
@@ -892,6 +905,59 @@ def serve(host, port):
     uvicorn.run("flubpub.server:app", host=host, port=port)
 
 
+@cli.command()
+@click.option("--site", "site_key", default=None,
+              help="Site key from the registry. Defaults to [default].")
+@click.option("--script", default="deploy/deploy.sh", show_default=True,
+              help="Path to the deploy script.")
+def deploy(site_key, script):
+    """Deploy a site from the registry. Reads remote/server_name/port from
+    ~/.config/flubpub/sites.toml and shells out to deploy.sh with the
+    derived env vars."""
+    cfg = _load_sites_config()
+    site_key = site_key or os.environ.get("FLUBPUB_SITE") or cfg.get("default")
+    if not site_key:
+        click.echo("No --site given and no [default] in config.", err=True)
+        sys.exit(1)
+    entry = (cfg.get("sites") or {}).get(site_key)
+    if not entry:
+        click.echo(f"Site '{site_key}' not found in {SITES_CONFIG_PATH}.", err=True)
+        sys.exit(1)
+    missing = [k for k in ("remote", "server_name", "port") if not entry.get(k)]
+    if missing:
+        click.echo(
+            f"Site '{site_key}' is missing required keys for deploy: {missing}. "
+            f"Run `flubpub sites add {site_key} <remote> "
+            f"--server-name <host> --port <n>` to fill them in.",
+            err=True,
+        )
+        sys.exit(1)
+    host, install_dir = _parse_remote(entry["remote"])
+    user, _, hostname = host.partition("@")
+    if not hostname:
+        user, hostname = "root", host
+
+    script_path = Path(script)
+    if not script_path.is_file():
+        click.echo(f"Deploy script not found at {script_path}", err=True)
+        sys.exit(1)
+
+    env = {
+        **os.environ,
+        "SITE": site_key,
+        "REMOTE_USER": user,
+        "REMOTE_HOST": hostname,
+        "REMOTE_DIR": install_dir,
+        "SERVER_NAME": entry["server_name"],
+        "PORT": str(entry["port"]),
+    }
+    click.echo(f"Deploying '{site_key}' via {script_path}")
+    click.echo(f"  → {user}@{hostname}:{install_dir}")
+    click.echo(f"  → {entry['server_name']}:{entry['port']}")
+    rc = subprocess.run(["bash", str(script_path)], env=env).returncode
+    sys.exit(rc)
+
+
 @cli.group()
 def sites():
     """Manage the sites registry at ~/.config/flubpub/sites.toml."""
@@ -905,7 +971,10 @@ def _save_sites_config(cfg: dict) -> None:
     for key, entry in (cfg.get("sites") or {}).items():
         lines.append(f'\n[sites.{key}]\n')
         for k, v in entry.items():
-            lines.append(f'{k} = "{v}"\n')
+            if isinstance(v, int):
+                lines.append(f'{k} = {v}\n')
+            else:
+                lines.append(f'{k} = "{v}"\n')
     SITES_CONFIG_PATH.write_text("".join(lines))
 
 
@@ -931,16 +1000,31 @@ def sites_list():
 @sites.command(name="add")
 @click.argument("key")
 @click.argument("remote_spec")
+@click.option("--server-name", default=None,
+              help="Public hostname nginx should match (e.g. example.com). "
+                   "Required for `flubpub deploy`.")
+@click.option("--port", type=int, default=None,
+              help="TCP port for this site's uvicorn (e.g. 8001). "
+                   "Required for `flubpub deploy`.")
 @click.option("--default", "make_default", is_flag=True, default=False,
               help="Also set this site as the default.")
-def sites_add(key, remote_spec, make_default):
+def sites_add(key, remote_spec, server_name, port, make_default):
     """Add or update a site entry. REMOTE_SPEC is e.g. root@host:/opt/flubpub-key."""
     cfg = _load_sites_config()
-    cfg.setdefault("sites", {})[key] = {"remote": remote_spec}
+    entry = cfg.setdefault("sites", {}).setdefault(key, {})
+    entry["remote"] = remote_spec
+    if server_name is not None:
+        entry["server_name"] = server_name
+    if port is not None:
+        entry["port"] = port
     if make_default or "default" not in cfg:
         cfg["default"] = key
     _save_sites_config(cfg)
     click.echo(f"Site '{key}' → {remote_spec}")
+    if server_name:
+        click.echo(f"  server_name: {server_name}")
+    if port:
+        click.echo(f"  port:        {port}")
     if cfg.get("default") == key:
         click.echo(f"(default)")
 

@@ -21,7 +21,7 @@ REMOTE_HOST=${REMOTE_HOST:?REMOTE_HOST must be set}
 SERVER_NAME=${SERVER_NAME:?SERVER_NAME must be set (the host nginx will match)}
 PORT=${PORT:?PORT must be set (a free TCP port for this install)}
 REMOTE_USER=${REMOTE_USER:-root}
-REMOTE_DIR=/opt/flubpub-${SITE}
+REMOTE_DIR=${REMOTE_DIR:-/opt/flubpub-${SITE}}
 # Override for testing; production never sets this.
 ETC=${ETC:-/etc}
 
@@ -62,7 +62,7 @@ FLUBPUB_PORT=${PORT}
 EOF
 
 # Set up venv and install the wheel
-uv venv "${REMOTE_DIR}/.venv"
+uv venv --clear "${REMOTE_DIR}/.venv"
 uv pip install --quiet --force-reinstall \
     --python "${REMOTE_DIR}/.venv/bin/python" \
     "${REMOTE_DIR}"/dist/*.whl

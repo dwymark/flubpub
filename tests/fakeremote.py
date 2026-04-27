@@ -65,7 +65,8 @@ class FakeRemote:
     # Default stubs installed when stub_system_commands=True. Each is a
     # no-op shim that logs to the transcript. `uv` and `rsync` get their
     # own dedicated shims with side effects; everything below is pure log.
-    DEFAULT_STUBS = ("systemctl", "nginx", "npm", "npx", "curl", "uv")
+    DEFAULT_STUBS = ("systemctl", "nginx", "npm", "npx", "curl", "uv",
+                     "certbot", "apt-get")
 
     def __init__(self, prefix: str = "/opt/flubpub", verbose: bool = False,
                  stub_system_commands: bool = False):

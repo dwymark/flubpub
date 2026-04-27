@@ -31,9 +31,11 @@ cd site && npx @11ty/eleventy
 
 # Configure once, with everything deploy needs:
 uv run flubpub sites add dwm root@danielwymark.com:/opt/flubpub-dwm \
-    --server-name danielwymark.com --port 8001 --default
+    --server-name danielwymark.com --port 8001 --default --email you@example.com
 uv run flubpub sites add bj  root@danielwymark.com:/opt/flubpub-bj \
     --server-name bijectivity.net --port 8002
+# or set acme_email = "you@example.com" at the top of sites.toml to apply
+# the same address to every site
 
 uv run flubpub sites list                    # inspect; * marks default
 uv run flubpub sites set-default bj          # change default
@@ -78,7 +80,8 @@ SITE=dwm REMOTE_HOST=danielwymark.com SERVER_NAME=danielwymark.com PORT=8001 \
 **Deploy** (`deploy/`):
 - `flubpub@.service` — templated systemd unit. `%i` substitutes the site key into `WorkingDirectory=/opt/flubpub-%i`, `EnvironmentFile=/opt/flubpub-%i/instance.env`. Each instance reads `FLUBPUB_PORT`, `FLUBPUB_DATA_DIR`, `FLUBPUB_SITE_DIR` from its own `instance.env`. One unit file on disk; many instances enabled (`flubpub@dwm`, `flubpub@bj`, …).
 - `nginx-site.conf.template` — three substitution points (`__SERVER_NAME__`, `__INSTALL_ROOT__`, `__PORT__`) rendered per-site by sed during deploy. Result lands at `/etc/nginx/sites-available/flubpub-<key>` with a sites-enabled symlink.
-- `deploy.sh` — requires `SITE`, `REMOTE_HOST`, `SERVER_NAME`, `PORT`. Builds wheel locally, rsyncs, writes `instance.env` on the remote, installs the templated unit, renders the nginx site, reloads both daemons. Idempotent. Honors `REMOTE_DIR` override (set by `flubpub deploy`), `REMOTE_USER` (defaults `root`), and `ETC` (defaults `/etc`; only used by tests).
+- `deploy.sh` — requires `SITE`, `REMOTE_HOST`, `SERVER_NAME`, `PORT`. Builds wheel locally, rsyncs, writes `instance.env` on the remote, installs the templated unit, renders the nginx site, reloads both daemons. Idempotent. Honors `REMOTE_DIR` override (set by `flubpub deploy`), `REMOTE_USER` (defaults `root`), `ETC` (defaults `/etc`; only used by tests), and `EMAIL` (if set, runs `certbot --nginx -d $SERVER_NAME -m $EMAIL --redirect` after the HTTP config is reloaded; certbot installs its own renewal timer).
+- **TLS:** Opt-in via `EMAIL`. The nginx template ships HTTP-only; `certbot --nginx` rewrites it on first run to add the 443 block and 80→443 redirect. On re-deploy, deploy.sh re-renders the HTTP-only config, then certbot re-applies its edits — net result is the same HTTPS config, with churn only during the deploy window. `flubpub deploy` resolves `EMAIL` from per-site `email`, top-level `acme_email`, or the `EMAIL` env var.
 
 **Test harness** (`tests/`): A `FakeRemote` context manager shims `ssh`/`scp`/`rsync` (and optionally system commands like `systemctl`/`nginx`/`npm`/`uv`) onto `PATH`, rewrites a configurable install-prefix to a temp directory, and writes a JSONL transcript of every call. `smoke_test_remote.py`, `smoke_test_sites.py`, and `smoke_test_deploy.py` exercise the routing, registry, and full deploy pipeline without touching a real VPS. Run with `uv run python3 tests/smoke_test_<name>.py`.
 
@@ -86,6 +89,7 @@ SITE=dwm REMOTE_HOST=danielwymark.com SERVER_NAME=danielwymark.com PORT=8001 \
 
 - Deployed to `danielwymark.com` (DigitalOcean VPS, Ubuntu)
 - Two installs: `/opt/flubpub-dwm/` (port 8001, served at `danielwymark.com`) and `/opt/flubpub-bj/` (port 8002, served at `bijectivity.net`)
+- Both on HTTPS via Let's Encrypt; certs at `/etc/letsencrypt/live/{danielwymark.com,bijectivity.net}/`. Renewal handled by the `certbot.timer` systemd unit (preinstalled with the certbot package).
 - Services: `systemctl status flubpub@dwm flubpub@bj`
 - Logs: `journalctl -u flubpub@dwm` / `journalctl -u flubpub@bj`
 - nginx configs: `/etc/nginx/sites-enabled/flubpub-dwm` and `/etc/nginx/sites-enabled/flubpub-bj` (each with explicit `server_name`, no catch-all)

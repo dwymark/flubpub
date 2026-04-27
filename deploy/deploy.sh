@@ -12,8 +12,12 @@
 #
 # Optional:
 #   REMOTE_USER  defaults to root.
+#   EMAIL        if set, request a Let's Encrypt cert for SERVER_NAME via
+#                `certbot --nginx`. Without it, the site is HTTP-only.
 #
 # Idempotent: re-running against an existing install rebuilds and restarts.
+# Re-running with EMAIL set is also idempotent — certbot detects the
+# existing cert and only re-applies its nginx edits.
 set -euo pipefail
 
 SITE=${SITE:?SITE must be set (e.g. dwm, bj)}
@@ -22,6 +26,7 @@ SERVER_NAME=${SERVER_NAME:?SERVER_NAME must be set (the host nginx will match)}
 PORT=${PORT:?PORT must be set (a free TCP port for this install)}
 REMOTE_USER=${REMOTE_USER:-root}
 REMOTE_DIR=${REMOTE_DIR:-/opt/flubpub-${SITE}}
+EMAIL=${EMAIL:-}
 # Override for testing; production never sets this.
 ETC=${ETC:-/etc}
 
@@ -29,6 +34,11 @@ echo "Deploying site '${SITE}'"
 echo "  remote:   ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
 echo "  hostname: ${SERVER_NAME}"
 echo "  port:     ${PORT}"
+if [[ -n "${EMAIL}" ]]; then
+    echo "  tls:      certbot --nginx (email=${EMAIL})"
+else
+    echo "  tls:      none (set EMAIL to enable Let's Encrypt)"
+fi
 
 echo "Building package..."
 uv build
@@ -90,6 +100,20 @@ ln -sf "${ETC}/nginx/sites-available/flubpub-${SITE}" \
        "${ETC}/nginx/sites-enabled/flubpub-${SITE}"
 nginx -t
 systemctl reload nginx
+
+# Optional TLS via Let's Encrypt. Idempotent: certbot --nginx is a no-op
+# (beyond re-applying its config edits) when a valid cert already exists.
+if [[ -n "${EMAIL}" ]]; then
+    if ! command -v certbot &>/dev/null; then
+        echo "Installing certbot..."
+        apt-get update -qq
+        apt-get install -y -qq certbot python3-certbot-nginx
+    fi
+    certbot --nginx \
+        -d "${SERVER_NAME}" \
+        -m "${EMAIL}" \
+        --agree-tos --non-interactive --redirect
+fi
 DEPLOY
 
 echo "Deployed site '${SITE}' successfully."

@@ -32,7 +32,7 @@ from tests.fakeremote import FakeRemote
 
 
 def run_deploy(site: str, server_name: str, port: str, fr: FakeRemote, etc: Path,
-               cwd: Path) -> subprocess.CompletedProcess:
+               cwd: Path, email: str = "") -> subprocess.CompletedProcess:
     env = {
         **fr.env,
         "SITE": site,
@@ -40,6 +40,7 @@ def run_deploy(site: str, server_name: str, port: str, fr: FakeRemote, etc: Path
         "SERVER_NAME": server_name,
         "PORT": port,
         "ETC": str(etc),
+        "EMAIL": email,
     }
     # Stream output live so a hang is diagnosable. stdin=DEVNULL prevents
     # the inner bash heredoc from getting confused by an inherited terminal.
@@ -58,13 +59,13 @@ def main() -> None:
     with FakeRemote(verbose=True, stub_system_commands=True) as fr:
         etc = fr.make_etc()
 
-        print("\n--- deploying site 'dwm' ---")
+        print("\n--- deploying site 'dwm' (with TLS) ---")
         proc = run_deploy("dwm", "danielwymark.com", "8001", fr, etc,
-                          cwd=project_root)
+                          cwd=project_root, email="ddw@danielwymark.com")
         if proc.returncode != 0:
             failures.append(f"dwm deploy rc={proc.returncode}")
 
-        print("\n--- deploying site 'bj' ---")
+        print("\n--- deploying site 'bj' (no TLS) ---")
         proc = run_deploy("bj", "bijectivity.net", "8002", fr, etc,
                           cwd=project_root)
         if proc.returncode != 0:
@@ -168,10 +169,25 @@ def main() -> None:
         if "dwm" in bj_body or "danielwymark" in bj_body:
             failures.append("bj nginx body leaked dwm references")
 
+        # 6b. TLS: certbot was invoked for dwm (which had EMAIL set) but NOT
+        # for bj (which didn't).
+        certbot_calls = [
+            e for e in fr.read_transcript()
+            if e.op == "cmd" and e.raw.get("name") == "certbot"
+        ]
+        certbot_joined = " | ".join(" ".join(e.raw["args"]) for e in certbot_calls)
+        for needle in ("--nginx", "-d danielwymark.com",
+                       "-m ddw@danielwymark.com",
+                       "--agree-tos", "--non-interactive", "--redirect"):
+            if needle not in certbot_joined:
+                failures.append(f"certbot never called with '{needle}'")
+        if "bijectivity.net" in certbot_joined:
+            failures.append("certbot was called for bj despite no EMAIL")
+
         # 7. Idempotence: re-deploy dwm.
         print("\n--- re-deploying 'dwm' (idempotence check) ---")
         proc = run_deploy("dwm", "danielwymark.com", "8001", fr, etc,
-                          cwd=project_root)
+                          cwd=project_root, email="ddw@danielwymark.com")
         if proc.returncode != 0:
             failures.append(f"dwm re-deploy rc={proc.returncode}")
 

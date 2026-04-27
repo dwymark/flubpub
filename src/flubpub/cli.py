@@ -942,6 +942,13 @@ def deploy(site_key, script):
         click.echo(f"Deploy script not found at {script_path}", err=True)
         sys.exit(1)
 
+    email = (
+        entry.get("email")
+        or cfg.get("acme_email")
+        or os.environ.get("EMAIL")
+        or ""
+    )
+
     env = {
         **os.environ,
         "SITE": site_key,
@@ -950,10 +957,12 @@ def deploy(site_key, script):
         "REMOTE_DIR": install_dir,
         "SERVER_NAME": entry["server_name"],
         "PORT": str(entry["port"]),
+        "EMAIL": email,
     }
     click.echo(f"Deploying '{site_key}' via {script_path}")
     click.echo(f"  → {user}@{hostname}:{install_dir}")
     click.echo(f"  → {entry['server_name']}:{entry['port']}")
+    click.echo(f"  → tls: {'certbot (' + email + ')' if email else 'http only'}")
     rc = subprocess.run(["bash", str(script_path)], env=env).returncode
     sys.exit(rc)
 
@@ -968,6 +977,8 @@ def _save_sites_config(cfg: dict) -> None:
     lines: list[str] = []
     if "default" in cfg:
         lines.append(f'default = "{cfg["default"]}"\n')
+    if "acme_email" in cfg:
+        lines.append(f'acme_email = "{cfg["acme_email"]}"\n')
     for key, entry in (cfg.get("sites") or {}).items():
         lines.append(f'\n[sites.{key}]\n')
         for k, v in entry.items():
@@ -1006,9 +1017,13 @@ def sites_list():
 @click.option("--port", type=int, default=None,
               help="TCP port for this site's uvicorn (e.g. 8001). "
                    "Required for `flubpub deploy`.")
+@click.option("--email", default=None,
+              help="ACME contact email. If set, `flubpub deploy` requests "
+                   "a Let's Encrypt cert via certbot. Falls back to top-level "
+                   "`acme_email` or the EMAIL env var.")
 @click.option("--default", "make_default", is_flag=True, default=False,
               help="Also set this site as the default.")
-def sites_add(key, remote_spec, server_name, port, make_default):
+def sites_add(key, remote_spec, server_name, port, email, make_default):
     """Add or update a site entry. REMOTE_SPEC is e.g. root@host:/opt/flubpub-key."""
     cfg = _load_sites_config()
     entry = cfg.setdefault("sites", {}).setdefault(key, {})
@@ -1017,6 +1032,8 @@ def sites_add(key, remote_spec, server_name, port, make_default):
         entry["server_name"] = server_name
     if port is not None:
         entry["port"] = port
+    if email is not None:
+        entry["email"] = email
     if make_default or "default" not in cfg:
         cfg["default"] = key
     _save_sites_config(cfg)
@@ -1025,6 +1042,8 @@ def sites_add(key, remote_spec, server_name, port, make_default):
         click.echo(f"  server_name: {server_name}")
     if port:
         click.echo(f"  port:        {port}")
+    if email:
+        click.echo(f"  email:       {email}")
     if cfg.get("default") == key:
         click.echo(f"(default)")
 

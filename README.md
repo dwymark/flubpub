@@ -23,7 +23,7 @@ deploy and publish via `--site KEY`:
 
 ```bash
 uv run flubpub sites add dwm root@host:/opt/flubpub-dwm \
-    --server-name danielwymark.com --port 8001 --default
+    --server-name danielwymark.com --port 8001 --default --email you@example.com
 uv run flubpub sites add bj  root@host:/opt/flubpub-bj \
     --server-name bijectivity.net --port 8002
 
@@ -35,6 +35,12 @@ uv run flubpub list                              # uses default site
 The Python package contains no site-specific names — keys live entirely in
 your config. `--remote root@host:/abs/path` is still available as a raw
 escape hatch; `flubpub serve` still runs locally for previewing.
+
+**TLS** is opt-in: pass `--email` to `sites add` (or set top-level
+`acme_email` in `sites.toml`, or export `EMAIL`). When set, `flubpub deploy`
+runs `certbot --nginx` on the remote to issue a Let's Encrypt cert, add a
+443 server block, and install an HTTP→HTTPS redirect. Certbot's bundled
+systemd timer handles renewal. Without an email, the site is HTTP-only.
 
 See [`CLAUDE.md`](CLAUDE.md) for the full command surface and architecture.
 

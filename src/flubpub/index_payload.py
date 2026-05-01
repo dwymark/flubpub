@@ -71,7 +71,8 @@ def parse_index_spec_from_html(html: str) -> tuple[IndexSpec | None, str]:
 
 def parse_index_spec_from_markdown(md: str) -> tuple[IndexSpec | None, str]:
     """Read YAML frontmatter (between `---` lines) and look for `index:`.
-    Frontmatter is left intact in the returned content."""
+    On a hit, the frontmatter block is stripped from the returned content;
+    on a miss, the original content comes back untouched."""
     match = _FRONTMATTER_RE.match(md)
     if not match:
         return None, md
@@ -79,7 +80,10 @@ def parse_index_spec_from_markdown(md: str) -> tuple[IndexSpec | None, str]:
         data = yaml.safe_load(match.group(1)) or {}
     except yaml.YAMLError:
         return None, md
-    return _spec_from_dict(data), md
+    spec = _spec_from_dict(data)
+    if spec is None:
+        return None, md
+    return spec, md[match.end():]
 
 
 def parse_index_spec(content: str, suffix: str) -> tuple[IndexSpec | None, str]:

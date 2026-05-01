@@ -46,21 +46,89 @@ def _is_local_ref(ref: str) -> bool:
     return not ref.startswith(REMOTE_SKIP_SCHEMES)
 
 
+_MD_FM_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
+
+
+def _split_md_frontmatter(text: str) -> tuple[str, dict | None]:
+    """Strip a leading `---…---` YAML block from a markdown string. Returns
+    (body_without_frontmatter, parsed_dict_or_None)."""
+    match = _MD_FM_RE.match(text)
+    if not match:
+        return text, None
+    try:
+        data = yaml.safe_load(match.group(1)) or {}
+    except yaml.YAMLError:
+        return text, None
+    return text[match.end():], data if isinstance(data, dict) else None
+
+
+def _merge_frontmatter(content: str, suffix: str, *,
+                       title: str | None, theme: str | None,
+                       color_scheme: str | None, parent: str | None,
+                       tags: tuple, excerpt: str | None,
+                       slug: str | None = None) -> dict:
+    """For .md inputs, parse YAML frontmatter and merge into the supplied
+    CLI-flag values — CLI flags always win. Returns a dict with the
+    (possibly-stripped) content and the resolved fields. The `index` key,
+    if present in the frontmatter, is lifted into a structured field the
+    server promotes to a markdown-sourced index page."""
+    out = {
+        "content": content, "title": title, "theme": theme,
+        "color_scheme": color_scheme, "parent": parent,
+        "tags": tags, "excerpt": excerpt, "slug": slug, "index": None,
+    }
+    if suffix != ".md":
+        return out
+    body, fm = _split_md_frontmatter(content)
+    if fm is None:
+        return out
+    out["content"] = body
+    out["title"]        = title        or fm.get("title")
+    out["theme"]        = theme        or fm.get("theme")
+    out["color_scheme"] = color_scheme or fm.get("color_scheme")
+    out["parent"]       = parent       or fm.get("parent")
+    out["excerpt"]      = excerpt      or fm.get("excerpt")
+    out["slug"]         = slug         or fm.get("slug")
+    if not tags:
+        fm_tags = fm.get("tags") or []
+        if isinstance(fm_tags, list):
+            out["tags"] = tuple(fm_tags)
+    if isinstance(fm.get("index"), dict):
+        out["index"] = fm["index"]
+    return out
+
+
 def _scan_md(md_path: Path) -> tuple[list[Path], list[Path]]:
     content = md_path.read_text()
     base = md_path.parent
     assets, sub_pages = [], []
+    seen_assets: set[Path] = set()
+    seen_subs: set[Path] = set()
     for _, src in IMG_RE.findall(content):
         if not _is_local_ref(src):
             continue
         p = (base / _strip_ref(src)).resolve()
-        if p.is_file():
+        if p.is_file() and p not in seen_assets:
+            seen_assets.add(p)
             assets.append(p)
     for _, href in LINK_RE.findall(content):
         if not _is_local_ref(href):
             continue
         p = (base / _strip_ref(href)).resolve()
-        if p.is_file():
+        if p.is_file() and p not in seen_subs:
+            seen_subs.add(p)
+            sub_pages.append(p)
+    # Markdown frequently embeds raw HTML (e.g. <link rel=stylesheet>,
+    # <script src=...>, <iframe>); markdown-it passes those through unchanged,
+    # so we also scan HTML asset/page refs from the same content.
+    html_assets, html_subs = _scan_html(md_path)
+    for p in html_assets:
+        if p not in seen_assets:
+            seen_assets.add(p)
+            assets.append(p)
+    for p in html_subs:
+        if p not in seen_subs:
+            seen_subs.add(p)
             sub_pages.append(p)
     return assets, sub_pages
 
@@ -161,6 +229,34 @@ def _rewrite_md(content: str, slug: str, asset_paths: list[Path], sub_paths: lis
 
     content = IMG_RE.sub(replace_img, content)
     content = LINK_RE.sub(replace_link, content)
+    # Raw HTML embedded in markdown (e.g. <script src=...>, <link href=...>)
+    # also needs its refs rewritten — markdown-it passes those through.
+    content = _rewrite_html_refs_inline(content, slug, asset_paths, sub_paths)
+    return content
+
+
+def _rewrite_html_refs_inline(content: str, slug: str,
+                              asset_paths: list[Path], sub_paths: list[Path]) -> str:
+    """Light-touch ref rewrite for raw HTML inside a markdown body. Unlike
+    _rewrite_html it doesn't reparse the document — it just substitutes
+    occurrences of each ref string in attribute values, scoped by basename."""
+    asset_by_name = {p.name: f"/assets/{slug}/{p.name}" for p in asset_paths}
+    page_by_name = {p.name: f"/{_slugify(p.stem)}/" for p in sub_paths}
+    if not asset_by_name and not page_by_name:
+        return content
+    pairs: list[tuple[str, str]] = []
+    attr_re = re.compile(r'''(href|src)=(["'])([^"']+)\2''')
+    for m in attr_re.finditer(content):
+        ref = m.group(3)
+        if not _is_local_ref(ref):
+            continue
+        name = Path(_strip_ref(ref)).name
+        if name in asset_by_name:
+            pairs.append((m.group(0), f'{m.group(1)}={m.group(2)}{asset_by_name[name]}{m.group(2)}'))
+        elif name in page_by_name:
+            pairs.append((m.group(0), f'{m.group(1)}={m.group(2)}{page_by_name[name]}{m.group(2)}'))
+    for old, new in pairs:
+        content = content.replace(old, new, 1)
     return content
 
 
@@ -339,10 +435,26 @@ def _upload_bundle_to_remote(remote: str, file_path: Path) -> str:
 @click.option("--site", default=None,
               help="Site key from ~/.config/flubpub/sites.toml. "
                    "Falls back to FLUBPUB_SITE env or [default].")
+@click.option("--local", "force_local", is_flag=True, default=False,
+              help="Bypass the sites registry entirely and target --server "
+                   "(default http://localhost:8000). USE WHEN TESTING LOCALLY "
+                   "to avoid silently pushing through SSH to a production "
+                   "site listed as `default` in ~/.config/flubpub/sites.toml.")
 @click.pass_context
-def cli(ctx, server, remote, site):
+def cli(ctx, server, remote, site, force_local):
     ctx.ensure_object(dict)
     ctx.obj["server"] = server
+    if force_local:
+        if remote or site:
+            click.echo(
+                "Warning: --local takes precedence over --remote/--site; "
+                "ignoring those flags.",
+                err=True,
+            )
+        ctx.obj["remote"] = None
+        ctx.obj["remote_dir"] = DEFAULT_REMOTE_DIR
+        ctx.obj["remote_port"] = None
+        return
     resolved_spec, resolved_port = _resolve_remote(remote, site)
     if resolved_spec:
         host, remote_dir = _parse_remote(resolved_spec)
@@ -361,11 +473,27 @@ def cli(ctx, server, remote, site):
 @click.option("--slug", default=None, help="URL slug")
 @click.option("--theme", default=None, help="Theme name (geocities, academic, hacker, angelfire, web-ring)")
 @click.option("--color-scheme", default=None, help="Color scheme (clean, neon, midnight, terminal, starfield, parchment)")
+@click.option("--parent", default=None, help="Slug of the parent index page (for nested sections)")
+@click.option("--tag", "tags", multiple=True, help="Tag this page (repeatable)")
+@click.option("--excerpt", default=None, help="Short summary used by index list rendering")
 @click.pass_context
-def push(ctx, file_path, title, slug, theme, color_scheme):
+def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt):
     """Push a file to the server as a published page."""
     path = Path(file_path)
     content = path.read_text()
+
+    # For .md inputs, lift YAML frontmatter into structured fields. CLI flags
+    # always win; only unset fields fall back to frontmatter values.
+    merged = _merge_frontmatter(
+        content, path.suffix.lower(),
+        title=title, theme=theme, color_scheme=color_scheme,
+        parent=parent, tags=tags, excerpt=excerpt, slug=slug,
+    )
+    content = merged["content"]
+    title, theme, color_scheme = merged["title"], merged["theme"], merged["color_scheme"]
+    parent, tags, excerpt = merged["parent"], merged["tags"], merged["excerpt"]
+    slug = merged["slug"]
+    index_spec = merged["index"]
 
     if not title:
         title = path.stem.replace("-", " ").replace("_", " ").title()
@@ -380,6 +508,12 @@ def push(ctx, file_path, title, slug, theme, color_scheme):
             args += f" --theme {shlex.quote(theme)}"
         if color_scheme:
             args += f" --color-scheme {shlex.quote(color_scheme)}"
+        if parent:
+            args += f" --parent {shlex.quote(parent)}"
+        for t in tags:
+            args += f" --tag {shlex.quote(t)}"
+        if excerpt:
+            args += f" --excerpt {shlex.quote(excerpt)}"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
         return
@@ -474,6 +608,14 @@ def push(ctx, file_path, title, slug, theme, color_scheme):
             body["theme"] = theme
         if color_scheme:
             body["color_scheme"] = color_scheme
+        if parent:
+            body["parent"] = parent
+        if tags:
+            body["tags"] = list(tags)
+        if excerpt:
+            body["excerpt"] = excerpt
+        if index_spec:
+            body["index"] = index_spec
 
         resp = client.post(f"{server}/api/pages", json=body)
 
@@ -551,8 +693,11 @@ def get(ctx, slug):
 @click.option("--title", default=None, help="New page title")
 @click.option("--theme", default=None, help="Theme name (geocities, academic, hacker, angelfire, web-ring)")
 @click.option("--color-scheme", default=None, help="Color scheme (clean, neon, midnight, terminal, starfield, parchment)")
+@click.option("--parent", default=None, help="Slug of the parent index page (for nested sections)")
+@click.option("--tag", "tags", multiple=True, help="Tag this page (repeatable; replaces existing tags)")
+@click.option("--excerpt", default=None, help="Short summary used by index list rendering")
 @click.pass_context
-def revise(ctx, slug, file_path, title, theme, color_scheme):
+def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excerpt):
     """Update an existing page with new content."""
     path = Path(file_path)
 
@@ -566,12 +711,31 @@ def revise(ctx, slug, file_path, title, theme, color_scheme):
             args += f" --theme {shlex.quote(theme)}"
         if color_scheme:
             args += f" --color-scheme {shlex.quote(color_scheme)}"
+        if parent:
+            args += f" --parent {shlex.quote(parent)}"
+        for t in tags:
+            args += f" --tag {shlex.quote(t)}"
+        if excerpt:
+            args += f" --excerpt {shlex.quote(excerpt)}"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
         return
 
     content = path.read_text()
     suffix = path.suffix.lower()
+
+    # Mirror push: for .md, lift YAML frontmatter into structured fields.
+    # CLI flags win; only unset fields fall back to frontmatter values.
+    merged = _merge_frontmatter(
+        content, suffix,
+        title=title, theme=theme, color_scheme=color_scheme,
+        parent=parent, tags=tags, excerpt=excerpt,
+    )
+    content = merged["content"]
+    title, theme, color_scheme = merged["title"], merged["theme"], merged["color_scheme"]
+    parent, tags, excerpt = merged["parent"], merged["tags"], merged["excerpt"]
+    index_spec = merged["index"]
+
     if suffix == ".md":
         content_type = "markdown"
     elif suffix == ".html" and theme:
@@ -581,6 +745,41 @@ def revise(ctx, slug, file_path, title, theme, color_scheme):
     else:
         content_type = "html"
 
+    # Mirror push's local-ref pipeline: scan for sibling assets/sub-pages,
+    # upload them, and rewrite refs in the outgoing content. Without this,
+    # revise would silently restore the source's pre-rewrite paths and break
+    # asset URLs the previous push had fixed up.
+    page_slug = slug
+    server_base = ctx.obj["server"]
+    if suffix in (".md", ".html"):
+        assets, sub_pages = collect_all_refs(path)
+        if assets or sub_pages:
+            click.echo("Local references found:")
+            if assets:
+                click.echo("  Assets:")
+                for a in assets:
+                    click.echo(f"    ./{a.relative_to(path.parent.resolve())}")
+            if sub_pages:
+                click.echo("  Linked pages:")
+                for s in sub_pages:
+                    click.echo(f"    ./{s.relative_to(path.parent.resolve())}")
+            click.echo()
+            if sys.stdin.isatty():
+                click.confirm("These files will be uploaded. Continue?", abort=True)
+        with httpx.Client() as upload_client:
+            for asset in assets:
+                with open(asset, "rb") as f:
+                    resp = upload_client.post(
+                        f"{server_base}/api/assets/{page_slug}",
+                        files={"file": (asset.name, f)},
+                    )
+                if not resp.is_success:
+                    click.echo(f"Error uploading {asset.name}: {resp.text}", err=True)
+                    sys.exit(1)
+                click.echo(f"Uploaded asset: {asset.name}")
+        rewrite_mode = "html" if suffix == ".html" else "md"
+        content = rewrite_refs(content, page_slug, assets, sub_pages, mode=rewrite_mode)
+
     body = {"content": content, "content_type": content_type}
     if title:
         body["title"] = title
@@ -588,6 +787,14 @@ def revise(ctx, slug, file_path, title, theme, color_scheme):
         body["theme"] = theme
     if color_scheme:
         body["color_scheme"] = color_scheme
+    if parent:
+        body["parent"] = parent
+    if tags:
+        body["tags"] = list(tags)
+    if excerpt:
+        body["excerpt"] = excerpt
+    if index_spec:
+        body["index"] = index_spec
 
     with httpx.Client() as client:
         resp = client.put(f"{ctx.obj['server']}/api/pages/{slug}", json=body)
@@ -659,12 +866,26 @@ def set_index(ctx, file_path, vars_file):
     the file is filled with the current pages list at every rebuild.
     """
     path = Path(file_path)
-    if path.suffix.lower() != ".html":
-        click.echo("Index must be an .html file", err=True)
+    suffix = path.suffix.lower()
+    if suffix not in (".html", ".md"):
+        click.echo("Index must be a .html or .md file", err=True)
         sys.exit(1)
 
+    is_markdown_index = suffix == ".md"
     variables = _load_template_vars(vars_file)
-    rendered = _render_index_template(path.read_text(), variables)
+    # Markdown indexes don't run through Jinja — they're rendered server-side
+    # into a minimal HTML shell or a flubpub theme. HTML indexes get the
+    # existing Jinja pass. Frontmatter (title/theme/color_scheme/style_css/
+    # index) on the markdown file becomes top-level IndexBody fields.
+    md_body: dict = {}
+    if is_markdown_index:
+        rendered, fm = _split_md_frontmatter(path.read_text())
+        if isinstance(fm, dict):
+            for key in ("title", "theme", "color_scheme", "style_css", "index"):
+                if key in fm and fm[key] is not None:
+                    md_body[key] = fm[key]
+    else:
+        rendered = _render_index_template(path.read_text(), variables)
 
     remote = ctx.obj.get("remote")
     if remote:
@@ -711,9 +932,14 @@ def set_index(ctx, file_path, vars_file):
             click.echo(f"Uploaded asset: {asset.name}")
 
         if assets:
-            rendered = rewrite_refs(rendered, INDEX_ASSETS_SLUG, assets, [], mode="html")
+            rewrite_mode = "md" if is_markdown_index else "html"
+            rendered = rewrite_refs(rendered, INDEX_ASSETS_SLUG, assets, [], mode=rewrite_mode)
 
-        resp = client.post(f"{server}/api/index", json={"content": rendered})
+        body = {"content": rendered}
+        if is_markdown_index:
+            body["content_type"] = "markdown"
+            body.update(md_body)
+        resp = client.post(f"{server}/api/index", json=body)
 
     if resp.is_success:
         click.echo("Custom index installed.")

@@ -8,14 +8,38 @@ flubpub is a personal web publishing tool — like `gh gist` but for web pages. 
 
 A single host can run multiple **side-by-side installs**, one per domain, each with its own data, port, systemd instance, and nginx site. Disambiguation is via a **sites registry** at `~/.config/flubpub/sites.toml`; the Python package itself contains zero references to any specific site.
 
+## Local-vs-remote routing — read this first
+
+⚠️ **`~/.config/flubpub/sites.toml` has a `default` key.** When set, *every*
+content command (`push`, `revise`, `list`, `get`, `delete`, `set-index`) that
+doesn't specify `--site`, `--remote`, `--local`, or `FLUBPUB_SITE` silently
+routes through SSH to that default site's production VPS. **This means a bare
+`uv run flubpub push foo.md` against your local server is — by default — a
+production push.**
+
+**Always pass `--local` when testing against a local `flubpub serve`.** It
+bypasses the sites registry entirely and targets `--server` (default
+`http://localhost:8000`). It also overrides `--site`, `--remote`, and
+`FLUBPUB_SITE` if any of them happen to be set in the environment.
+
+```bash
+# Local development — ALWAYS use --local
+uv run flubpub --local push page.md
+uv run flubpub --local list
+uv run flubpub --local set-index home.md
+```
+
+The `--local` flag must come **before** the subcommand (it's a group-level
+option). Not `flubpub push --local` (Click will reject it).
+
 ## Commands
 
 ```bash
 # Run the server locally
 uv run flubpub serve
 
-# Push a page (server must be running)
-uv run flubpub push mypage.html --title "My Page"
+# Push a page locally (server must be running)
+uv run flubpub --local push mypage.html --title "My Page"
 uv run flubpub push mypage.html --theme geocities  # themed page
 uv run flubpub push mypage.html --theme hacker --color-scheme midnight  # theme + color scheme
 uv run flubpub push doc.md  # auto-scans for local images/links

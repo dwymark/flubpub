@@ -1,0 +1,25 @@
+{% extends "_papered/_base.html" %}
+{# engineroom - technical-paper; off-black + cream, p4m-lattice crosshair grid #}
+{% block extra_styles %}
+:root {
+  --pattern-opacity: 0.20;
+  --pattern-stroke: 0.9;
+  --prose-font: "Charter", "Source Serif Pro", "Iowan Old Style", Georgia, serif;
+}
+main h1 { font-variant: small-caps; letter-spacing: 0.08em; }
+{% endblock %}
+{% block wallpaper %}
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <pattern id="papered-engineroom" patternUnits="userSpaceOnUse" x="0" y="0" width="128" height="128">
+      <path d="M 0 32 L 128 32 M 0 96 L 128 96 M 32 0 L 32 128 M 96 0 L 96 128"
+            stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+      <circle cx="32" cy="32" r="2" fill="var(--pattern-accent)"/>
+      <circle cx="96" cy="32" r="2" fill="var(--pattern-accent)"/>
+      <circle cx="32" cy="96" r="2" fill="var(--pattern-accent)"/>
+      <circle cx="96" cy="96" r="2" fill="var(--pattern-accent)"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#papered-engineroom)"/>
+</svg>
+{% endblock %}

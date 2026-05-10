@@ -1,0 +1,30 @@
+{% extends "_papered/_base.html" %}
+{# alpine - cool crisp; snow paper + slate, p3-triskele 3-fold curls #}
+{% block extra_styles %}
+:root {
+  --pattern-opacity: 0.22;
+  --prose-font: "Charter", "Iowan Old Style", "Source Serif Pro", Georgia, serif;
+}
+{% endblock %}
+{% block wallpaper %}
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <pattern id="papered-alpine" patternUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <g transform="rotate(0 128 128)">
+        <path d="M 128 128 Q 176 104 216 128 Q 176 152 128 128"
+              stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+      </g>
+      <g transform="rotate(120 128 128)">
+        <path d="M 128 128 Q 176 104 216 128 Q 176 152 128 128"
+              stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+      </g>
+      <g transform="rotate(240 128 128)">
+        <path d="M 128 128 Q 176 104 216 128 Q 176 152 128 128"
+              stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+      </g>
+      <circle cx="128" cy="128" r="2" fill="var(--pattern-accent)"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#papered-alpine)"/>
+</svg>
+{% endblock %}

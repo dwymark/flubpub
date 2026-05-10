@@ -1,0 +1,59 @@
+{% extends "_papered/_base.html" %}
+{# kiln - warm ceramic; clay + ember accent, p6m-snowflake six-fold motif #}
+{% block extra_styles %}
+:root { --pattern-opacity: 0.26; --pattern-stroke: 1.4; }
+{% endblock %}
+{% block wallpaper %}
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <pattern id="papered-kiln" patternUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <g stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none">
+        <g transform="rotate(0 128 128)">
+          <line x1="128" y1="128" x2="128" y2="40"/>
+          <line x1="128" y1="80" x2="116" y2="68"/>
+          <line x1="128" y1="80" x2="140" y2="68"/>
+          <line x1="128" y1="60" x2="118" y2="50"/>
+          <line x1="128" y1="60" x2="138" y2="50"/>
+        </g>
+        <g transform="rotate(60 128 128)">
+          <line x1="128" y1="128" x2="128" y2="40"/>
+          <line x1="128" y1="80" x2="116" y2="68"/>
+          <line x1="128" y1="80" x2="140" y2="68"/>
+          <line x1="128" y1="60" x2="118" y2="50"/>
+          <line x1="128" y1="60" x2="138" y2="50"/>
+        </g>
+        <g transform="rotate(120 128 128)">
+          <line x1="128" y1="128" x2="128" y2="40"/>
+          <line x1="128" y1="80" x2="116" y2="68"/>
+          <line x1="128" y1="80" x2="140" y2="68"/>
+          <line x1="128" y1="60" x2="118" y2="50"/>
+          <line x1="128" y1="60" x2="138" y2="50"/>
+        </g>
+        <g transform="rotate(180 128 128)">
+          <line x1="128" y1="128" x2="128" y2="40"/>
+          <line x1="128" y1="80" x2="116" y2="68"/>
+          <line x1="128" y1="80" x2="140" y2="68"/>
+          <line x1="128" y1="60" x2="118" y2="50"/>
+          <line x1="128" y1="60" x2="138" y2="50"/>
+        </g>
+        <g transform="rotate(240 128 128)">
+          <line x1="128" y1="128" x2="128" y2="40"/>
+          <line x1="128" y1="80" x2="116" y2="68"/>
+          <line x1="128" y1="80" x2="140" y2="68"/>
+          <line x1="128" y1="60" x2="118" y2="50"/>
+          <line x1="128" y1="60" x2="138" y2="50"/>
+        </g>
+        <g transform="rotate(300 128 128)">
+          <line x1="128" y1="128" x2="128" y2="40"/>
+          <line x1="128" y1="80" x2="116" y2="68"/>
+          <line x1="128" y1="80" x2="140" y2="68"/>
+          <line x1="128" y1="60" x2="118" y2="50"/>
+          <line x1="128" y1="60" x2="138" y2="50"/>
+        </g>
+      </g>
+      <circle cx="128" cy="128" r="3" fill="var(--pattern-accent)"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#papered-kiln)"/>
+</svg>
+{% endblock %}

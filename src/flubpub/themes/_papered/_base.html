@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <style>
+    /* ------------------------------------------------------------------
+       _papered/_base — shared DNA for the "papered" theme family.
+       Each child theme extends this base and overrides {% raw %}{% block wallpaper %}{% endraw %}
+       with an inline SVG, plus a small {% raw %}{% block extra_styles %}{% endraw %} for
+       palette nudges or typography swaps. Color values come from the
+       page-level CSS custom properties injected by the server.
+       ------------------------------------------------------------------ */
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --measure: 68ch;
+      --pattern-opacity: 0.28;
+      --pattern-stroke: 1.2;
+    }
+
+    /* Background lives on <html>; <body> is transparent so the wallpaper
+       layer paints through. Putting `background` on body would obscure
+       any z-index:0 sibling behind it, breaking the wallpaper. */
+    html { background: var(--bg); }
+    body {
+      margin: 0;
+      padding: 0;
+      color: var(--fg);
+      font-family: var(--prose-font, "Iowan Old Style", "Charter",
+                   "Palatino Linotype", Palatino, "Times New Roman", Georgia, serif);
+      font-size: clamp(16px, 1rem + 0.25vw, 19px);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    /* Wallpaper layer: full-window, painted before content. We use a
+       positive z-index of 0 plus z-index:1 on the chrome/content rather
+       than z-index:-1 on the wallpaper — the negative-z trick fails the
+       moment any ancestor has a non-transparent background. */
+    .wallpaper {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: var(--pattern-opacity);
+    }
+    .wallpaper svg { width: 100%; height: 100%; display: block; }
+    nav.crumb, main, .colophon { position: relative; z-index: 1; }
+
+    nav.crumb {
+      max-width: var(--measure);
+      margin: 0 auto;
+      padding: 1rem 1rem 0;
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--ink-light);
+    }
+    nav.crumb a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px dotted currentColor;
+    }
+    nav.crumb a:hover { color: var(--link); }
+
+    main {
+      max-width: var(--measure);
+      margin: 1.25rem auto 3rem;
+      padding: clamp(1rem, 4vw, 2.75rem);
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      box-shadow: 0 2px 14px var(--card-shadow, rgba(0,0,0,0.10));
+    }
+
+    h1, h2, h3, h4 {
+      color: var(--heading);
+      font-family: var(--display-font, inherit);
+      font-weight: 600;
+      line-height: 1.25;
+      letter-spacing: -0.005em;
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(1.7rem, 1.4rem + 1.2vw, 2.4rem);
+      font-variant: small-caps;
+      letter-spacing: 0.02em;
+      text-align: center;
+    }
+    h2 {
+      margin: 2.25rem 0 0.75rem;
+      font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.55rem);
+      padding-bottom: 0.2rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    h3 {
+      margin: 1.5rem 0 0.5rem;
+      font-size: 1.1rem;
+      font-style: italic;
+      font-weight: 600;
+    }
+
+    p { margin: 0 0 1rem; }
+    p + p { text-indent: 1.25em; margin-top: -0.25rem; }
+
+    a { color: var(--link); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    a:visited { color: var(--link-visited); }
+    a:hover { text-decoration-thickness: 2px; }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--rule);
+      margin: 2rem auto;
+      max-width: 60%;
+      position: relative;
+    }
+    hr::after {
+      content: "❦";
+      position: absolute;
+      top: -0.7em;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card-bg);
+      padding: 0 0.6em;
+      color: var(--accent);
+      font-size: 1.1rem;
+    }
+
+    blockquote {
+      margin: 1.25rem 0;
+      padding: 0.5rem 1.25rem;
+      border-left: 3px solid var(--accent);
+      color: var(--ink-light);
+      font-style: italic;
+    }
+
+    code, pre {
+      background: var(--code-bg);
+      color: var(--code-fg);
+      font-family: var(--mono-font, "JetBrains Mono", "SF Mono", Consolas, "Courier New", monospace);
+      font-size: 0.92em;
+    }
+    code { padding: 1px 5px; border-radius: 3px; }
+    pre { padding: 0.85rem 1rem; overflow-x: auto; border-radius: 4px; border: 1px solid var(--rule); }
+
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95em; }
+    th, td { padding: 0.4rem 0.7rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+    th { font-weight: 600; border-bottom: 2px solid var(--ink-light); }
+
+    img { max-width: 100%; height: auto; display: block; margin: 1.25rem auto; }
+    figure { margin: 1.5rem 0; text-align: center; }
+    figure svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    figcaption { font-size: 0.88em; color: var(--ink-light); margin-top: 0.5rem; }
+
+    ul.flubpub-pages { list-style: none; padding: 0; margin: 1rem 0; }
+    ul.flubpub-pages li { padding: 0.5rem 0; border-bottom: 1px dotted var(--rule); }
+    ul.flubpub-pages li:last-child { border-bottom: none; }
+    ul.flubpub-pages a { font-weight: 600; text-decoration: none; border-bottom: 1px solid transparent; }
+    ul.flubpub-pages a:hover { border-bottom-color: currentColor; }
+    ul.flubpub-pages .flubpub-date { color: var(--ink-light); font-size: 0.92em; }
+    ul.flubpub-pages .flubpub-excerpt { color: var(--ink-light); font-size: 0.92em; margin-top: 0.15rem; }
+
+    .colophon {
+      max-width: var(--measure);
+      margin: 0 auto 2rem;
+      padding: 0 clamp(1rem, 4vw, 2.75rem);
+      font-size: 0.82rem;
+      color: var(--ink-light);
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+    .colophon hr { max-width: 12ch; margin: 1rem auto 0.6rem; }
+    .colophon hr::after { display: none; }
+    .colophon a { color: inherit; }
+
+    @media (max-width: 720px) {
+      main { margin: 0.5rem 6px; padding: 1.25rem 1rem; }
+      h1 { font-size: clamp(1.5rem, 1.3rem + 1.5vw, 2rem); }
+      p + p { text-indent: 0; margin-top: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+
+    {% block extra_styles %}{% endblock %}
+  </style>
+</head>
+<body>
+  <div class="wallpaper" aria-hidden="true">
+    {% block wallpaper %}{% endblock %}
+  </div>
+  <nav class="crumb"><a href="/">← danielwymark.com</a></nav>
+  <main>
+    {{ content }}
+  </main>
+  <footer class="colophon">
+    <hr>
+    <p>Last revised {{ date }} · typeset on the World Wide Web.</p>
+  </footer>
+</body>
+</html>

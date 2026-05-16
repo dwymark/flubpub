@@ -112,15 +112,12 @@ Not source of truth: `site/src/pages/` and `data/pages.json` at the repo root.
 Those belong to the local dev install (`flubpub serve`) and are rebuilt by
 every local push.
 
-**Tile metadata (deferred).** Production's `data/pages.json` carries per-page
-`tile` entries produced by `/card-construction`, which do not live in the
-markdown source. When the gallery layout starts getting used, commit a
-sanitized copy of those tile entries to `content/<key>/tiles.json` so a
-rebuild-from-content is lossless. Until then, the gallery is unused and
-`tiles.json` does not need to exist.
-
 If this repo ever goes public, `content/` is the directory to exfiltrate or
 gitignore.
+
+Per-site notes (vendored projects, tile-metadata plans, refresh recipes) live
+in sibling docs at the repo root: see [`DWM.md`](./DWM.md) for the
+danielwymark.com install.
 
 ## Architecture
 

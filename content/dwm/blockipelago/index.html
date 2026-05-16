@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blockipelago — Spiral + Lloyd · WebGL Edition</title>
+
+<!-- Bundled font stack so glyph coverage isn't at the mercy of the user's OS.
+     Google Fonts gives us ~75 Noto Sans script families (subsetted per-font);
+     Last Resort HE (locally hosted, ~560 KB, 381 designed placeholders by
+     block) handles anything the Notos miss — unknown codepoints render as
+     the Unicode block's stylized symbol, never a generic tofu rectangle. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Living + CJK + symbols + emoji + math -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400&family=Noto+Sans+Mono:wght@400&family=Noto+Sans+SC:wght@400&family=Noto+Sans+JP:wght@400&family=Noto+Sans+KR:wght@400&family=Noto+Sans+HK:wght@400&family=Noto+Sans+Math&family=Noto+Sans+Symbols:wght@400&family=Noto+Sans+Symbols+2&family=Noto+Color+Emoji&family=Noto+Music&family=Noto+Sans+Hebrew:wght@400&family=Noto+Sans+Arabic:wght@400&family=Noto+Sans+Syriac:wght@400&family=Noto+Sans+Thaana:wght@400&family=Noto+Sans+NKo&family=Noto+Sans+Mongolian:wght@400&family=Noto+Sans+Devanagari:wght@400&family=Noto+Sans+Bengali:wght@400&family=Noto+Sans+Gujarati:wght@400&family=Noto+Sans+Gurmukhi:wght@400&family=Noto+Sans+Tamil:wght@400&family=Noto+Sans+Telugu:wght@400&family=Noto+Sans+Kannada:wght@400&family=Noto+Sans+Malayalam:wght@400&family=Noto+Sans+Sinhala:wght@400&family=Noto+Sans+Thai:wght@400&family=Noto+Sans+Lao:wght@400&family=Noto+Sans+Khmer:wght@400&family=Noto+Sans+Tibetan:wght@400&family=Noto+Sans+Myanmar:wght@400&family=Noto+Sans+Georgian:wght@400&family=Noto+Sans+Armenian:wght@400&family=Noto+Sans+Ethiopic:wght@400&family=Noto+Sans+Cherokee:wght@400&family=Noto+Sans+Canadian+Aboriginal:wght@400&family=Noto+Sans+Adlam&family=Noto+Sans+Tagalog&display=swap">
+<!-- Indic / SE Asian / minor scripts -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Limbu&family=Noto+Sans+Tai+Le&family=Noto+Sans+New+Tai+Lue&family=Noto+Sans+Tai+Tham&family=Noto+Sans+Tai+Viet&family=Noto+Sans+Buginese&family=Noto+Sans+Balinese&family=Noto+Sans+Sundanese&family=Noto+Sans+Batak&family=Noto+Sans+Lepcha&family=Noto+Sans+Ol+Chiki&family=Noto+Sans+Saurashtra&family=Noto+Sans+Kayah+Li&family=Noto+Sans+Rejang&family=Noto+Sans+Cham&family=Noto+Sans+Meetei+Mayek&family=Noto+Sans+Tifinagh&family=Noto+Sans+Yi&family=Noto+Sans+Lisu&family=Noto+Sans+Vai&family=Noto+Sans+Bamum&family=Noto+Sans+Hanunoo&family=Noto+Sans+Buhid&family=Noto+Sans+Tagbanwa&family=Noto+Sans+Hanifi+Rohingya&family=Noto+Sans+Wancho&family=Noto+Sans+Mahajani&family=Noto+Sans+Modi&family=Noto+Sans+Sora+Sompeng&family=Noto+Sans+Takri&family=Noto+Sans+Newa&family=Noto+Sans+Sharada&family=Noto+Sans+Khojki&family=Noto+Sans+Khudawadi&family=Noto+Sans+Multani&family=Noto+Sans+Tirhuta&family=Noto+Sans+Siddham&family=Noto+Sans+Mro&family=Noto+Sans+Pau+Cin+Hau&family=Noto+Sans+Bassa+Vah&family=Noto+Sans+Pahawh+Hmong&family=Noto+Sans+Bhaiksuki&family=Noto+Sans+Marchen&family=Noto+Sans+Soyombo&family=Noto+Sans+Vithkuqi&family=Noto+Sans+Kawi&family=Noto+Sans+Tangsa&family=Noto+Sans+Oriya&family=Noto+Sans+Osage&family=Noto+Sans+Miao&family=Noto+Sans+Nushu&family=Noto+Sans+Javanese&display=swap">
+<!-- Historical / dead scripts -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&family=Noto+Sans+Anatolian+Hieroglyphs&family=Noto+Sans+Cuneiform&family=Noto+Sans+Old+Italic&family=Noto+Sans+Old+Persian&family=Noto+Sans+Old+Turkic&family=Noto+Sans+Old+Hungarian&family=Noto+Sans+Old+Permic&family=Noto+Sans+Old+North+Arabian&family=Noto+Sans+Old+South+Arabian&family=Noto+Sans+Old+Sogdian&family=Noto+Sans+Sogdian&family=Noto+Sans+Phoenician&family=Noto+Sans+Glagolitic&family=Noto+Sans+Coptic&family=Noto+Sans+Linear+A&family=Noto+Sans+Linear+B&family=Noto+Sans+Brahmi&family=Noto+Sans+Ugaritic&family=Noto+Sans+Runic&family=Noto+Sans+Deseret&family=Noto+Sans+Ogham&family=Noto+Sans+Gothic&family=Noto+Sans+Shavian&family=Noto+Sans+Osmanya&family=Noto+Sans+Cypriot&family=Noto+Sans+Warang+Citi&family=Noto+Sans+Duployan&family=Noto+Sans+SignWriting&family=Noto+Sans+Imperial+Aramaic&family=Noto+Sans+Inscriptional+Pahlavi&family=Noto+Sans+Inscriptional+Parthian&family=Noto+Sans+Lycian&family=Noto+Sans+Carian&family=Noto+Sans+Lydian&family=Noto+Sans+Avestan&family=Noto+Sans+Mandaic&family=Noto+Sans+Manichaean&family=Noto+Sans+Nabataean&family=Noto+Sans+Palmyrene&family=Noto+Sans+Hatran&family=Noto+Sans+Mende+Kikakui&family=Noto+Sans+Caucasian+Albanian&family=Noto+Sans+Elbasan&family=Noto+Sans+Kharoshthi&family=Noto+Sans+Indic+Siyaq+Numbers&family=Noto+Serif+Tibetan&family=Noto+Serif+Tangut&family=Noto+Serif+Khitan+Small+Script&family=Noto+Traditional+Nushu&display=swap">
+
+<style>
+@font-face {
+  font-family: "Last Resort HE";
+  src: url("fonts/LastResortHE-Regular.ttf") format("truetype");
+  font-display: block;
+}
+/* Noto Sans Symbols 2 — full hinted TTF from notofonts.github.io. Google
+   Fonts ships a heavily-subsetted version that omits Phaistos Disc and
+   many other esoteric blocks. The full font (~660 KB) is the smallest
+   hammer that covers them. We name it distinctly ("Noto Symbols Full")
+   and place it first in font stacks; the GF version (still in the link
+   tag) remains as a layered fallback. */
+@font-face {
+  font-family: "Noto Symbols Full";
+  src: url("fonts/NotoSansSymbols2-Full-Regular.ttf") format("truetype");
+  font-display: block;
+}
+</style>
+<style>
+/* ==========================================================
+   Spiral + Lloyd. Each Voronoi cell is filled with the actual
+   Unicode characters from its block, baked into a 4096² texture
+   atlas that the GPU samples with an inverse Gaussian fisheye.
+   ========================================================== */
+
+:root {
+  --page-bg: #faf8f2;
+  --ink: #2a2520;
+  --ink-dim: #5a5048;
+  --ink-faint: #8a8278;
+  --rule: #c8c2b8;
+  --rule-strong: #8a8278;
+  --inspector-bg: #f3efe5;
+  --active: #b8431a;
+  --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  --mono: "Courier New", Courier, "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; min-height: 100%; }
+
+body {
+  background-color: #b4d0e6;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22200%22%20height%3D%22200%22%3E%3Crect%20fill%3D%22%23b4d0e6%22%20width%3D%22200%22%20height%3D%22200%22/%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.018%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%20seed%3D%223%22/%3E%3CfeColorMatrix%20type%3D%22matrix%22%20values%3D%220%200%200%200%201%20%200%200%200%200%201%20%200%200%200%200%201%20%200%200%200%200.22%200%22/%3E%3C/filter%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20filter%3D%22url%28%23n%29%22/%3E%3Cpath%20d%3D%22M0%2050L200%2050M0%20100L200%20100M0%20150L200%20150M50%200L50%20200M100%200L100%20200M150%200L150%20200%22%20stroke%3D%22%2396b8d0%22%20stroke-width%3D%220.5%22%20opacity%3D%220.4%22/%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%22100%22%20r%3D%221.2%22%20fill%3D%22%237ba2c0%22%20opacity%3D%220.5%22/%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%220.8%22%20fill%3D%22%237ba2c0%22%20opacity%3D%220.4%22/%3E%3Ccircle%20cx%3D%22150%22%20cy%3D%22150%22%20r%3D%220.8%22%20fill%3D%22%237ba2c0%22%20opacity%3D%220.4%22/%3E%3Ccircle%20cx%3D%22150%22%20cy%3D%2250%22%20r%3D%220.8%22%20fill%3D%22%237ba2c0%22%20opacity%3D%220.4%22/%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%22150%22%20r%3D%220.8%22%20fill%3D%22%237ba2c0%22%20opacity%3D%220.4%22/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  animation: drift 80s linear infinite;
+  font-family: var(--mono);
+  color: var(--ink);
+  line-height: 1.65;
+}
+
+@keyframes drift {
+  from { background-position: 0 0; }
+  to   { background-position: -200px -200px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body { animation: none; }
+  * { transition: none !important; }
+}
+
+/* ---------- Page (the typewriter sheet) ---------- */
+
+.page {
+  max-width: 1080px;
+  margin: 40px auto;
+  background: var(--page-bg);
+  padding: 56px 72px 72px;
+  border: 1px solid var(--rule-strong);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.06),
+              0 6px 20px rgba(20, 30, 50, 0.18);
+  position: relative;
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.025) 0, transparent 24px),
+              linear-gradient(0deg, rgba(0,0,0,0.025) 0, transparent 24px);
+  pointer-events: none;
+}
+
+/* ---------- Header ---------- */
+
+.page-header { max-width: 680px; margin: 0 auto 36px; }
+
+.page-header h1 {
+  font-family: var(--mono);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+  color: var(--ink);
+}
+
+.page-header .dek {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-dim);
+  font-size: 1.05rem;
+  margin: 0 0 24px;
+}
+
+.page-header hr.rule-double {
+  border: none;
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  height: 4px;
+  margin: 0 0 24px;
+}
+
+.page-header p.intro {
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ink);
+  margin: 0 0 16px;
+}
+
+.page-header p.intro:last-child { margin-bottom: 0; }
+.page-header p.intro em { color: var(--ink-dim); }
+
+/* ---------- Status strip (replaces the renderer switcher) ---------- */
+
+.status-strip {
+  margin-top: 18px;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-dim);
+  letter-spacing: 0.06em;
+}
+
+.status-strip .label {
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+}
+
+.status-strip .status-msg { flex: 1; font-style: italic; }
+
+.status-strip.stage-strip {
+  margin-top: 6px;
+  border-top: none;
+  padding-top: 4px;
+}
+
+.stage-btn {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 1px 8px;
+  background: var(--page-bg);
+  border: 1px solid var(--rule-strong);
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.stage-btn:hover { background: var(--inspector-bg); }
+.stage-btn:active { transform: translateY(1px); }
+.stage-btn:disabled { opacity: 0.35; cursor: default; }
+
+.stage-readout {
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+  text-align: center;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.stage-hint {
+  margin-left: auto;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.mode-btn { margin-left: 12px; padding: 1px 10px; }
+
+.status-strip .fps {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  min-width: 7ch;
+  text-align: right;
+  color: var(--ink-faint);
+}
+
+/* ---------- Visualization section ---------- */
+
+.viz-section { margin: 48px 0 0; display: flex; justify-content: center; }
+
+.viz-wrap {
+  width: min(70vw, 900px);
+  aspect-ratio: 1 / 1;
+  position: relative;
+  /* Default; the canvas inside extends past viz-wrap's box on purpose so
+     the fisheye lens can paint magnified content over surrounding page
+     elements. Ancestors don't clip (no overflow:hidden anywhere upstream). */
+  overflow: visible;
+}
+
+/* Canvas is parented to viz-wrap so it scrolls with the page like any
+   other content, but expanded to 200% × 200% with negative insets so the
+   fisheye lens can warp content well past the disk's geometric edge —
+   that overflow paints over surrounding page elements (header text,
+   legend) rather than getting cropped at an invisible boundary.
+   pointer-events: none lets clicks land on the page below; the inspector
+   (z-index 10) always wins z-order. */
+#gl-canvas {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  display: block;
+  background: transparent;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* The unwarped-edge ring + lens dashed ring as a CSS overlay layer. */
+.viz-wrap .ring-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ---------- Inspector panel (antipodal, fixed) ---------- */
+
+.inspector {
+  position: fixed;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--inspector-bg);
+  border: 1px solid var(--rule-strong);
+  padding: 18px 22px 22px;
+  font-family: var(--mono);
+  box-shadow: 0 6px 24px rgba(20, 30, 50, 0.18),
+              0 1px 0 rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  transition: top 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              right 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              bottom 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              left 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inspector.pos-tl { top: 16px; left: 16px;  right: auto; bottom: auto; }
+.inspector.pos-tr { top: 16px; right: 16px; left: auto;  bottom: auto; }
+.inspector.pos-bl { bottom: 16px; left: 16px;  right: auto; top: auto; }
+.inspector.pos-br { bottom: 16px; right: 16px; left: auto;  top: auto; }
+
+.inspector .meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: 16px;
+}
+
+.inspector .meta-row .meta-item { white-space: nowrap; }
+.inspector .meta-row .meta-item strong { color: var(--ink); font-weight: 700; }
+
+.inspector .bucket-chip {
+  display: inline-block;
+  width: 10px; height: 10px;
+  vertical-align: middle;
+  margin-right: 6px; margin-top: -2px;
+  border: 1px solid rgba(0,0,0,0.15);
+}
+
+.inspector h2.project-name {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 16px;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  line-height: 1.25;
+}
+
+.inspector .desc {
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ink);
+  margin: 0 0 20px;
+}
+
+.inspector .tidbit-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 6px;
+}
+
+.inspector .tidbit {
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--ink-dim);
+  line-height: 1.65;
+  margin: 0 0 18px;
+  padding-left: 12px;
+  border-left: 2px solid var(--rule);
+}
+
+.inspector.resting h2.project-name,
+.inspector.resting .desc,
+.inspector.resting .tidbit-label,
+.inspector.resting .tidbit,
+.inspector.resting .glyphs-display,
+.inspector.resting .meta-row { display: none; }
+
+.inspector.resting .placeholder { display: block; }
+.inspector:not(.resting) .placeholder { display: none; }
+
+.inspector .placeholder .p-header {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: 16px;
+}
+
+.inspector .placeholder h2 {
+  font-family: var(--mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 14px;
+  color: var(--ink);
+}
+
+.inspector .placeholder p {
+  font-family: var(--serif);
+  font-size: 0.98rem;
+  line-height: 1.7;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+
+.inspector .placeholder p.hint {
+  color: var(--ink-dim);
+  font-style: italic;
+  font-size: 0.92rem;
+}
+
+.inspector .glyphs-display {
+  display: flex; align-items: center; justify-content: space-around;
+  gap: 10px; padding: 14px 10px 16px; margin: 0 0 18px;
+  border: 1px solid var(--rule); background: var(--page-bg); min-height: 70px;
+}
+.inspector .glyphs-display .g {
+  font-size: 2.6em; line-height: 1; color: var(--ink);
+  font-weight: 400; text-align: center; flex: 1 1 0;
+  overflow: hidden; max-width: 33%; padding: 0.1em 0;
+}
+.inspector .glyphs-display .g.font-living       { font-family: "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+.inspector .glyphs-display .g.font-historical   { font-family: "Noto Sans Historical", "Noto Serif", "Iowan Old Style", Georgia, serif; }
+.inspector .glyphs-display .g.font-cjk          { font-family: "Noto Sans CJK SC", "Noto Sans JP", "Yu Mincho", "Hiragino Mincho ProN", "MS Mincho", serif; }
+.inspector .glyphs-display .g.font-emoji        { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Noto Emoji", sans-serif; }
+.inspector .glyphs-display .g.font-math         { font-family: "Cambria Math", "Latin Modern Math", "STIX Two Math", "DejaVu Math TeX Gyre", Cambria, Georgia, serif; }
+.inspector .glyphs-display .g.font-technical    { font-family: "Cascadia Mono", "Consolas", "Menlo", "Courier New", monospace; }
+.inspector .glyphs-display .g.font-punct        { font-family: "Georgia", "Iowan Old Style", "Palatino Linotype", serif; }
+.inspector .tidbit-note-label { margin-top: 4px; }
+
+/* ---------- Legend ---------- */
+
+.legend {
+  max-width: 820px;
+  margin: 36px auto 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.legend h3 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 6px 18px;
+}
+
+.legend-row {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.legend-row .sw { width: 12px; height: 12px; border: 1px solid rgba(0,0,0,0.25); }
+.legend-row .lname { color: var(--ink); }
+.legend-row .lcount { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+
+/* ---------- Footer ---------- */
+
+.page-footer {
+  max-width: 680px;
+  margin: 48px auto 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule-strong);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.page-footer em { font-family: var(--serif); color: var(--ink-dim); }
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 768px) {
+  body { background-image: none; background-color: var(--page-bg); animation: none; }
+  .page { margin: 0; padding: 28px 18px 40px; border: none; box-shadow: none; }
+  .page::before { display: none; }
+  .page-header, .legend, .page-footer { max-width: 100%; }
+  .page-header h1 { font-size: 1.5rem; }
+  .page-header .dek { font-size: 0.95rem; }
+  .page-header p.intro { font-size: 0.95rem; }
+  .viz-section { margin: 28px 0 0; }
+  .viz-wrap { width: 100%; }
+  .inspector {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    max-height: none;
+    overflow-y: visible;
+    margin: 20px 0 0;
+    padding: 16px 16px 20px;
+    box-shadow: none;
+    transition: none;
+    top: auto; right: auto; bottom: auto; left: auto;
+  }
+  .inspector h2.project-name { font-size: 1.2rem; }
+  .inspector .desc { font-size: 0.95rem; }
+  .legend-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 420px) {
+  .legend-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<main class="page">
+
+  <header class="page-header">
+    <h1>Blockipelago</h1>
+    <p class="dek">Spiral + Lloyd, with a fisheye on the GPU.</p>
+    <hr class="rule-double">
+    <p class="intro">
+      One hundred fifty&#8209;two Unicode blocks, one disk, two layouts. The default is classic <strong>Lloyd&rsquo;s relaxation</strong>: Vogel&#8209;sunflower seeds, Voronoi clipped against the disk, sites moved to centroids, repeat. Six snapshots are baked in &mdash; <kbd>&larr;</kbd>&nbsp;/&nbsp;<kbd>&rarr;</kbd> or <kbd>1</kbd>&ndash;<kbd>6</kbd> step through them, watching rings soften and cells hexagonalize. Press <kbd>m</kbd> to toggle into <strong>weighted</strong> mode, where additively&#8209;weighted Lloyd sizes each cell to its codepoint count (capped at 4096): CJK Ext B claims 8% of the disk; the smallest blocks shrink to 0.03%.
+    </p>
+    <p class="intro">
+      Each cell is filled with the <em>actual codepoints</em> from its block &mdash; over 117,000 glyphs baked into a single texture, dyed by cluster. From a distance the disk reads as grey static; the <strong>mouseglass</strong> (Furnas 1986) magnifies the substrate under the pointer with a Gaussian inverse warp on the GPU, and the characters resolve. Scroll over the disk to dial the lens between 0 and 100%.
+    </p>
+    <div class="status-strip" aria-live="polite">
+      <span class="label">Status</span>
+      <span class="status-msg" id="status-msg">booting&hellip;</span>
+      <span class="fps" id="fps">&nbsp;</span>
+    </div>
+    <div class="status-strip stage-strip">
+      <span class="label">Layout</span>
+      <button type="button" class="stage-btn" id="stage-prev" aria-label="previous stage">&larr;</button>
+      <span class="stage-readout" id="stage-readout">Lloyd 6 / 6</span>
+      <button type="button" class="stage-btn" id="stage-next" aria-label="next stage">&rarr;</button>
+      <button type="button" class="stage-btn mode-btn" id="mode-btn">switch to weighted</button>
+      <span class="stage-hint">&larr; / &rarr; or 1&ndash;6 step Lloyd; <kbd>m</kbd> toggles mode</span>
+    </div>
+  </header>
+
+  <section class="viz-section" aria-label="Blockipelago disk with mouseglass lens">
+    <div class="viz-wrap" id="viz-wrap">
+      <canvas id="gl-canvas"></canvas>
+    </div>
+  </section>
+
+  <aside id="inspector" class="inspector resting pos-tr" aria-live="polite">
+    <div class="placeholder">
+      <div class="p-header">INSPECTOR &nbsp;&middot;&nbsp; RESTING STATE</div>
+      <h2>Move the cursor into the disk.</h2>
+      <p>Hover any cell to inspect its block. The disk is a 4096&times;4096 texture of every Unicode codepoint placed inside its Voronoi cell; the GPU samples it with an inverse Gaussian fisheye each frame.</p>
+      <p class="hint">On desktop: hover to glass, move off the disk to collapse. On mobile: tap to inspect, tap the page to reset.</p>
+    </div>
+    <div class="meta-row"></div>
+    <h2 class="project-name"></h2>
+    <p class="desc"></p>
+    <div class="tidbit-label">REPRESENTATIVE GLYPHS</div>
+    <div class="glyphs-display"></div>
+    <div class="tidbit-label tidbit-note-label">NOTE</div>
+    <p class="tidbit"></p>
+  </aside>
+
+  <section class="legend">
+    <h3>The Seven Clusters</h3>
+    <div class="legend-grid" id="legend-grid"></div>
+  </section>
+
+  <footer class="page-footer">
+    152 Unicode blocks, 117,488 codepoints, one Voronoi, one shader. Mouseglass after G.&nbsp;Furnas, <em>Generalized Fisheye Views</em>, SIGCHI 1986. Codepoint data: Unicode 17.0.0 <code>Blocks.txt</code>, 2025&#8209;08&#8209;01.
+    <br>
+    The atlas is rendered once on the CPU into an offscreen 4096&sup2; canvas. The GPU then samples it through an inverse fisheye every frame &mdash; a single uniform (cursor) drives a per-fragment Newton-style solve for the source pixel.
+  </footer>
+
+</main>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

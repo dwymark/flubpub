@@ -904,21 +904,31 @@ def set_index(ctx, file_path, vars_file):
 
     remote = ctx.obj.get("remote")
     if remote:
-        # Tempfile lives in the source dir so its asset refs still resolve
-        # locally. Remote set-index re-runs Jinja — idempotent.
-        with tempfile.NamedTemporaryFile(
-            mode="w", dir=path.parent, prefix=".rendered-",
-            suffix=".html", delete=False,
-        ) as tf:
-            tf.write(rendered)
-            rendered_path = Path(tf.name)
+        # For markdown indexes, upload the original .md with frontmatter
+        # intact so the remote-side set-index re-parses theme/index/style_css
+        # natively. Transcoding md -> rendered .html locally would strip the
+        # frontmatter and the remote would see a raw HTML blob, losing the
+        # theme and the index spec. HTML indexes still get the local Jinja
+        # pass and are uploaded as rendered .html.
+        if is_markdown_index:
+            upload_path = path
+            cleanup_path: Path | None = None
+        else:
+            with tempfile.NamedTemporaryFile(
+                mode="w", dir=path.parent, prefix=".rendered-",
+                suffix=".html", delete=False,
+            ) as tf:
+                tf.write(rendered)
+                cleanup_path = Path(tf.name)
+            upload_path = cleanup_path
         try:
-            remote_path = _upload_bundle_to_remote(remote, rendered_path)
+            remote_path = _upload_bundle_to_remote(remote, upload_path)
             args = f"set-index {shlex.quote(remote_path)}"
             _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
             _remote_cleanup(remote)
         finally:
-            rendered_path.unlink(missing_ok=True)
+            if cleanup_path is not None:
+                cleanup_path.unlink(missing_ok=True)
         return
 
     assets, sub_pages = scan_local_refs(path)

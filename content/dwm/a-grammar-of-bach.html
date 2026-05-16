@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Grammar of Bach</title>
+<style>
+  /* --- e-ink monograph: monochrome, typography-first, no JS, no shadows. --- */
+
+  :root {
+    --paper: #fafaf6;
+    --ink: #111111;
+    --ink-soft: #2a2a2a;
+    --rule: #1a1a1a;
+    --serif: 'Iowan Old Style', 'Lyon Text', 'Charter', 'Source Serif Pro',
+             'Sitka Text', 'Georgia', serif;
+    --mono: 'Iosevka', 'JetBrains Mono', 'IBM Plex Mono', 'Menlo',
+            'Consolas', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.65;
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  main {
+    max-width: 36em;
+    margin: 0 auto;
+    padding: 4.5rem 1.6rem 5rem;
+  }
+
+  /* --- masthead --- */
+
+  .masthead {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 1.85rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 0 0.9rem 0;
+    line-height: 1.25;
+  }
+
+  .subtitle {
+    font-style: italic;
+    font-size: 1.02rem;
+    margin: 0 0 1.3rem 0;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    max-width: 28em;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .byline {
+    font-family: var(--serif);
+    font-size: 0.78rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .byline span {
+    margin: 0 0.6em;
+  }
+
+  /* --- ornaments --- */
+
+  .ornament {
+    text-align: center;
+    margin: 3rem 0;
+    font-size: 1.1rem;
+    letter-spacing: 0.6em;
+    color: var(--ink);
+  }
+
+  .ornament::before { content: ""; }
+
+  /* --- section headings --- */
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 0.92rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin: 3rem 0 1.4rem 0;
+    text-align: center;
+  }
+
+  h2 .num {
+    font-style: italic;
+    font-size: 0.85em;
+    letter-spacing: 0.1em;
+    margin-right: 0.6em;
+  }
+
+  /* --- body prose --- */
+
+  p {
+    margin: 0 0 1.1rem 0;
+    text-align: justify;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+  }
+
+  p + p {
+    text-indent: 1.4em;
+  }
+
+  /* drop-cap on the first paragraph after Premise */
+
+  .open::first-letter {
+    font-size: 3.4em;
+    line-height: 0.86;
+    float: left;
+    padding: 0.05em 0.12em 0 0;
+    font-weight: 400;
+  }
+
+  .open {
+    text-indent: 0;
+  }
+
+  em.term {
+    font-style: italic;
+  }
+
+  /* --- pulled lines (for the three findings, one per paragraph) --- */
+
+  .finding {
+    margin: 0 0 1.2rem 0;
+    padding-left: 1.6em;
+    text-indent: -1.6em;
+    text-align: left;
+  }
+
+  .finding::before {
+    content: "—  ";
+    font-style: normal;
+  }
+
+  /* --- figure --- */
+
+  figure {
+    margin: 2.6rem 0;
+    padding: 0;
+  }
+
+  figure svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    font-style: italic;
+    font-size: 0.86rem;
+    text-align: center;
+    color: var(--ink-soft);
+    margin-top: 0.9rem;
+    line-height: 1.45;
+  }
+
+  figcaption .figlabel {
+    font-style: normal;
+    font-variant: small-caps;
+    letter-spacing: 0.12em;
+    margin-right: 0.5em;
+  }
+
+  /* --- colophon --- */
+
+  .colophon {
+    margin-top: 3.5rem;
+    padding-top: 1.6rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.7;
+    color: var(--ink-soft);
+  }
+
+  .colophon p {
+    text-indent: 0;
+    text-align: left;
+    margin: 0 0 0.4rem 0;
+  }
+
+  .colophon .label {
+    display: inline-block;
+    width: 8.4em;
+    color: var(--ink);
+  }
+
+  /* --- e-ink contingencies --- */
+
+  @media (max-width: 480px) {
+    body { font-size: 17px; }
+    main { padding: 3rem 1.2rem 3.5rem; }
+    h1 { font-size: 1.45rem; letter-spacing: 0.14em; }
+  }
+
+  @media print {
+    body { background: white; }
+  }
+
+  /* --- provenance band: AI-authorship disclosure ---
+     CSS-only toggle (no JS) via the checkbox-hack pattern.
+     Dismissal collapses to a permanent compact strip; never fully
+     hidden, never fully removable. Reusable as a copy-paste
+     component across publications. --- */
+
+  .banner-toggle {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    clip: rect(0 0 0 0);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .provenance {
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--serif);
+  }
+
+  .provenance-full {
+    max-width: 36em;
+    margin: 0 auto;
+    padding: 1.7rem 1.6rem 1.6rem;
+  }
+
+  .provenance-compact {
+    display: none;
+    max-width: 36em;
+    margin: 0 auto;
+    padding: 0.55rem 1.6rem;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .banner-toggle:checked ~ .provenance .provenance-full { display: none; }
+  .banner-toggle:checked ~ .provenance .provenance-compact { display: block; }
+
+  .provenance-header {
+    font-family: var(--serif);
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    margin: 0 0 0.7rem 0;
+    color: var(--ink);
+  }
+
+  .provenance-body {
+    margin: 0 0 1.1rem 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--ink);
+    text-align: left;
+    text-indent: 0;
+    max-width: 32em;
+  }
+
+  .provenance-body em {
+    font-style: italic;
+  }
+
+  .provenance-action {
+    display: inline-block;
+    cursor: pointer;
+    border: 1px solid var(--ink);
+    padding: 0.4rem 1.05rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: transparent;
+    user-select: none;
+  }
+
+  .banner-toggle:focus-visible ~ .provenance .provenance-action {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  .provenance-action:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .provenance-restore {
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .provenance-restore::after {
+    content: "  ↺";
+    margin-left: 0.4em;
+    font-size: 0.85em;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<input type="checkbox" id="ai-banner-toggle" class="banner-toggle">
+<aside class="provenance" role="region" aria-label="AI authorship provenance notice">
+  <div class="provenance-full">
+    <p class="provenance-header">Provenance Notice</p>
+    <p class="provenance-body">This page contains <em>AI-generated prose</em>, drafted by Claude (Anthropic) from research notes and prior conversations by the bylined author. The findings, numbers, and design choices are the author&apos;s; the wording is not.</p>
+    <label for="ai-banner-toggle" class="provenance-action" tabindex="0">Acknowledge</label>
+  </div>
+  <div class="provenance-compact">
+    <label for="ai-banner-toggle" class="provenance-restore" tabindex="0">AI-drafted · acknowledged</label>
+  </div>
+</aside>
+
+<main>
+
+  <header class="masthead">
+    <h1>A Grammar of Bach</h1>
+    <p class="subtitle">Notes on a Lambek type system induced from four hundred and thirteen chorale harmonizations.</p>
+    <p class="byline"><span>Daniel Wymark</span>·<span>Interim Report</span></p>
+  </header>
+
+  <div class="ornament">·   ·   ·</div>
+
+  <h2><span class="num">I.</span>Premise</h2>
+
+  <p class="open">A Lambek grammar is a system for assigning <em class="term">types</em> to words in such a way that the types of a sentence&apos;s words, concatenated and reduced according to a small calculus, yield a single distinguished type — by convention, the type of a complete sentence. The grammar is what licenses sentences as sentences. An inducer&apos;s job is to discover, given a corpus of acceptable sentences and a fixed inventory of primitive types, type assignments that make the corpus parse.</p>
+
+  <p>Bach&apos;s chorales provide an unusually clean corpus for an inducer that does not natively know about music. The four-voice texture is settled, the cadential vocabulary is constrained, and the corpus is bounded: four hundred and thirteen harmonizations are available in the music21 library, partitionable into 2,514 melodic phrases by rests of one beat or longer and by fermatas. The decision to treat the soprano&apos;s scale-degree sequence as the surface yield, and a phrase as a sentence, makes Bach a corpus and Lambek a tool.</p>
+
+  <p>The premise is then literal: induce a type system over scale degrees that licenses every observed phrase as parse-complete, and read the resulting type assignments to see what they say.</p>
+
+  <h2><span class="num">II.</span>Method</h2>
+
+  <p>The inducer wraps Google&apos;s CP-SAT constraint solver. Four primitive types are supplied by hand: M, the type of a complete melodic phrase, and three arrival points — At1, At3, At5 — for stability at tonic, mediant, and dominant respectively. The maximum derived-type depth is two; the solver runs with a one-hundred-and-twenty-second timeout and a memory cap of one and a half gigabytes. Phrase length is filtered to the range of three to ten notes, leaving 2,196 phrases over which the solver must succeed simultaneously.</p>
+
+  <p>Concretely, each scale degree may be assigned a set of types of depth at most two. A phrase parses if some choice of types for its scale-degree tokens reduces, by application of the Lambek calculus, to M. The inducer then searches for an assignment under which every phrase in the filtered corpus parses. A constraint problem of this size does not fit in memory whole; the solver attacks it one phrase at a time, batched.</p>
+
+  <p>The filtered corpus is diatonic: scale degrees one through seven, with no chromatic alterations surviving in the phrases the solver sees. The lexicon contains seven words and seven only.</p>
+
+  <h2><span class="num">III.</span>The Lexicon</h2>
+
+  <p>The corpus&apos;s first arithmetic facts are themselves illuminating, and bear stating before any type is induced. Bach&apos;s soprano lines are not uniformly distributed across the seven scale degrees, and the shape of that distribution is part of the structure the inducer must accommodate.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scale-degree distribution across 22,017 notes from 413 Bach chorale soprano lines.">
+      <g font-family="'Iowan Old Style', 'Charter', Georgia, serif" fill="#111">
+
+        <!-- column headers -->
+        <text x="22" y="22" font-size="11" letter-spacing="2.2" font-style="italic" fill="#2a2a2a">degree</text>
+        <text x="540" y="22" font-size="11" letter-spacing="2.2" font-style="italic" text-anchor="end" fill="#2a2a2a">share</text>
+
+        <!-- row template helper: each row is 36px tall, bars 18px tall, baseline at row + 22 -->
+
+        <!-- row 1: do · 1 · 17.7% -->
+        <text x="22"  y="62" font-size="14">do</text>
+        <text x="58"  y="62" font-size="11" fill="#2a2a2a">·  1</text>
+        <rect x="110" y="50" width="354" height="18" fill="#111"/>
+        <text x="540" y="62" font-size="13" text-anchor="end">17.7%</text>
+
+        <!-- row 2: re · 2 · 17.1% -->
+        <text x="22"  y="98" font-size="14">re</text>
+        <text x="58"  y="98" font-size="11" fill="#2a2a2a">·  2</text>
+        <rect x="110" y="86" width="342" height="18" fill="#111"/>
+        <text x="540" y="98" font-size="13" text-anchor="end">17.1%</text>
+
+        <!-- row 3: mi · 3 · 19.1% — the maximum -->
+        <text x="22"  y="134" font-size="14">mi</text>
+        <text x="58"  y="134" font-size="11" fill="#2a2a2a">·  3</text>
+        <rect x="110" y="122" width="382" height="18" fill="#111"/>
+        <text x="540" y="134" font-size="13" text-anchor="end">19.1%</text>
+
+        <!-- row 4: fa · 4 · 13.3% -->
+        <text x="22"  y="170" font-size="14">fa</text>
+        <text x="58"  y="170" font-size="11" fill="#2a2a2a">·  4</text>
+        <rect x="110" y="158" width="266" height="18" fill="#111"/>
+        <text x="540" y="170" font-size="13" text-anchor="end">13.3%</text>
+
+        <!-- row 5: sol · 5 · 18.4% -->
+        <text x="22"  y="206" font-size="14">sol</text>
+        <text x="58"  y="206" font-size="11" fill="#2a2a2a">·  5</text>
+        <rect x="110" y="194" width="368" height="18" fill="#111"/>
+        <text x="540" y="206" font-size="13" text-anchor="end">18.4%</text>
+
+        <!-- row 6: la · 6 · 7.2% -->
+        <text x="22"  y="242" font-size="14">la</text>
+        <text x="58"  y="242" font-size="11" fill="#2a2a2a">·  6</text>
+        <rect x="110" y="230" width="144" height="18" fill="#111"/>
+        <text x="540" y="242" font-size="13" text-anchor="end">7.2%</text>
+
+        <!-- row 7: ti · 7 · 7.2% -->
+        <text x="22"  y="278" font-size="14">ti</text>
+        <text x="58"  y="278" font-size="11" fill="#2a2a2a">·  7</text>
+        <rect x="110" y="266" width="144" height="18" fill="#111"/>
+        <text x="540" y="278" font-size="13" text-anchor="end">7.2%</text>
+
+        <!-- baseline reference (no axis): a 1px tick at the right edge of the maximum bar -->
+        <line x1="492" y1="295" x2="492" y2="305" stroke="#111" stroke-width="1"/>
+        <text x="492" y="316" font-size="9" letter-spacing="1.2" text-anchor="middle" fill="#2a2a2a">max</text>
+
+      </g>
+    </svg>
+    <figcaption><span class="figlabel">Figure 1.</span>Distribution of soprano scale degrees across 22,017 notes; ordered by scale degree rather than by share. Mediant first, leading-tone and submediant tied last.</figcaption>
+  </figure>
+
+  <p>Mi is the most common surface token; fa, despite its weight in cadential theory, is comparatively scarce; la and ti are the rare two. The inducer&apos;s constraint problem is, in part, to find a small set of types per scale degree that copes with this skew without any one degree carrying the entire grammar.</p>
+
+  <p>Most inducers chew through several thousand types over several thousand lexical items. Here the inducer must squeeze every observed phrase through a vocabulary of seven, and the structure has to come not from dictionary growth but from polysemy: a single scale degree, at different points in different phrases, takes different types from a small finite set. That is the project&apos;s actual question. <em class="term">How polysemic is each scale degree?</em></p>
+
+  <h2><span class="num">IV.</span>What the Solver Found</h2>
+
+  <p>The induced grammar assigns between five and nine distinct types per scale degree — a tight band. Three findings stand out.</p>
+
+  <p class="finding">Sol is the structurally maximal scale degree. It is the only degree whose type-set carries M\M, the type of phrase continuation, and it reaches every primitive with nine distinct types, more than any other degree. It can either stand or extend; its grammatical role is connector, in the strong sense.</p>
+
+  <p class="finding">Do, the tonic, functions less as a stable arrival point than as a connector. This is the result that should surprise music theorists, or rather, the result that quietly confirms a long-standing observation: the tonic in Bach&apos;s chorales is more often passed through than arrived at.</p>
+
+  <p class="finding">Fa, alone, cannot end a phrase. There is no type assignment, in any solution returned, that licenses a phrase whose terminal lexical item is the subdominant in isolation. Theorists know this as a tendency. The inducer, given no music theory, takes it as a hard constraint and finds none.</p>
+
+  <p>These are not music-theoretical claims dressed in mathematics. They emerge from a constraint solver to which no musical knowledge has been supplied beyond the four primitive labels and the locations of phrase boundaries. The solver finds them because the corpus enforces them.</p>
+
+  <h2><span class="num">V.</span>Why This Might Matter</h2>
+
+  <p>Two angles, briefly. Music-theoretically, the Riemannian apparatus of tonic, subdominant, and dominant function has a long history of phenomenological description. A type-theoretic restatement — <em class="term">fa is the scale degree with no terminal license</em> — is unusually crisp. It also opens an obvious follow-up: induce a type system on a corpus from a different repertoire, Palestrina, say, or Gesualdo, and read off where the lexicon&apos;s connector-and-arrival structure differs.</p>
+
+  <p>Linguistically, Lambek grammars are a categorial framework whose original target was natural language. Their applicability to a domain with no obvious semantic content — only structural well-formedness — is a low-grade vindication of the formalism&apos;s claim to be a theory of combinatorial possibility, not of meaning. The chorales parse for the same reason English sentences parse: the categories have to fit.</p>
+
+  <p>This is the sort of result that wants a paper, not a postcard. The present document is an interim report.</p>
+
+  <div class="ornament">·   ·   ·</div>
+
+  <section class="colophon">
+    <p><span class="label">Project</span>lambek-type-induction</p>
+    <p><span class="label">Corpus</span>413 BWV chorale harmonizations · music21 library</p>
+    <p><span class="label">Solver</span>Google CP-SAT, batched per phrase</p>
+    <p><span class="label">Calculus</span>Lambek, primitives M / At1 / At3 / At5</p>
+    <p><span class="label">Set in</span>Iowan Old Style, with Iosevka for the colophon</p>
+    <p><span class="label">Findings</span>Daniel Wymark</p>
+    <p><span class="label">Prose</span>Claude (Anthropic), from D.W.&apos;s materials</p>
+    <p><span class="label">Status</span>Complete</p>
+    <p><span class="label">Drafted</span>Generated 5/1/2026, Fact-Checked and Published 5/16/2026</p>
+  </section>
+
+</main>
+</body>
+</html>

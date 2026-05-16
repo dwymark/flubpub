@@ -1,12 +1,12 @@
 ---
 title: "Daniel Wymark"
+theme: latticework
 index:
   filter:
-    slug_glob: "blockipelago"
     exclude_self: true
   sort:
     by: manual
-    manual: [blockipelago]
+    manual: [blockipelago, a-grammar-of-bach]
 ---
 # Daniel Wymark's Home Page
 

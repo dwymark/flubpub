@@ -84,6 +84,44 @@ SITE=dwm REMOTE_HOST=danielwymark.com SERVER_NAME=danielwymark.com PORT=8001 \
     bash deploy/deploy.sh
 ```
 
+## Content source of truth
+
+The `content/` directory is the version-controlled source of truth for every
+page published to a flubpub site. Layout is partitioned by site key, mirroring
+the sites registry:
+
+```
+content/
+  dwm/
+    home.md
+    <slug>.{md,html}
+    <slug>/                 # sibling assets, scanned by `push`
+      diagram.png
+    index-spec.json         # mirror of production data/custom_index_spec.json
+    tiles.json              # mirror of production tile metadata (see below)
+  bj/
+    ...
+```
+
+One file per slug, basename = slug. Assets sit in a sibling folder named after
+the slug; `push` already scans and uploads them. Publish with
+`uv run flubpub --site <key> push content/<key>/<slug>.md` or, for the home
+page, `set-index`.
+
+Not source of truth: `site/src/pages/` and `data/pages.json` at the repo root.
+Those belong to the local dev install (`flubpub serve`) and are rebuilt by
+every local push.
+
+**Tile metadata (deferred).** Production's `data/pages.json` carries per-page
+`tile` entries produced by `/card-construction`, which do not live in the
+markdown source. When the gallery layout starts getting used, commit a
+sanitized copy of those tile entries to `content/<key>/tiles.json` so a
+rebuild-from-content is lossless. Until then, the gallery is unused and
+`tiles.json` does not need to exist.
+
+If this repo ever goes public, `content/` is the directory to exfiltrate or
+gitignore.
+
 ## Architecture
 
 **Data flow:** CLI → POST /api/pages → server writes page file to `site/src/pages/` → server runs `npx @11ty/eleventy` in `site/` → static HTML appears in `site/_site/` → nginx serves `_site/` directly, proxies `/api/` and `/health` to uvicorn.

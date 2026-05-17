@@ -6,6 +6,7 @@ import subprocess
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File
@@ -33,6 +34,19 @@ PAGES_JSON = DATA_DIR / "pages.json"
 SITE_OUTPUT = SITE_DIR / "_site"
 ASSETS_DIR = SITE_DIR / "src" / "assets"
 THEMES_DIR = Path(__file__).parent / "themes"
+# Timestamps in pages.json are stored as UTC ISO strings; display lists
+# render them in this timezone. Default UTC keeps behavior unchanged for
+# installs that don't set it. Per-instance via systemd's instance.env.
+def _resolve_display_tz() -> ZoneInfo:
+    name = os.environ.get("FLUBPUB_DISPLAY_TZ", "UTC")
+    try:
+        return ZoneInfo(name)
+    except ZoneInfoNotFoundError:
+        logger.warning("Unknown FLUBPUB_DISPLAY_TZ=%r, falling back to UTC", name)
+        return ZoneInfo("UTC")
+
+DISPLAY_TZ = _resolve_display_tz()
+
 CUSTOM_INDEX_SRC = DATA_DIR / "custom_index.html"
 CUSTOM_INDEX_SPEC = DATA_DIR / "custom_index_spec.json"
 INDEX_PAGES_MARKER_ID = "flubpub-pages"
@@ -55,7 +69,15 @@ def _render_pages_list_html(payload: list[dict]) -> str:
 
     def _date(p: dict) -> str:
         v = p.get("created_at") or ""
-        return v[:10] if isinstance(v, str) and len(v) >= 10 else ""
+        if not isinstance(v, str) or len(v) < 10:
+            return ""
+        try:
+            dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
+        except ValueError:
+            return v[:10]
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(DISPLAY_TZ).strftime("%Y-%m-%d")
 
     def _li(p: dict) -> str:
         title = p.get("title") or p.get("slug") or "(untitled)"

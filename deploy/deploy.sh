@@ -27,6 +27,7 @@ PORT=${PORT:?PORT must be set (a free TCP port for this install)}
 REMOTE_USER=${REMOTE_USER:-root}
 REMOTE_DIR=${REMOTE_DIR:-/opt/flubpub-${SITE}}
 EMAIL=${EMAIL:-}
+DISPLAY_TZ=${DISPLAY_TZ:-}
 # Override for testing; production never sets this.
 ETC=${ETC:-/etc}
 
@@ -69,6 +70,7 @@ cat > "${REMOTE_DIR}/instance.env" <<EOF
 FLUBPUB_DATA_DIR=${REMOTE_DIR}/data
 FLUBPUB_SITE_DIR=${REMOTE_DIR}/site
 FLUBPUB_PORT=${PORT}
+${DISPLAY_TZ:+FLUBPUB_DISPLAY_TZ=${DISPLAY_TZ}}
 EOF
 
 # Set up venv and install the wheel

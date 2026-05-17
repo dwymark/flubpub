@@ -1218,6 +1218,12 @@ def deploy(site_key, script):
         "SERVER_NAME": entry["server_name"],
         "PORT": str(entry["port"]),
         "EMAIL": email,
+        "DISPLAY_TZ": str(
+            entry.get("display_tz")
+            or cfg.get("display_tz")
+            or os.environ.get("DISPLAY_TZ")
+            or ""
+        ),
     }
     click.echo(f"Deploying '{site_key}' via {script_path}")
     click.echo(f"  → {user}@{hostname}:{install_dir}")

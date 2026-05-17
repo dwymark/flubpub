@@ -487,9 +487,58 @@ body {
 @media (max-width: 420px) {
   .legend-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- Provenance banner (style/web/provenance, recipe: tech-demo) ---------- */
+
+.banner-toggle { position: absolute; width: 1px; height: 1px; clip: rect(0 0 0 0); overflow: hidden; }
+.provenance {
+  background: var(--page-bg);
+  border-bottom: 1px solid var(--rule-strong);
+  font-family: var(--serif);
+  color: var(--ink);
+}
+.provenance-full { max-width: 36em; margin: 0 auto; padding: 1.7rem 1.6rem 1.6rem; }
+.provenance-compact {
+  display: none; max-width: 36em; margin: 0 auto; padding: .55rem 1.6rem; text-align: center;
+  font-family: var(--mono); font-size: .7rem; letter-spacing: .24em; text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.banner-toggle:checked ~ .provenance .provenance-full { display: none; }
+.banner-toggle:checked ~ .provenance .provenance-compact { display: block; }
+.provenance-header {
+  font-family: var(--mono); font-size: .78rem; font-weight: 400;
+  letter-spacing: .24em; text-transform: uppercase; color: var(--ink-dim);
+  margin: 0 0 .7rem;
+}
+.provenance-body { font-size: .95rem; line-height: 1.55; max-width: 32em; margin: 0 0 .6rem; }
+.provenance-behavior {
+  font-family: var(--mono); font-size: .72rem; letter-spacing: .04em;
+  color: var(--ink-dim); margin: 0 0 1.1rem;
+}
+.provenance-action {
+  display: inline-block; cursor: pointer; border: 1px solid var(--ink);
+  padding: .4rem 1.05rem; font-family: var(--mono); font-size: .7rem;
+  letter-spacing: .24em; text-transform: uppercase; background: transparent; color: var(--ink);
+}
+.provenance-action:hover { background: var(--ink); color: var(--page-bg); }
+.provenance-restore { color: inherit; cursor: pointer; text-decoration: none; }
+.provenance-restore::after { content: "  ↺"; margin-left: .4em; opacity: .7; }
 </style>
 </head>
 <body>
+
+<input type="checkbox" id="ai-banner-toggle" class="banner-toggle">
+<aside class="provenance" role="region" aria-label="AI authorship provenance notice">
+  <div class="provenance-full">
+    <p class="provenance-header">Provenance Notice</p>
+    <p class="provenance-body">This page (prose, code, and design) was authored and implemented by <strong>Claude Opus 4.7</strong> (Anthropic) under Daniel Wymark's direction. The findings, design choices, and direction are Daniel's; the wording and implementation are Claude's.</p>
+    <p class="provenance-behavior">This page runs WebGL in your browser. No network calls beyond Google Fonts, no telemetry, no cookies, no storage.</p>
+    <label for="ai-banner-toggle" class="provenance-action" tabindex="0">Acknowledge</label>
+  </div>
+  <div class="provenance-compact">
+    <label for="ai-banner-toggle" class="provenance-restore" tabindex="0">AI-authored tech demo &middot; acknowledged</label>
+  </div>
+</aside>
 
 <main class="page">
 

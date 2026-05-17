@@ -20,7 +20,7 @@ Cases:
   6. FLUBPUB_NO_MIRROR=1         → nothing written
   7. --local                     → not registry-backed, no mirror
   8. shape reconcile flat→dir    → stale flat file dropped
-  9. push straight from content/ → self-copy no-op ("already current")
+  9. in-place re-publish        → no SameFileError crash, bundle intact
 """
 from __future__ import annotations
 
@@ -154,15 +154,16 @@ def main() -> None:
         check((content_dwm / "zeta" / "zeta.md").is_file(),
               "case8: dir-shape zeta/zeta.md missing")
 
-        # --- case 9: pushing from content/ itself is a no-op ---
-        print("--- case 9: self-copy no-op ---")
-        proc = flub(["--site", "dwm", "push",
-                     str(content_dwm / "beta" / "page.md"), "--slug", "beta"])
-        check("already current" in proc.stdout,
-              f"case9: expected 'already current'; got {proc.stdout!r}")
+        # --- case 9: re-publishing the canonical content/ file in place
+        # must not crash (SameFileError) or corrupt/drop the bundle ---
+        print("--- case 9: in-place re-publish ---")
+        flub(["--site", "dwm", "push",
+              str(content_dwm / "beta" / "page.md"), "--slug", "beta"])
         check((content_dwm / "beta" / "page.md").read_text()
               == "# Beta\n\n![pic](pic.png)\n",
-              "case9: self-copy corrupted the file")
+              "case9: in-place re-publish corrupted the entry")
+        check((content_dwm / "beta" / "pic.png").is_file(),
+              "case9: in-place re-publish dropped a bundled asset")
 
     print()
     if failures:

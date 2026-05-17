@@ -493,10 +493,9 @@ def _mirror_bundle_pairs(
 
 
 def _mirror_to_content(site_key: str, slug: str, entry_path: Path) -> None:
-    """Copy a just-published bundle into content/<site_key>/ so the tree is
-    canonical without manual upkeep. Keeps exactly one shape per slug (drops
-    the opposite flat/dir form) and skips files that already are the
-    destination, so publishing straight from content/ is a no-op."""
+    """Copy a just-published bundle into content/<site_key>/ so the tree
+    stays canonical without manual upkeep, keeping exactly one shape per
+    slug (drops the opposite flat/dir form)."""
     root = _content_root()
     if root is None:
         click.echo(
@@ -509,31 +508,28 @@ def _mirror_to_content(site_key: str, slug: str, entry_path: Path) -> None:
     dest_dir = root / site_key
     pairs, is_dir = _mirror_bundle_pairs(slug, entry, dest_dir)
 
-    removed = 0
-    if is_dir:
-        for ext in (".md", ".html"):
-            stale = dest_dir / f"{slug}{ext}"
-            if stale.is_file():
-                stale.unlink()
-                removed += 1
-    else:
-        stale_dir = dest_dir / slug
-        if stale_dir.is_dir():
-            shutil.rmtree(stale_dir)
-            removed += 1
-
-    copied = 0
+    wrote = False
     for src, dest in pairs:
+        # Don't copy a file onto itself — shutil.copy2 raises SameFileError,
+        # and there is nothing to do when the published file already is the
+        # canonical copy.
         if src.resolve() == dest.resolve():
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
-        copied += 1
+        wrote = True
 
-    if copied or removed:
-        click.echo(f"Mirrored SSOT → content/{site_key}/ ({copied} file(s))")
+    # Drop the opposite flat/dir form *after* writing, so a source that
+    # lived inside the old shape has already been copied out before the
+    # old shape is removed.
+    if is_dir:
+        for ext in (".md", ".html"):
+            (dest_dir / f"{slug}{ext}").unlink(missing_ok=True)
     else:
-        click.echo(f"content/{site_key}/ SSOT already current")
+        shutil.rmtree(dest_dir / slug, ignore_errors=True)
+
+    if wrote:
+        click.echo(f"Mirrored → content/{site_key}/")
 
 
 def _unmirror_from_content(site_key: str, slug: str) -> None:

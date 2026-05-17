@@ -344,19 +344,32 @@ def _load_sites_config() -> dict:
         return {}
 
 
-def _resolve_remote(remote: str | None, site: str | None) -> tuple[str | None, int | None]:
+def _resolve_remote(
+    remote: str | None, site: str | None
+) -> tuple[str | None, int | None, str | None]:
     """Resolve --remote / --site / default-from-config / FLUBPUB_SITE env into
-    a (remote_spec, port) tuple. Returns (None, None) for local-HTTP mode.
-    The port is taken from the registry when --site is used (or default)."""
-    if remote:
-        return remote, None
-    site = site or os.environ.get("FLUBPUB_SITE")
+    a (remote_spec, port, site_key) triple. Returns (None, None, None) for
+    local-HTTP mode. The port is taken from the registry when --site is used
+    (or default). site_key is the registry key publishes mirror into under
+    content/; it is None when it can't be determined (a raw --remote spec with
+    no matching registry entry, or local-HTTP mode), which disables mirroring."""
     cfg = _load_sites_config()
+    sites = cfg.get("sites") or {}
+    if remote:
+        # Reverse-map a raw --remote spec back onto a registry key so the
+        # content/ mirror still partitions correctly. No match → no mirror
+        # (the raw escape hatch isn't registry-backed).
+        key = next(
+            (k for k, e in sites.items()
+             if isinstance(e, dict) and e.get("remote") == remote),
+            None,
+        )
+        return remote, None, key
+    site = site or os.environ.get("FLUBPUB_SITE")
     if not site:
         site = cfg.get("default")
     if not site:
-        return None, None
-    sites = cfg.get("sites") or {}
+        return None, None, None
     entry = sites.get(site)
     if not entry:
         click.echo(
@@ -370,7 +383,7 @@ def _resolve_remote(remote: str | None, site: str | None) -> tuple[str | None, i
         click.echo(f"Site '{site}' has no 'remote' key.", err=True)
         sys.exit(1)
     port = entry.get("port") if isinstance(entry, dict) else None
-    return spec, port
+    return spec, port, site
 
 
 def _ssh_run(remote: str, cmd: str) -> subprocess.CompletedProcess:
@@ -443,6 +456,116 @@ def _upload_bundle_to_remote(remote: str, file_path: Path) -> str:
     return f"{rdir}/{file_path.name}"
 
 
+def _content_root() -> Path | None:
+    """Locate the repo's content/ directory by walking up from CWD to the
+    nearest dir holding a .git or pyproject.toml marker. Returns None when
+    invoked outside the flubpub repo (mirroring is skipped, with a notice)."""
+    cur = Path.cwd().resolve()
+    for d in (cur, *cur.parents):
+        if (d / ".git").exists() or (d / "pyproject.toml").is_file():
+            return d / "content"
+    return None
+
+
+def _mirror_bundle_pairs(
+    slug: str, entry: Path, dest_dir: Path
+) -> tuple[list[tuple[Path, Path]], bool]:
+    """Plan the (src, dest) copies that mirror `entry` plus its ref-closure
+    into content/<site>/. A ref-free single file lands flat as
+    content/<site>/<slug>.<ext>; anything with assets/sub-pages lands in a
+    content/<site>/<slug>/ directory preserving each file's path relative to
+    the entry's own directory (the entry keeps its source filename). Returns
+    (pairs, is_dir_shape)."""
+    suffix = entry.suffix.lower()
+    assets, subs = collect_all_refs(entry) if suffix in PAGE_SUFFIXES else ([], [])
+    if not assets and not subs:
+        return [(entry, dest_dir / f"{slug}{entry.suffix}")], False
+    bundle_root = dest_dir / slug
+    base = entry.parent.resolve()
+    pairs = [(entry, bundle_root / entry.name)]
+    for ref in assets + subs:
+        try:
+            rel = ref.resolve().relative_to(base).as_posix()
+        except ValueError:
+            rel = ref.name
+        pairs.append((ref, bundle_root / rel))
+    return pairs, True
+
+
+def _mirror_to_content(site_key: str, slug: str, entry_path: Path) -> None:
+    """Copy a just-published bundle into content/<site_key>/ so the tree is
+    canonical without manual upkeep. Keeps exactly one shape per slug (drops
+    the opposite flat/dir form) and skips files that already are the
+    destination, so publishing straight from content/ is a no-op."""
+    root = _content_root()
+    if root is None:
+        click.echo(
+            "Note: flubpub repo root not found (no .git/pyproject.toml above "
+            "CWD); skipping content/ mirror.",
+            err=True,
+        )
+        return
+    entry = entry_path.resolve()
+    dest_dir = root / site_key
+    pairs, is_dir = _mirror_bundle_pairs(slug, entry, dest_dir)
+
+    removed = 0
+    if is_dir:
+        for ext in (".md", ".html"):
+            stale = dest_dir / f"{slug}{ext}"
+            if stale.is_file():
+                stale.unlink()
+                removed += 1
+    else:
+        stale_dir = dest_dir / slug
+        if stale_dir.is_dir():
+            shutil.rmtree(stale_dir)
+            removed += 1
+
+    copied = 0
+    for src, dest in pairs:
+        if src.resolve() == dest.resolve():
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        copied += 1
+
+    if copied or removed:
+        click.echo(f"Mirrored SSOT → content/{site_key}/ ({copied} file(s))")
+    else:
+        click.echo(f"content/{site_key}/ SSOT already current")
+
+
+def _unmirror_from_content(site_key: str, slug: str) -> None:
+    """Drop a deleted page's canonical copy from content/<site_key>/ so a
+    delete doesn't leave the tree claiming a page that no longer exists."""
+    root = _content_root()
+    if root is None:
+        click.echo(
+            "Note: flubpub repo root not found (no .git/pyproject.toml above "
+            "CWD); skipping content/ unmirror.",
+            err=True,
+        )
+        return
+    dest_dir = root / site_key
+    removed: list[str] = []
+    for ext in (".md", ".html"):
+        f = dest_dir / f"{slug}{ext}"
+        if f.is_file():
+            f.unlink()
+            removed.append(f.name)
+    d = dest_dir / slug
+    if d.is_dir():
+        shutil.rmtree(d)
+        removed.append(f"{slug}/")
+    if removed:
+        click.echo(f"Removed from content/{site_key}/: {', '.join(removed)}")
+
+
+def _should_mirror(ctx) -> bool:
+    return bool(ctx.obj.get("mirror")) and bool(ctx.obj.get("site_key"))
+
+
 @click.group()
 @click.option("--server", default="http://localhost:8000", show_default=True, help="Server base URL")
 @click.option("--remote", default=None,
@@ -455,10 +578,16 @@ def _upload_bundle_to_remote(remote: str, file_path: Path) -> str:
                    "(default http://localhost:8000). USE WHEN TESTING LOCALLY "
                    "to avoid silently pushing through SSH to a production "
                    "site listed as `default` in ~/.config/flubpub/sites.toml.")
+@click.option("--no-mirror", "no_mirror", is_flag=True, default=False,
+              help="Skip mirroring the published bundle into content/. By "
+                   "default every push/revise/set-index/delete keeps "
+                   "content/<site>/ canonical automatically. Also disabled by "
+                   "FLUBPUB_NO_MIRROR=1.")
 @click.pass_context
-def cli(ctx, server, remote, site, force_local):
+def cli(ctx, server, remote, site, force_local, no_mirror):
     ctx.ensure_object(dict)
     ctx.obj["server"] = server
+    mirror_disabled = no_mirror or os.environ.get("FLUBPUB_NO_MIRROR") in ("1", "true", "yes")
     if force_local:
         if remote or site:
             click.echo(
@@ -469,17 +598,22 @@ def cli(ctx, server, remote, site, force_local):
         ctx.obj["remote"] = None
         ctx.obj["remote_dir"] = DEFAULT_REMOTE_DIR
         ctx.obj["remote_port"] = None
+        ctx.obj["site_key"] = None
+        ctx.obj["mirror"] = False
         return
-    resolved_spec, resolved_port = _resolve_remote(remote, site)
+    ctx.obj["mirror"] = not mirror_disabled
+    resolved_spec, resolved_port, resolved_key = _resolve_remote(remote, site)
     if resolved_spec:
         host, remote_dir = _parse_remote(resolved_spec)
         ctx.obj["remote"] = host
         ctx.obj["remote_dir"] = remote_dir
         ctx.obj["remote_port"] = resolved_port
+        ctx.obj["site_key"] = resolved_key
     else:
         ctx.obj["remote"] = None
         ctx.obj["remote_dir"] = DEFAULT_REMOTE_DIR
         ctx.obj["remote_port"] = None
+        ctx.obj["site_key"] = None
 
 
 @cli.command()
@@ -531,6 +665,8 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
             args += f" --excerpt {shlex.quote(excerpt)}"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
+        if _should_mirror(ctx):
+            _mirror_to_content(ctx.obj["site_key"], slug or _slugify(title), path)
         return
 
     suffix = path.suffix.lower()
@@ -734,6 +870,8 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
             args += f" --excerpt {shlex.quote(excerpt)}"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
+        if _should_mirror(ctx):
+            _mirror_to_content(ctx.obj["site_key"], slug, path)
         return
 
     content = path.read_text()
@@ -831,6 +969,8 @@ def delete(ctx, slug):
     remote = ctx.obj.get("remote")
     if remote:
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=f"delete {shlex.quote(slug)}")
+        if _should_mirror(ctx):
+            _unmirror_from_content(ctx.obj["site_key"], slug)
         return
 
     with httpx.Client() as client:
@@ -926,6 +1066,8 @@ def set_index(ctx, file_path, vars_file):
             args = f"set-index {shlex.quote(remote_path)}"
             _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
             _remote_cleanup(remote)
+            if _should_mirror(ctx):
+                _mirror_to_content(ctx.obj["site_key"], path.stem, path)
         finally:
             if cleanup_path is not None:
                 cleanup_path.unlink(missing_ok=True)

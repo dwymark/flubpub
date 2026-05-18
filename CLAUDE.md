@@ -65,10 +65,13 @@ uv run flubpub sites list                    # inspect; * marks default
 uv run flubpub sites set-default bj          # change default
 uv run flubpub sites remove old-site
 
-# Then publish via --site (or rely on the default):
+# Then publish via --site (or rely on the default). Every push/revise/
+# set-index/delete also mirrors the bundle into content/<key>/ (the SSOT),
+# so you can publish a draft from anywhere and the tree stays canonical:
 uv run flubpub --site dwm push page.html --title "About"
 uv run flubpub --site bj  list
 uv run flubpub push page.md                  # uses default site
+uv run flubpub --no-mirror --site dwm push page.md   # skip the content/ mirror
 FLUBPUB_SITE=bj uv run flubpub list          # env-var override
 
 # Raw escape hatches still work:
@@ -87,26 +90,36 @@ SITE=dwm REMOTE_HOST=danielwymark.com SERVER_NAME=danielwymark.com PORT=8001 \
 ## Content source of truth
 
 The `content/` directory is the version-controlled source of truth for every
-page published to a flubpub site. Layout is partitioned by site key, mirroring
-the sites registry:
+page published to a flubpub site, and the CLI keeps it that way automatically.
+Every `push`/`revise`/`set-index`/`delete` that resolves to a registry site
+key mirrors the published bundle into `content/<key>/` (and `delete` removes
+it). Publish a draft from anywhere — `/tmp`, a scratchpad, wherever — and the
+tree is canonical afterward; no manual upkeep, no discipline. Layout is
+partitioned by site key, mirroring the sites registry:
 
 ```
 content/
   dwm/
     home.md
-    <slug>.{md,html}
-    <slug>/                 # sibling assets, scanned by `push`
-      diagram.png
-    index-spec.json         # mirror of production data/custom_index_spec.json
-    tiles.json              # mirror of production tile metadata (see below)
+    <slug>.{md,html}        # a ref-free page lands flat
+    <slug>/                 # a page with assets/sub-pages lands as a dir,
+      <entry>.{md,html}     #   entry keeps its source filename,
+      diagram.png           #   refs preserved relative to the entry
   bj/
     ...
 ```
 
-One file per slug, basename = slug. Assets sit in a sibling folder named after
-the slug; `push` already scans and uploads them. Publish with
-`uv run flubpub --site <key> push content/<key>/<slug>.md` or, for the home
-page, `set-index`.
+Exactly one shape per slug — the mirror drops the opposite flat/dir form on
+write, so the tree never carries a stale duplicate.
+
+Mirroring is skipped for: `--local` (the local dev install is not the SSOT,
+see below) and a raw `--remote` spec with no matching registry entry (the
+escape hatch isn't registry-backed). Opt out per-invocation with
+`--no-mirror` or globally with `FLUBPUB_NO_MIRROR=1`.
+
+Not auto-mirrored: per-page `tile` metadata (produced by `/card-construction`,
+not present in the markdown source) — see [`DWM.md`](./DWM.md) for the
+deferred plan.
 
 Not source of truth: `site/src/pages/` and `data/pages.json` at the repo root.
 Those belong to the local dev install (`flubpub serve`) and are rebuilt by
@@ -127,6 +140,7 @@ danielwymark.com install.
 
 **Python package** (`src/flubpub/`):
 - `cli.py` — Click CLI (push, list, get, revise, delete, serve, deploy, sites group). Uses httpx for HTTP, scp+ssh for `--remote`. Scans .md/.html files for local image/link references and uploads them. The `--site KEY` flag resolves a remote spec from `~/.config/flubpub/sites.toml`. The package has zero hardcoded site keys.
+- **content/ mirror-on-write:** `_resolve_remote` also returns the resolved registry key; `_should_mirror` gates on it (None for `--local` / unmatched raw `--remote` / `--no-mirror` / `FLUBPUB_NO_MIRROR`). After a successful remote `push`/`revise`/`set-index`, `_mirror_to_content` copies the bundle into `content/<key>/` via `_content_root()` (nearest `.git`/`pyproject.toml` ancestor of CWD; a notice if none); `delete` calls `_unmirror_from_content`. `_mirror_bundle_pairs` reuses `collect_all_refs` and the same relative-to-entry layout as `_upload_bundle_to_remote`: ref-free → flat `content/<key>/<slug>.<ext>`, otherwise a `content/<key>/<slug>/` dir. It writes the bundle first, then drops the opposite flat/dir form so a slug never carries both (copy-before-remove keeps a source that lived in the old shape safe); a file is never copied onto itself (`shutil.copy2` would raise `SameFileError`). Mirroring runs only in the remote branch, after `_remote_flubpub` (which `sys.exit`s on failure), so it never claims an unpublished page.
 - **Remote upload shape:** `push`, `revise`, and `set-index` over `--remote` use `_upload_bundle_to_remote`, which scp's the entry file and its sibling assets/sub-pages into a fresh `/tmp/flubpub-upload-dir-<hex>/` on the remote, preserving each asset's path *relative to the entry file's directory* (subdir refs like `url("fonts/X.ttf")` keep their `fonts/` prefix; assets outside the entry's tree fall back to basename). The remote-side `flubpub` then re-scans the file in that dir, resolves relative refs (CSS/JS/images, .md links), uploads assets via the local HTTP API, and rewrites refs. Cleanup via `rm -rf /tmp/flubpub-upload-*`. (Don't collapse the bundle root into `/tmp/flubpub-upload-<basename>`; that breaks relative resolution on the remote and silently ships un-rewritten refs.) `click.confirm` prompts in `push`, `revise`, and `set-index` are gated on `sys.stdin.isatty()` so the inner remote invocation doesn't abort under non-interactive ssh.
 - `server.py` — FastAPI app; full CRUD (POST/GET/PUT/DELETE), Jinja2 theme rendering, color scheme injection, asset upload, triggers 11ty rebuilds, mounts `_site/` as static files. Reads `FLUBPUB_DATA_DIR` and `FLUBPUB_SITE_DIR` from env (set per-instance by systemd).
 - `models.py` — Pydantic models: PageCreate, PageUpdate, PageMeta, PageResponse, PageDetail

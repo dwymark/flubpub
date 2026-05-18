@@ -2,6 +2,7 @@
 title: "Daniel Wymark"
 theme: latticework
 index:
+  show_dates: false
   filter:
     exclude_self: true
   sort:
@@ -20,7 +21,7 @@ I have a large and diverse collection of side projects, very few of which were c
 
 Oh, AI. As with most jargon, the term is misleading at best. Nevertheless, we have to live with it. It includes a hell of a lot more than LLMs, and it has rightfully become culturally maligned these days thanks to the disposition of the leading labs and the impact they are having on everyday people. I don't deny those wrongs.
 
-That said, I'm an LLM enthusiast. Many of my experiments and side projects since 2022 have been authored in part with tooling that relies on LLMs. *However:* as a matter of principle, I care deeply about distinguishing my own voice from generated text. If I have not marked text as AI-generated, I wrote it by hand without any AI assistance. That includes this document here. Any of the documents I share which were either written wholesale by an LLM, or which are written "in collaboration" with an LLM, will be marked as such unambiguously.
+That said, I'm an LLM enthusiast. Many of my experiments and side projects since 2022 have been authored in part with tooling that relies on LLMs. *However:* as a matter of principle, I want to clearly distinguish my own voice from generated text. If I have not marked text as AI-generated, I wrote it by hand without any AI assistance. That includes this document here. Any of the documents I share which were either written wholesale by an LLM, or which are written "in collaboration" with an LLM, will be marked as such unambiguously.
 
 ## Projects
 

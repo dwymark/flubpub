@@ -192,13 +192,15 @@
   <div class="wallpaper" aria-hidden="true">
     {% block wallpaper %}{% endblock %}
   </div>
-  <nav class="crumb"><a href="/">← danielwymark.com</a></nav>
+  {# Empty slug = the site index. The crumb and colophon are page chrome, not
+     home-page chrome — suppress them when we are the home page. #}
+  {% if slug %}<nav class="crumb"><a href="/">← danielwymark.com</a></nav>{% endif %}
   <main>
     {{ content }}
   </main>
-  <footer class="colophon">
+  {% if slug %}<footer class="colophon">
     <hr>
     <p>Last revised {{ date }} · typeset on the World Wide Web.</p>
-  </footer>
+  </footer>{% endif %}
 </body>
 </html>

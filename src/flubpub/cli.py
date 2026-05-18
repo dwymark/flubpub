@@ -9,6 +9,7 @@ import tempfile
 import click
 import httpx
 import yaml
+from datetime import datetime, timezone
 from pathlib import Path
 from bs4 import BeautifulSoup
 from jinja2 import Template
@@ -657,6 +658,120 @@ def _should_mirror(ctx) -> bool:
     return bool(ctx.obj.get("mirror")) and bool(ctx.obj.get("site_key"))
 
 
+# `sync` reads a small per-site manifest at content/<site>/_manifest.toml to
+# learn which file is the index. The manifest is intentionally minimal — let
+# it grow organically rather than designing an ontology up front.
+SITE_MANIFEST_NAME = "_manifest.toml"
+RECYCLE_DIR_NAME = ".recycle"
+
+
+def _load_site_manifest(site_dir: Path) -> dict:
+    path = site_dir / SITE_MANIFEST_NAME
+    if not path.is_file():
+        return {}
+    import tomllib
+    try:
+        return tomllib.loads(path.read_text())
+    except tomllib.TOMLDecodeError as e:
+        click.echo(f"Warning: could not parse {path}: {e}", err=True)
+        return {}
+
+
+def _find_bundle_entry(bundle_dir: Path) -> Path | None:
+    """Pick the entry file inside a content bundle dir. Prefers
+    `<slug>.{html,md}`, falls back to `index.{html,md}`."""
+    slug = bundle_dir.name
+    for name in (f"{slug}.html", f"{slug}.md", "index.html", "index.md"):
+        p = bundle_dir / name
+        if p.is_file():
+            return p
+    return None
+
+
+def _enumerate_content_site(site_dir: Path) -> tuple[Path | None, dict[str, Path]]:
+    """Walk content/<site>/ and classify entries. Returns (index_entry, {slug:
+    entry_path}). The index is named explicitly in `_manifest.toml`; hidden
+    names, the manifest itself, and `.recycle/` are skipped."""
+    if not site_dir.is_dir():
+        return None, {}
+    manifest = _load_site_manifest(site_dir)
+    index_entry: Path | None = None
+    index_decl = manifest.get("index")
+    if isinstance(index_decl, str) and index_decl:
+        cand = (site_dir / index_decl).resolve()
+        if cand.is_file() and site_dir.resolve() in cand.parents:
+            index_entry = cand
+        else:
+            click.echo(
+                f"Warning: manifest index '{index_decl}' not found under "
+                f"content/{site_dir.name}/.",
+                err=True,
+            )
+
+    pages: dict[str, Path] = {}
+    for item in sorted(site_dir.iterdir()):
+        if item.name.startswith(".") or item.name == RECYCLE_DIR_NAME:
+            continue
+        if item.name == SITE_MANIFEST_NAME:
+            continue
+        if index_entry is not None and item.resolve() == index_entry:
+            continue
+        if item.is_file() and item.suffix.lower() in PAGE_SUFFIXES:
+            pages[item.stem] = item
+            continue
+        if item.is_dir():
+            entry = _find_bundle_entry(item)
+            if entry is None:
+                click.echo(
+                    f"  skip content/{site_dir.name}/{item.name}/: no entry file "
+                    f"(looked for {item.name}.{{html,md}}, index.{{html,md}})",
+                    err=True,
+                )
+                continue
+            pages[item.name] = entry
+    return index_entry, pages
+
+
+def _remote_pages_index(remote: str, remote_dir: str) -> list[dict]:
+    """Read the remote's data/pages.json via ssh. Returns [] when missing."""
+    result = subprocess.run(
+        ["ssh", remote, f"cat {shlex.quote(remote_dir)}/data/pages.json 2>/dev/null || echo '[]'"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        click.echo(f"SSH error reading pages.json: {result.stderr.strip()}", err=True)
+        sys.exit(1)
+    try:
+        data = json.loads(result.stdout or "[]")
+    except json.JSONDecodeError:
+        return []
+    return data if isinstance(data, list) else []
+
+
+def _recycle_remote_page(remote: str, remote_dir: str, bin_dir: Path,
+                         slug: str, meta: dict) -> None:
+    """Capture a remote page (entry file + assets + metadata) into the local
+    recycle bin before deletion. Best-effort: a missing assets dir is not
+    fatal, since not every page has one."""
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    # Entry file. The remote keeps these as `pages/<slug>.{md,html}` — try both
+    # rather than glob-via-ssh to keep behavior predictable.
+    for ext in (".html", ".md"):
+        src = f"{remote}:{remote_dir}/site/src/pages/{slug}{ext}"
+        r = subprocess.run(
+            ["scp", "-q", src, str(bin_dir / f"{slug}{ext}")],
+            capture_output=True, text=True,
+        )
+        if r.returncode == 0:
+            break
+    assets_src = f"{remote}:{remote_dir}/site/src/assets/{slug}"
+    subprocess.run(
+        ["scp", "-rq", assets_src, str(bin_dir / "assets")],
+        capture_output=True, text=True,
+    )
+    (bin_dir / "metadata.json").write_text(json.dumps(meta, indent=2))
+
+
 @click.group()
 @click.option("--server", default="http://localhost:8000", show_default=True, help="Server base URL")
 @click.option("--remote", default=None,
@@ -1238,6 +1353,95 @@ def unset_index(ctx):
     else:
         click.echo(f"Error: {resp.text}", err=True)
         sys.exit(1)
+
+
+@cli.command()
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Show the plan without making any remote changes.")
+@click.pass_context
+def sync(ctx, dry_run):
+    """Reconcile remote site with content/<site>/ as the source of truth.
+
+    Pushes new entries, revises existing ones, and recycles remote-only pages
+    into content/<site>/.recycle/<UTC-ts>/<slug>/ before deleting them. Looks
+    for `home.{md,html}` at the content root and re-applies it via set-index.
+    Requires --site (or a configured default); --local is not supported."""
+    if ctx.obj.get("remote") is None:
+        click.echo("sync requires a remote site; pass --site KEY (or set a "
+                   "default in sites.toml). --local is unsupported.", err=True)
+        sys.exit(1)
+    site_key = ctx.obj.get("site_key")
+    if not site_key:
+        click.echo("sync needs a registry-backed site (raw --remote without a "
+                   "matching sites.toml entry is unsupported).", err=True)
+        sys.exit(1)
+    content_root = _content_root()
+    if content_root is None:
+        click.echo("Cannot locate content/: no .git/pyproject.toml ancestor of CWD.", err=True)
+        sys.exit(1)
+    site_dir = content_root / site_key
+    if not site_dir.is_dir():
+        click.echo(f"No content/{site_key}/ directory found.", err=True)
+        sys.exit(1)
+
+    remote = ctx.obj["remote"]
+    remote_dir = ctx.obj["remote_dir"]
+
+    index_entry, local_pages = _enumerate_content_site(site_dir)
+    remote_pages = _remote_pages_index(remote, remote_dir)
+    remote_slugs = {p["slug"]: p for p in remote_pages if "slug" in p}
+
+    to_push   = sorted(s for s in local_pages if s not in remote_slugs)
+    to_revise = sorted(s for s in local_pages if s in remote_slugs)
+    to_recycle = sorted(s for s in remote_slugs if s not in local_pages)
+
+    click.echo(f"Sync plan for '{site_key}':")
+    click.echo(f"  push:    {to_push or '(none)'}")
+    click.echo(f"  revise:  {to_revise or '(none)'}")
+    click.echo(f"  recycle: {to_recycle or '(none)'}")
+    click.echo(f"  index:   {index_entry.name if index_entry else '(none)'}")
+    if dry_run:
+        return
+
+    # Recycle first so we don't accidentally revise a page we're about to drop.
+    bin_root: Path | None = None
+    recycled_ok: list[str] = []
+    if to_recycle:
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
+        bin_root = site_dir / RECYCLE_DIR_NAME / ts
+    for slug in to_recycle:
+        slug_bin = bin_root / slug
+        _recycle_remote_page(remote, remote_dir, slug_bin, slug, remote_slugs[slug])
+        ctx.invoke(delete, slug=slug)
+        recycled_ok.append(slug)
+
+    pushed_ok: list[str] = []
+    for slug in to_push:
+        entry = local_pages[slug]
+        ctx.invoke(push, file_path=str(entry), slug=slug)
+        pushed_ok.append(slug)
+
+    revised_ok: list[str] = []
+    for slug in to_revise:
+        entry = local_pages[slug]
+        ctx.invoke(revise, slug=slug, file_path=str(entry))
+        revised_ok.append(slug)
+
+    if index_entry:
+        ctx.invoke(set_index, file_path=str(index_entry))
+
+    click.echo()
+    click.echo(f"Sync report for '{site_key}':")
+    click.echo(f"  pushed   ({len(pushed_ok)}): {pushed_ok or '(none)'}")
+    click.echo(f"  revised  ({len(revised_ok)}): {revised_ok or '(none)'}")
+    click.echo(f"  recycled ({len(recycled_ok)}): {recycled_ok or '(none)'}")
+    if bin_root is not None:
+        try:
+            rel = bin_root.relative_to(content_root.parent)
+        except ValueError:
+            rel = bin_root
+        click.echo(f"  recycle bin: {rel}/")
+    click.echo(f"  index:    {index_entry.name if index_entry else '(unchanged)'}")
 
 
 def _find_templates_dir() -> Path | None:

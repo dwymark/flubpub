@@ -37,6 +37,7 @@ class IndexSpec(BaseModel):
     limit: int | None = None
     group_by: str | None = None   # year | month | quarter | theme | color_scheme | tags[0]
     shaper: str | None = None     # named function in flubpub.index_payload.SHAPERS
+    show_dates: bool = True       # render per-entry date in the default <ul>; toggle off on landing pages
 
 
 class PageCreate(BaseModel):

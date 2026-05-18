@@ -66,10 +66,11 @@ _LIST_SENTINEL_RE = re.compile(
 )
 
 
-def _render_pages_list_html(payload: list[dict]) -> str:
+def _render_pages_list_html(payload: list[dict], show_dates: bool = True) -> str:
     """Render an index payload as a simple <ul>. Handles both flat lists and
-    grouped {label, pages} sections. Inline-styled, no theme — callers can
-    override with their own template if they want richer presentation."""
+    grouped {label, pages} sections. `show_dates` suppresses the per-entry
+    timestamp so landing-page indexes can let the artifacts speak for
+    themselves."""
     if not payload:
         return '<p class="flubpub-empty">No pages yet.</p>'
 
@@ -88,7 +89,7 @@ def _render_pages_list_html(payload: list[dict]) -> str:
     def _li(p: dict) -> str:
         title = p.get("title") or p.get("slug") or "(untitled)"
         url = p.get("url") or f"/{p.get('slug', '')}/"
-        date = _date(p)
+        date = _date(p) if show_dates else ""
         excerpt = p.get("excerpt")
         bits = [f'<a href="{url}">{title}</a>']
         if date:
@@ -113,12 +114,12 @@ def _render_pages_list_html(payload: list[dict]) -> str:
     return f'<ul class="flubpub-pages">\n  {items}\n</ul>'
 
 
-def _substitute_list_sentinel(html: str, payload: list[dict]) -> str:
+def _substitute_list_sentinel(html: str, payload: list[dict], show_dates: bool = True) -> str:
     """Replace the first occurrence of LIST_SENTINEL (and any wrapping <p>)
     with a server-rendered list. Returns html unchanged if no sentinel."""
     if LIST_SENTINEL not in html:
         return html
-    rendered = _render_pages_list_html(payload)
+    rendered = _render_pages_list_html(payload, show_dates=show_dates)
     return _LIST_SENTINEL_RE.sub(lambda _m: rendered, html, count=1)
 
 
@@ -208,7 +209,7 @@ def _inject_marker(html: str, spec: IndexSpec, all_pages: list[dict], self_slug:
     payload = build_index_payload(spec, all_pages, self_slug)
     payload_json = json.dumps(payload, indent=2, default=str)
     html = substitute_pages_marker(html, payload_json)
-    html = _substitute_list_sentinel(html, payload)
+    html = _substitute_list_sentinel(html, payload, show_dates=spec.show_dates)
     return html
 
 

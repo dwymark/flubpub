@@ -135,6 +135,16 @@ deferred plan.
 > into production use; until then, state the claim with the "modulo tiles"
 > qualifier wherever it's made.
 
+To reconcile a remote that has drifted off content/, run `flubpub --site KEY
+sync`. The site's index file is declared in `content/<KEY>/_manifest.toml`
+(`index = "home.md"`); every other top-level entry is a page (file -> flat
+slug = stem, dir -> bundle with entry `<slug>.{md,html}` or
+`index.{md,html}`). Sync `push`es new entries, `revise`s existing ones, and
+**recycles** remote-only pages — capturing the entry file, asset dir, and
+pages.json metadata into `content/<KEY>/.recycle/<UTC-ts>/<slug>/` before
+deleting from the remote. `--dry-run` prints the plan. The manifest is
+deliberately minimal; let it grow as new per-site needs surface.
+
 Not source of truth: `site/src/pages/` and `data/pages.json` at the repo root.
 Those belong to the local dev install (`flubpub serve`) and are rebuilt by
 every local push.

@@ -1,0 +1,2 @@
+# Per-site manifest. Read by `flubpub sync`. Grows organically.
+index = "home.md"

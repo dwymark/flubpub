@@ -8,13 +8,12 @@ server {
         try_files $uri $uri/ =404;
     }
 
-    # FastAPI application
-    location /api/ {
-        proxy_pass http://127.0.0.1:__PORT__;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
+    # NOTE: /api/ is deliberately NOT proxied. The flubpub HTTP API is an
+    # unauthenticated mutation surface (create/replace/delete pages, upload
+    # assets). It is only ever reached over SSH (the CLI runs `flubpub` on
+    # the box against http://localhost:PORT) or locally via --local; uvicorn
+    # binds 127.0.0.1 only. Exposing it publicly would let anyone deface or
+    # wipe the site. Static output + /health are all the public needs.
 
     location /health {
         proxy_pass http://127.0.0.1:__PORT__;

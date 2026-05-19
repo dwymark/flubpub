@@ -13,6 +13,7 @@ Cases:
 """
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -33,10 +34,10 @@ def run(args: list[str], env: dict, expect_rc: int = 0) -> subprocess.CompletedP
     return proc
 
 
-def write_config(home: Path, body: str) -> None:
+def write_config(home: Path, cfg: dict) -> None:
     cfg_dir = home / ".config" / "flubpub"
     cfg_dir.mkdir(parents=True, exist_ok=True)
-    (cfg_dir / "sites.toml").write_text(body)
+    (cfg_dir / "sites.json").write_text(json.dumps(cfg, indent=2))
 
 
 def main() -> None:
@@ -48,15 +49,14 @@ def main() -> None:
     with FakeRemote(verbose=True) as fr:
         fr.install("dwm"); fr.install("bj")
 
-        write_config(fake_home, f"""
-default = "dwm"
-
-[sites.dwm]
-remote = "root@fake.invalid:{fr.prefix}-dwm"
-
-[sites.bj]
-remote = "root@fake.invalid:{fr.prefix}-bj"
-""")
+        both = {
+            "default": "dwm",
+            "sites": {
+                "dwm": {"remote": f"root@fake.invalid:{fr.prefix}-dwm"},
+                "bj": {"remote": f"root@fake.invalid:{fr.prefix}-bj"},
+            },
+        }
+        write_config(fake_home, both)
 
         env = {**fr.env, "HOME": str(fake_home)}
 
@@ -76,10 +76,9 @@ remote = "root@fake.invalid:{fr.prefix}-bj"
             failures.append(f"default: {proc.stdout!r}")
 
         print("\n--- case 4: no default → local HTTP ---")
-        write_config(fake_home, f"""
-[sites.dwm]
-remote = "root@fake.invalid:{fr.prefix}-dwm"
-""")
+        write_config(fake_home, {
+            "sites": {"dwm": {"remote": f"root@fake.invalid:{fr.prefix}-dwm"}}
+        })
         # No remote/site/default → flubpub should try HTTP localhost:8000.
         # We expect non-zero rc (connection refused) but importantly NOT a
         # site-resolution error.
@@ -97,13 +96,12 @@ remote = "root@fake.invalid:{fr.prefix}-dwm"
             failures.append(f"--remote precedence: {proc.stdout!r}")
 
         print("\n--- case 6: FLUBPUB_SITE env var ---")
-        write_config(fake_home, f"""
-[sites.dwm]
-remote = "root@fake.invalid:{fr.prefix}-dwm"
-
-[sites.bj]
-remote = "root@fake.invalid:{fr.prefix}-bj"
-""")
+        write_config(fake_home, {
+            "sites": {
+                "dwm": {"remote": f"root@fake.invalid:{fr.prefix}-dwm"},
+                "bj": {"remote": f"root@fake.invalid:{fr.prefix}-bj"},
+            }
+        })
         env_with_site = {**env, "FLUBPUB_SITE": "bj"}
         proc = run(["list"], env_with_site)
         if f"dir={fr.actual_prefix}-bj " not in proc.stdout:

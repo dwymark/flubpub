@@ -37,8 +37,8 @@ it's live: `uv run flubpub deploy --site bj`.
 The sites registry moved from TOML to JSON. Convert your existing config once:
 
 ```bash
-uv run flubpub sites migrate-config       # writes ~/.config/flubpub/sites.json
-# verify, then: rm ~/.config/flubpub/sites.toml
+python3 migrate-sites-config.py           # writes ~/.config/flubpub/sites.json
+# verify, then: rm ~/.config/flubpub/sites.toml migrate-sites-config.py
 ```
 
 Optionally anchor the SSOT so `publish from anywhere` is literally true:

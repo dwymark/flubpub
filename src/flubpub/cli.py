@@ -404,12 +404,13 @@ def _load_sites_config() -> dict:
 
     The registry is plain JSON — read and written symmetrically with the same
     library, no hand-rolled emitter. A pre-JSON `sites.toml` is not read
-    silently; run `flubpub sites migrate-config` to convert it once."""
+    silently; run `python3 migrate-sites-config.py` (a delete-after-use
+    one-off at the repo root) to convert it once."""
     if not SITES_CONFIG_PATH.is_file():
         if _LEGACY_SITES_TOML.is_file():
             click.echo(
                 f"Found legacy {_LEGACY_SITES_TOML} but no {SITES_CONFIG_PATH.name}. "
-                f"Run `flubpub sites migrate-config` to convert it.",
+                f"Run `python3 migrate-sites-config.py` to convert it.",
                 err=True,
             )
         return {}
@@ -1488,29 +1489,6 @@ def sites():
 def _save_sites_config(cfg: dict) -> None:
     SITES_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     SITES_CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n")
-
-
-@sites.command(name="migrate-config")
-def sites_migrate_config():
-    """One-shot: convert a pre-JSON ~/.config/flubpub/sites.toml to sites.json.
-
-    Reads the legacy TOML, writes the JSON registry, and leaves the .toml in
-    place (it's your data — delete it yourself once you've confirmed)."""
-    if SITES_CONFIG_PATH.is_file():
-        click.echo(f"{SITES_CONFIG_PATH} already exists; nothing to migrate.")
-        return
-    if not _LEGACY_SITES_TOML.is_file():
-        click.echo(f"No legacy {_LEGACY_SITES_TOML} found; nothing to migrate.")
-        return
-    import tomllib
-    try:
-        cfg = tomllib.loads(_LEGACY_SITES_TOML.read_text())
-    except tomllib.TOMLDecodeError as e:
-        click.echo(f"Could not parse {_LEGACY_SITES_TOML}: {e}", err=True)
-        sys.exit(1)
-    _save_sites_config(cfg)
-    click.echo(f"Migrated {_LEGACY_SITES_TOML.name} → {SITES_CONFIG_PATH}")
-    click.echo(f"Verify, then `rm {_LEGACY_SITES_TOML}` when you're satisfied.")
 
 
 @sites.command(name="set-content-root")

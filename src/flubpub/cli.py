@@ -62,6 +62,71 @@ def _split_md_frontmatter(text: str) -> tuple[str, dict | None]:
     return text[match.end():], data if isinstance(data, dict) else None
 
 
+def _explicit_overrides(*, title=None, slug=None, theme=None, color_scheme=None,
+                        parent=None, tags=(), excerpt=None) -> dict:
+    """Collect only the flags the user actually passed, mapped to their
+    frontmatter key. None / empty-tuple means "not given" and is skipped, so
+    we never clobber frontmatter with a default."""
+    out: dict = {}
+    if title is not None:
+        out["title"] = title
+    if slug is not None:
+        out["slug"] = slug
+    if theme is not None:
+        out["theme"] = theme
+    if color_scheme is not None:
+        out["color_scheme"] = color_scheme
+    if parent is not None:
+        out["parent"] = parent
+    if excerpt is not None:
+        out["excerpt"] = excerpt
+    if tags:
+        out["tags"] = list(tags)
+    return out
+
+
+def _apply_cli_overrides_to_md_file(path: Path, overrides: dict) -> None:
+    """In-file SoT: when a CLI flag is given for a `.md` push/revise, the
+    frontmatter is the source of truth, so persist the override *into the
+    file's frontmatter first*, then let the normal push read the now-canonical
+    file. Best of both worlds — CLI ergonomics, frontmatter durability.
+
+    `overrides` maps frontmatter key → value, containing only flags the user
+    explicitly passed (None / empty are pre-filtered by the caller). A clear
+    per-key diagnostic is printed for every change. If the file can't be
+    written (e.g. a read-only /tmp scratch), a warning is emitted and the push
+    proceeds with the merged values un-persisted."""
+    if path.suffix.lower() != ".md" or not overrides:
+        return
+    body, fm = _split_md_frontmatter(path.read_text())
+    fm = dict(fm) if isinstance(fm, dict) else {}
+    changes: list[str] = []
+    for key, new in overrides.items():
+        old = fm.get(key)
+        if old == new:
+            continue
+        fm[key] = new
+        shown_old = "(unset)" if old is None else repr(old)
+        changes.append(f"{key}: {shown_old} → {new!r}")
+    if not changes:
+        return
+    fm_text = yaml.safe_dump(fm, sort_keys=False, default_flow_style=False,
+                             allow_unicode=True).strip()
+    new_text = f"---\n{fm_text}\n---\n{body}"
+    try:
+        path.write_text(new_text)
+    except OSError as e:
+        click.echo(
+            f"Warning: {path.name}: could not persist frontmatter ({e}); "
+            f"pushing merged values without updating the source file.",
+            err=True,
+        )
+        return
+    click.echo(f"{path.name}: frontmatter updated (in-file SoT)")
+    for c in changes:
+        click.echo(f"  {c}")
+
+
 def _merge_frontmatter(content: str, suffix: str, *,
                        title: str | None, theme: str | None,
                        color_scheme: str | None, parent: str | None,
@@ -329,19 +394,31 @@ def _parse_remote(spec: str) -> tuple[str, str]:
     return spec, DEFAULT_REMOTE_DIR
 
 
-SITES_CONFIG_PATH = Path.home() / ".config" / "flubpub" / "sites.toml"
+SITES_CONFIG_DIR = Path.home() / ".config" / "flubpub"
+SITES_CONFIG_PATH = SITES_CONFIG_DIR / "sites.json"
+_LEGACY_SITES_TOML = SITES_CONFIG_DIR / "sites.toml"
 
 
 def _load_sites_config() -> dict:
-    """Read the sites registry. Returns {} if absent or unreadable."""
+    """Read the sites registry (JSON). Returns {} if absent or unreadable.
+
+    The registry is plain JSON — read and written symmetrically with the same
+    library, no hand-rolled emitter. A pre-JSON `sites.toml` is not read
+    silently; run `flubpub sites migrate-config` to convert it once."""
     if not SITES_CONFIG_PATH.is_file():
+        if _LEGACY_SITES_TOML.is_file():
+            click.echo(
+                f"Found legacy {_LEGACY_SITES_TOML} but no {SITES_CONFIG_PATH.name}. "
+                f"Run `flubpub sites migrate-config` to convert it.",
+                err=True,
+            )
         return {}
-    import tomllib
     try:
-        return tomllib.loads(SITES_CONFIG_PATH.read_text())
-    except tomllib.TOMLDecodeError as e:
+        data = json.loads(SITES_CONFIG_PATH.read_text())
+    except json.JSONDecodeError as e:
         click.echo(f"Warning: could not parse {SITES_CONFIG_PATH}: {e}", err=True)
         return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _resolve_remote(
@@ -457,9 +534,26 @@ def _upload_bundle_to_remote(remote: str, file_path: Path) -> str:
 
 
 def _content_root() -> Path | None:
-    """Locate the repo's content/ directory by walking up from CWD to the
-    nearest dir holding a .git or pyproject.toml marker. Returns None when
-    invoked outside the flubpub repo (mirroring is skipped, with a notice)."""
+    """Locate the SSOT content/ directory.
+
+    Resolution order:
+      1. the registry's top-level `content_root` (absolute path to the repo
+         that owns content/) — this makes "publish from anywhere" literally
+         true: you can push a draft from /tmp and the canonical tree still
+         updates, because the root is configured, not inferred from CWD;
+      2. fallback — walk up from CWD to the nearest .git/pyproject.toml marker
+         (works with zero config when you happen to be inside the repo).
+    Returns None when neither resolves (mirroring is skipped, with a notice)."""
+    configured = (_load_sites_config() or {}).get("content_root")
+    if configured:
+        repo = Path(configured).expanduser()
+        if repo.is_dir():
+            return repo / "content"
+        click.echo(
+            f"Note: configured content_root {configured!r} is not a directory; "
+            f"falling back to CWD-walk for the content/ mirror.",
+            err=True,
+        )
     cur = Path.cwd().resolve()
     for d in (cur, *cur.parents):
         if (d / ".git").exists() or (d / "pyproject.toml").is_file():
@@ -567,13 +661,13 @@ def _should_mirror(ctx) -> bool:
 @click.option("--remote", default=None,
               help="SSH remote (e.g. root@host[:/abs/path]). Overrides --site.")
 @click.option("--site", default=None,
-              help="Site key from ~/.config/flubpub/sites.toml. "
+              help="Site key from ~/.config/flubpub/sites.json. "
                    "Falls back to FLUBPUB_SITE env or [default].")
 @click.option("--local", "force_local", is_flag=True, default=False,
               help="Bypass the sites registry entirely and target --server "
                    "(default http://localhost:8000). USE WHEN TESTING LOCALLY "
                    "to avoid silently pushing through SSH to a production "
-                   "site listed as `default` in ~/.config/flubpub/sites.toml.")
+                   "site listed as `default` in ~/.config/flubpub/sites.json.")
 @click.option("--no-mirror", "no_mirror", is_flag=True, default=False,
               help="Skip mirroring the published bundle into content/. By "
                    "default every push/revise/set-index/delete keeps "
@@ -625,6 +719,13 @@ def cli(ctx, server, remote, site, force_local, no_mirror):
 def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt):
     """Push a file to the server as a published page."""
     path = Path(file_path)
+
+    # In-file SoT: persist any explicit CLI override into the .md frontmatter
+    # first, so the source file (and its content/ mirror) stays canonical.
+    _apply_cli_overrides_to_md_file(path, _explicit_overrides(
+        title=title, slug=slug, theme=theme, color_scheme=color_scheme,
+        parent=parent, tags=tags, excerpt=excerpt,
+    ))
     content = path.read_text()
 
     # For .md inputs, lift YAML frontmatter into structured fields. CLI flags
@@ -848,6 +949,13 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
     """Update an existing page with new content."""
     path = Path(file_path)
 
+    # In-file SoT: persist explicit CLI overrides into the .md frontmatter
+    # before anything reads/uploads/mirrors the file (revise has no --slug).
+    _apply_cli_overrides_to_md_file(path, _explicit_overrides(
+        title=title, theme=theme, color_scheme=color_scheme,
+        parent=parent, tags=tags, excerpt=excerpt,
+    ))
+
     remote = ctx.obj.get("remote")
     if remote:
         remote_path = _upload_bundle_to_remote(remote, path)
@@ -1025,14 +1133,15 @@ def set_index(ctx, file_path, vars_file):
     is_markdown_index = suffix == ".md"
     variables = _load_template_vars(vars_file)
     # Markdown indexes don't run through Jinja — they're rendered server-side
-    # into a minimal HTML shell or a flubpub theme. HTML indexes get the
-    # existing Jinja pass. Frontmatter (title/theme/color_scheme/style_css/
-    # index) on the markdown file becomes top-level IndexBody fields.
+    # through the unified page-type model (one index model — see server.py
+    # set_custom_index). HTML indexes get the existing Jinja pass. Frontmatter
+    # (title/theme/color_scheme/index) on the markdown file becomes top-level
+    # IndexBody fields.
     md_body: dict = {}
     if is_markdown_index:
         rendered, fm = _split_md_frontmatter(path.read_text())
         if isinstance(fm, dict):
-            for key in ("title", "theme", "color_scheme", "style_css", "index"):
+            for key in ("title", "theme", "color_scheme", "index"):
                 if key in fm and fm[key] is not None:
                     md_body[key] = fm[key]
     else:
@@ -1041,7 +1150,7 @@ def set_index(ctx, file_path, vars_file):
     remote = ctx.obj.get("remote")
     if remote:
         # For markdown indexes, upload the original .md with frontmatter
-        # intact so the remote-side set-index re-parses theme/index/style_css
+        # intact so the remote-side set-index re-parses theme/index
         # natively. Transcoding md -> rendered .html locally would strip the
         # frontmatter and the remote would see a raw HTML blob, losing the
         # theme and the index spec. HTML indexes still get the local Jinja
@@ -1310,7 +1419,7 @@ def serve(host, port):
               help="Path to the deploy script.")
 def deploy(site_key, script):
     """Deploy a site from the registry. Reads remote/server_name/port from
-    ~/.config/flubpub/sites.toml and shells out to deploy.sh with the
+    ~/.config/flubpub/sites.json and shells out to deploy.sh with the
     derived env vars."""
     cfg = _load_sites_config()
     site_key = site_key or os.environ.get("FLUBPUB_SITE") or cfg.get("default")
@@ -1373,24 +1482,54 @@ def deploy(site_key, script):
 
 @cli.group()
 def sites():
-    """Manage the sites registry at ~/.config/flubpub/sites.toml."""
+    """Manage the sites registry at ~/.config/flubpub/sites.json."""
 
 
 def _save_sites_config(cfg: dict) -> None:
     SITES_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    lines: list[str] = []
-    if "default" in cfg:
-        lines.append(f'default = "{cfg["default"]}"\n')
-    if "acme_email" in cfg:
-        lines.append(f'acme_email = "{cfg["acme_email"]}"\n')
-    for key, entry in (cfg.get("sites") or {}).items():
-        lines.append(f'\n[sites.{key}]\n')
-        for k, v in entry.items():
-            if isinstance(v, int):
-                lines.append(f'{k} = {v}\n')
-            else:
-                lines.append(f'{k} = "{v}"\n')
-    SITES_CONFIG_PATH.write_text("".join(lines))
+    SITES_CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n")
+
+
+@sites.command(name="migrate-config")
+def sites_migrate_config():
+    """One-shot: convert a pre-JSON ~/.config/flubpub/sites.toml to sites.json.
+
+    Reads the legacy TOML, writes the JSON registry, and leaves the .toml in
+    place (it's your data — delete it yourself once you've confirmed)."""
+    if SITES_CONFIG_PATH.is_file():
+        click.echo(f"{SITES_CONFIG_PATH} already exists; nothing to migrate.")
+        return
+    if not _LEGACY_SITES_TOML.is_file():
+        click.echo(f"No legacy {_LEGACY_SITES_TOML} found; nothing to migrate.")
+        return
+    import tomllib
+    try:
+        cfg = tomllib.loads(_LEGACY_SITES_TOML.read_text())
+    except tomllib.TOMLDecodeError as e:
+        click.echo(f"Could not parse {_LEGACY_SITES_TOML}: {e}", err=True)
+        sys.exit(1)
+    _save_sites_config(cfg)
+    click.echo(f"Migrated {_LEGACY_SITES_TOML.name} → {SITES_CONFIG_PATH}")
+    click.echo(f"Verify, then `rm {_LEGACY_SITES_TOML}` when you're satisfied.")
+
+
+@sites.command(name="set-content-root")
+@click.argument("path", type=click.Path(path_type=Path))
+def sites_set_content_root(path: Path):
+    """Anchor the SSOT content/ tree to a fixed repo path.
+
+    Once set, every mirroring push updates <PATH>/content/<key>/ no matter
+    what directory you run flubpub from — `publish from anywhere` becomes
+    literally true instead of CWD-dependent."""
+    resolved = path.expanduser().resolve()
+    if not resolved.is_dir():
+        click.echo(f"Not a directory: {resolved}", err=True)
+        sys.exit(1)
+    cfg = _load_sites_config()
+    cfg["content_root"] = str(resolved)
+    _save_sites_config(cfg)
+    click.echo(f"content_root → {resolved}")
+    click.echo(f"(mirrors land in {resolved / 'content'}/<site>/)")
 
 
 @sites.command(name="list")

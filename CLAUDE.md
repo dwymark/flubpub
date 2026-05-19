@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 flubpub is a personal web publishing tool — like `gh gist` but for web pages. A CLI pushes content to a FastAPI server, which writes markdown files into an 11ty site and triggers a static rebuild. The result is a chronological index of published pages.
 
-A single host can run multiple **side-by-side installs**, one per domain, each with its own data, port, systemd instance, and nginx site. Disambiguation is via a **sites registry** at `~/.config/flubpub/sites.toml`; the Python package itself contains zero references to any specific site.
+A single host can run multiple **side-by-side installs**, one per domain, each with its own data, port, systemd instance, and nginx site. Disambiguation is via a **sites registry** at `~/.config/flubpub/sites.json` (plain JSON, read/written symmetrically — a pre-JSON `sites.toml` is converted once via `flubpub sites migrate-config`); the Python package itself contains zero references to any specific site.
 
 ## Local-vs-remote routing — read this first
 
-⚠️ **`~/.config/flubpub/sites.toml` has a `default` key.** When set, *every*
+⚠️ **`~/.config/flubpub/sites.json` has a `default` key.** When set, *every*
 content command (`push`, `revise`, `list`, `get`, `delete`, `set-index`) that
 doesn't specify `--site`, `--remote`, `--local`, or `FLUBPUB_SITE` silently
 routes through SSH to that default site's production VPS. **This means a bare
@@ -58,12 +58,14 @@ uv run flubpub sites add dwm root@danielwymark.com:/opt/flubpub-dwm \
     --server-name danielwymark.com --port 8001 --default --email you@example.com
 uv run flubpub sites add bj  root@danielwymark.com:/opt/flubpub-bj \
     --server-name bijectivity.net --port 8002
-# or set acme_email = "you@example.com" at the top of sites.toml to apply
+# or set "acme_email": "you@example.com" at the top of sites.json to apply
 # the same address to every site
 
 uv run flubpub sites list                    # inspect; * marks default
 uv run flubpub sites set-default bj          # change default
 uv run flubpub sites remove old-site
+uv run flubpub sites migrate-config          # one-shot: sites.toml -> sites.json
+uv run flubpub sites set-content-root ~/flubpub  # anchor the SSOT (see below)
 
 # Then publish via --site (or rely on the default). Every push/revise/
 # set-index/delete also mirrors the bundle into content/<key>/ (the SSOT),
@@ -93,8 +95,12 @@ The `content/` directory is the version-controlled source of truth for every
 page published to a flubpub site, and the CLI keeps it that way automatically.
 Every `push`/`revise`/`set-index`/`delete` that resolves to a registry site
 key mirrors the published bundle into `content/<key>/` (and `delete` removes
-it). Publish a draft from anywhere — `/tmp`, a scratchpad, wherever — and the
-tree is canonical afterward; no manual upkeep, no discipline. Layout is
+it). "Publish a draft from anywhere — `/tmp`, a scratchpad, wherever" is
+**literally** true once you anchor the SSOT with `flubpub sites
+set-content-root <repo>`: the mirror root then comes from the registry, not
+from CWD, so the canonical tree updates no matter where you run flubpub.
+Without that anchor it falls back to a CWD walk (nearest `.git`/`pyproject.toml`),
+which only mirrors when you happen to be inside the repo. Layout is
 partitioned by site key, mirroring the sites registry:
 
 ```
@@ -121,6 +127,14 @@ Not auto-mirrored: per-page `tile` metadata (produced by `/card-construction`,
 not present in the markdown source) — see [`DWM.md`](./DWM.md) for the
 deferred plan.
 
+> **TODO / known invariant gap.** Because `tile` is not mirrored, the SSOT
+> guarantee is "lossless rebuild-from-`content/` **modulo tiles**." For any
+> site that actually uses the gallery layout, `content/` alone is *not*
+> sufficient to reconstruct the site. Close this by committing a sanitized
+> `content/<key>/tiles.json` on write (see `DWM.md`) before the gallery goes
+> into production use; until then, state the claim with the "modulo tiles"
+> qualifier wherever it's made.
+
 Not source of truth: `site/src/pages/` and `data/pages.json` at the repo root.
 Those belong to the local dev install (`flubpub serve`) and are rebuilt by
 every local push.
@@ -134,15 +148,17 @@ danielwymark.com install.
 
 ## Architecture
 
-**Data flow:** CLI → POST /api/pages → server writes page file to `site/src/pages/` → server runs `npx @11ty/eleventy` in `site/` → static HTML appears in `site/_site/` → nginx serves `_site/` directly, proxies `/api/` and `/health` to uvicorn.
+**Data flow:** CLI → POST /api/pages → server writes page file to `site/src/pages/` → server runs `npx @11ty/eleventy` in `site/` → static HTML appears in `site/_site/` → nginx serves `_site/` directly and proxies only `/health` to uvicorn. **nginx does NOT proxy `/api/`** — the API is an unauthenticated mutation surface, uvicorn binds `127.0.0.1` only, and the CLI reaches it over SSH (running `flubpub` on the box against `http://localhost:PORT`) or locally via `--local`. Nothing public needs `/api/`.
 
 **Resolution order for `--remote`/`--site`:** `--remote SPEC` (raw, wins) > `--site KEY` > `FLUBPUB_SITE` env > registry `[default]` > local HTTP (`--server`, default `http://localhost:8000`). When a site is in play, the CLI also injects `--server http://localhost:<port>` into the remote-side `uv run flubpub` invocation, since each install's uvicorn binds a unique port.
 
 **Python package** (`src/flubpub/`):
-- `cli.py` — Click CLI (push, list, get, revise, delete, serve, deploy, sites group). Uses httpx for HTTP, scp+ssh for `--remote`. Scans .md/.html files for local image/link references and uploads them. The `--site KEY` flag resolves a remote spec from `~/.config/flubpub/sites.toml`. The package has zero hardcoded site keys.
-- **content/ mirror-on-write:** `_resolve_remote` also returns the resolved registry key; `_should_mirror` gates on it (None for `--local` / unmatched raw `--remote` / `--no-mirror` / `FLUBPUB_NO_MIRROR`). After a successful remote `push`/`revise`/`set-index`, `_mirror_to_content` copies the bundle into `content/<key>/` via `_content_root()` (nearest `.git`/`pyproject.toml` ancestor of CWD; a notice if none); `delete` calls `_unmirror_from_content`. `_mirror_bundle_pairs` reuses `collect_all_refs` and the same relative-to-entry layout as `_upload_bundle_to_remote`: ref-free → flat `content/<key>/<slug>.<ext>`, otherwise a `content/<key>/<slug>/` dir. It writes the bundle first, then drops the opposite flat/dir form so a slug never carries both (copy-before-remove keeps a source that lived in the old shape safe); a file is never copied onto itself (`shutil.copy2` would raise `SameFileError`). Mirroring runs only in the remote branch, after `_remote_flubpub` (which `sys.exit`s on failure), so it never claims an unpublished page.
+- `cli.py` — Click CLI (push, list, get, revise, delete, serve, deploy, sites group). Uses httpx for HTTP, scp+ssh for `--remote`. Scans .md/.html files for local image/link references and uploads them. The `--site KEY` flag resolves a remote spec from `~/.config/flubpub/sites.json`. The package has zero hardcoded site keys. Registry I/O is symmetric JSON (`_load_sites_config`/`_save_sites_config`); `sites migrate-config` converts a legacy `sites.toml` once.
+- **in-file SoT (#11):** for `.md` `push`/`revise`, any explicit CLI override (`--title/--slug/--theme/--color-scheme/--parent/--tag/--excerpt`) is written *into the source file's YAML frontmatter first* (`_apply_cli_overrides_to_md_file`), with a per-key diagnostic, then the now-canonical file is read and pushed. Frontmatter is authoritative; the CLI just keeps it honest. If the source isn't writable (e.g. read-only `/tmp`), it warns and pushes the merged values un-persisted.
+- **content/ mirror-on-write:** `_resolve_remote` also returns the resolved registry key; `_should_mirror` gates on it (None for `--local` / unmatched raw `--remote` / `--no-mirror` / `FLUBPUB_NO_MIRROR`). After a successful remote `push`/`revise`/`set-index`, `_mirror_to_content` copies the bundle into `content/<key>/` via `_content_root()` — the registry's `content_root` (set by `sites set-content-root`) when present, else the nearest `.git`/`pyproject.toml` ancestor of CWD, else a notice; `delete` calls `_unmirror_from_content`. `_mirror_bundle_pairs` reuses `collect_all_refs` and the same relative-to-entry layout as `_upload_bundle_to_remote`: ref-free → flat `content/<key>/<slug>.<ext>`, otherwise a `content/<key>/<slug>/` dir. It writes the bundle first, then drops the opposite flat/dir form so a slug never carries both (copy-before-remove keeps a source that lived in the old shape safe); a file is never copied onto itself (`shutil.copy2` would raise `SameFileError`). Mirroring runs only in the remote branch, after `_remote_flubpub` (which `sys.exit`s on failure), so it never claims an unpublished page.
 - **Remote upload shape:** `push`, `revise`, and `set-index` over `--remote` use `_upload_bundle_to_remote`, which scp's the entry file and its sibling assets/sub-pages into a fresh `/tmp/flubpub-upload-dir-<hex>/` on the remote, preserving each asset's path *relative to the entry file's directory* (subdir refs like `url("fonts/X.ttf")` keep their `fonts/` prefix; assets outside the entry's tree fall back to basename). The remote-side `flubpub` then re-scans the file in that dir, resolves relative refs (CSS/JS/images, .md links), uploads assets via the local HTTP API, and rewrites refs. Cleanup via `rm -rf /tmp/flubpub-upload-*`. (Don't collapse the bundle root into `/tmp/flubpub-upload-<basename>`; that breaks relative resolution on the remote and silently ships un-rewritten refs.) `click.confirm` prompts in `push`, `revise`, and `set-index` are gated on `sys.stdin.isatty()` so the inner remote invocation doesn't abort under non-interactive ssh.
-- `server.py` — FastAPI app; full CRUD (POST/GET/PUT/DELETE), Jinja2 theme rendering, color scheme injection, asset upload, triggers 11ty rebuilds, mounts `_site/` as static files. Reads `FLUBPUB_DATA_DIR` and `FLUBPUB_SITE_DIR` from env (set per-instance by systemd).
+- `server.py` — FastAPI app; full CRUD (POST/GET/PUT/DELETE), Jinja2 theme rendering, color scheme injection, asset upload, triggers 11ty rebuilds, mounts `_site/` as static files. Reads `FLUBPUB_DATA_DIR` and `FLUBPUB_SITE_DIR` from env (set per-instance by systemd). `upload_asset` reduces the client-controlled slug (`[a-z0-9-]+`) and filename (`Path(...).name`) to single safe path segments — no traversal escapes the assets tree even though the API is localhost-only.
+- **One index model.** A "page-type index" is any `pages.json` entry with `content_type: index`. `resolve_index(content, content_type, body_index, *, force_index=False)` is the single place the "is this an index, in what form?" promotion rules live — called by `create_page`, `update_page`, and the `/api/index` adaptor; both write paths funnel through `_create_or_replace_page` (one persistence model). **The site front page is just the page-type index at the reserved slug `ROOT_INDEX_SLUG` ("index").** `set_custom_index` (`POST /api/index`) is thin sugar: classify with `force_index=True`, create/replace that entry. `inject_index_pages` is one loop; the root's *only* specialness is mechanical — its URL is `/`, so its injected output is written to `_site/index.html` (overwriting 11ty's `src/index.njk` build) and the routed `_site/index/` duplicate is removed. The pre-unification root store (`data/custom_index.html` + `custom_index_spec.json`, `_render_root_markdown`, the `inject_custom_index` alias) is **deleted**; `_sweep_legacy_root_index` drops those stale files on the next `set-index`/`unset-index` of an upgraded install. `unset-index` deletes the root entry so 11ty's default `index.njk` wins again. (`style_css` on a markdown root index is gone — themed roots go through the theme catalogue; un-themed roots render via 11ty `base.njk`.)
 - `models.py` — Pydantic models: PageCreate, PageUpdate, PageMeta, PageResponse, PageDetail
 - `colors.py` — Named color schemes (clean, neon, midnight, terminal, starfield, parchment) as CSS custom property dicts. Default scheme mapping per theme.
 - `themes/` — Jinja2 HTML templates using CSS custom properties for colors (6 themes: default, geocities, academic, hacker, angelfire, web-ring). Any color scheme can be paired with any theme.
@@ -167,5 +183,6 @@ danielwymark.com install.
 - Services: `systemctl status flubpub@dwm flubpub@bj`
 - Logs: `journalctl -u flubpub@dwm` / `journalctl -u flubpub@bj`
 - nginx configs: `/etc/nginx/sites-enabled/flubpub-dwm` and `/etc/nginx/sites-enabled/flubpub-bj` (each with explicit `server_name`, no catch-all)
-- The legacy single-instance setup (`flubpub.service`, `/opt/flubpub/`, `/etc/nginx/sites-enabled/flubpub`) is disabled but still on disk; remove if you want.
+- Legacy single-instance setup (`flubpub.service`, `/opt/flubpub/`, `/etc/nginx/sites-enabled/flubpub`): defunct. Reclaim it — `systemctl disable --now flubpub` and delete the unit, dir, and nginx site. (Not "remove if you want": leaving dead infra beside live infra is the exact carrying cost this codebase otherwise avoids.)
+- **Pending security action:** the public-`/api/` lockdown ships in this branch but production isn't fixed until each live site is redeployed. Tracked by `deploy/TODO-dwm-api-lockdown.md` (a `.claude/settings.json` SessionStart hook nags every session until that file is `rm`'d). Run `flubpub deploy --site dwm && flubpub --site dwm set-index content/dwm/home.md` (and the same for `bj`) on a machine with the ssh key.
 - Adding a third site: pick key + free port + hostname, point DNS at the VPS, run `flubpub sites add … --server-name … --port …`, then `flubpub deploy --site …`. No source modification.

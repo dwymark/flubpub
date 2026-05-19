@@ -10,3 +10,4 @@ site/src/assets/
 site/src/pages/*.md
 site/src/pages/*.html
 .cards/
+scratch/

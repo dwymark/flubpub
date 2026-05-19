@@ -24,6 +24,7 @@ Cases:
 """
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -54,9 +55,10 @@ def main() -> None:
         fr.install("dwm")
         cfg = fake_home / ".config" / "flubpub"
         cfg.mkdir(parents=True)
-        (cfg / "sites.toml").write_text(
-            f'default = "dwm"\n\n[sites.dwm]\nremote = "{fr.remote_spec("dwm")}"\n'
-        )
+        (cfg / "sites.json").write_text(json.dumps({
+            "default": "dwm",
+            "sites": {"dwm": {"remote": fr.remote_spec("dwm")}},
+        }, indent=2))
 
         def flub(args: list[str], extra_env: dict | None = None,
                  expect_rc: int = 0) -> subprocess.CompletedProcess:
@@ -75,22 +77,27 @@ def main() -> None:
                 sys.exit(1)
             return proc
 
+        # Sources carry their slug in frontmatter (the CLI reads it), so no
+        # explicit --slug override is passed. That keeps this test focused on
+        # the content/ mirror: with no CLI override the in-file-SoT writeback
+        # (#11) is a no-op, so the mirrored file equals the source verbatim.
+
         # --- case 1: flat file, no refs ---
         print("--- case 1: flat mirror ---")
-        (src / "alpha.md").write_text("# Alpha\n\nplain body\n")
-        flub(["--site", "dwm", "push", str(src / "alpha.md"), "--slug", "alpha"])
+        ALPHA = "---\nslug: alpha\n---\n# Alpha\n\nplain body\n"
+        (src / "alpha.md").write_text(ALPHA)
+        flub(["--site", "dwm", "push", str(src / "alpha.md")])
         flat = content_dwm / "alpha.md"
         check(flat.is_file(), "case1: content/dwm/alpha.md not created")
-        check(flat.read_text() == "# Alpha\n\nplain body\n",
-              "case1: flat content mismatch")
+        check(flat.read_text() == ALPHA, "case1: flat content mismatch")
 
         # --- case 2: bundle (md + referenced image) → directory shape ---
         print("--- case 2: bundle mirror ---")
         bdir = src / "beta-src"
         bdir.mkdir()
-        (bdir / "page.md").write_text("# Beta\n\n![pic](pic.png)\n")
+        (bdir / "page.md").write_text("---\nslug: beta\n---\n# Beta\n\n![pic](pic.png)\n")
         (bdir / "pic.png").write_bytes(b"\x89PNG\r\n\x1a\n_fake_")
-        flub(["--site", "dwm", "push", str(bdir / "page.md"), "--slug", "beta"])
+        flub(["--site", "dwm", "push", str(bdir / "page.md")])
         check((content_dwm / "beta" / "page.md").is_file(),
               "case2: content/dwm/beta/page.md missing")
         check((content_dwm / "beta" / "pic.png").read_bytes()
@@ -101,9 +108,10 @@ def main() -> None:
 
         # --- case 3: revise updates the mirrored copy ---
         print("--- case 3: revise re-mirrors ---")
-        (src / "alpha2.md").write_text("# Alpha\n\nrevised body\n")
+        ALPHA2 = "---\nslug: alpha\n---\n# Alpha\n\nrevised body\n"
+        (src / "alpha2.md").write_text(ALPHA2)
         flub(["--site", "dwm", "revise", "alpha", str(src / "alpha2.md")])
-        check(flat.read_text() == "# Alpha\n\nrevised body\n",
+        check(flat.read_text() == ALPHA2,
               "case3: revise did not update mirror")
 
         # --- case 4: delete removes the mirrored copy ---
@@ -115,40 +123,39 @@ def main() -> None:
 
         # --- case 5: --no-mirror skips ---
         print("--- case 5: --no-mirror ---")
-        (src / "gamma.md").write_text("# Gamma\n")
-        flub(["--no-mirror", "--site", "dwm", "push",
-              str(src / "gamma.md"), "--slug", "gamma"])
+        (src / "gamma.md").write_text("---\nslug: gamma\n---\n# Gamma\n")
+        flub(["--no-mirror", "--site", "dwm", "push", str(src / "gamma.md")])
         check(not (content_dwm / "gamma.md").exists(),
               "case5: --no-mirror still wrote content/dwm/gamma.md")
 
         # --- case 6: FLUBPUB_NO_MIRROR=1 skips ---
         print("--- case 6: FLUBPUB_NO_MIRROR env ---")
-        (src / "delta.md").write_text("# Delta\n")
-        flub(["--site", "dwm", "push", str(src / "delta.md"), "--slug", "delta"],
+        (src / "delta.md").write_text("---\nslug: delta\n---\n# Delta\n")
+        flub(["--site", "dwm", "push", str(src / "delta.md")],
              extra_env={"FLUBPUB_NO_MIRROR": "1"})
         check(not (content_dwm / "delta.md").exists(),
               "case6: FLUBPUB_NO_MIRROR still wrote content/dwm/delta.md")
 
         # --- case 7: --local is not registry-backed → no mirror ---
         print("--- case 7: --local skips ---")
-        (src / "epsilon.md").write_text("# Epsilon\n")
+        (src / "epsilon.md").write_text("---\nslug: epsilon\n---\n# Epsilon\n")
         # No local server running → push fails, but the point is that no
         # content/ copy is produced regardless of outcome.
-        flub(["--local", "push", str(src / "epsilon.md"), "--slug", "epsilon"],
+        flub(["--local", "push", str(src / "epsilon.md")],
              expect_rc=None)
         check(not (content_dwm / "epsilon.md").exists(),
               "case7: --local push wrote content/dwm/epsilon.md")
 
         # --- case 8: shape reconcile flat → dir ---
         print("--- case 8: flat→dir reconcile ---")
-        (src / "zeta.md").write_text("# Zeta\n\nno refs\n")
-        flub(["--site", "dwm", "push", str(src / "zeta.md"), "--slug", "zeta"])
+        (src / "zeta.md").write_text("---\nslug: zeta\n---\n# Zeta\n\nno refs\n")
+        flub(["--site", "dwm", "push", str(src / "zeta.md")])
         check((content_dwm / "zeta.md").is_file(), "case8: flat zeta.md missing")
         zdir = src / "zeta-src"
         zdir.mkdir()
-        (zdir / "zeta.md").write_text("# Zeta\n\n![p](p.png)\n")
+        (zdir / "zeta.md").write_text("---\nslug: zeta\n---\n# Zeta\n\n![p](p.png)\n")
         (zdir / "p.png").write_bytes(b"_png_")
-        flub(["--site", "dwm", "push", str(zdir / "zeta.md"), "--slug", "zeta"])
+        flub(["--site", "dwm", "push", str(zdir / "zeta.md")])
         check(not (content_dwm / "zeta.md").exists(),
               "case8: stale flat zeta.md not reconciled away")
         check((content_dwm / "zeta" / "zeta.md").is_file(),
@@ -158,9 +165,9 @@ def main() -> None:
         # must not crash (SameFileError) or corrupt/drop the bundle ---
         print("--- case 9: in-place re-publish ---")
         flub(["--site", "dwm", "push",
-              str(content_dwm / "beta" / "page.md"), "--slug", "beta"])
+              str(content_dwm / "beta" / "page.md")])
         check((content_dwm / "beta" / "page.md").read_text()
-              == "# Beta\n\n![pic](pic.png)\n",
+              == "---\nslug: beta\n---\n# Beta\n\n![pic](pic.png)\n",
               "case9: in-place re-publish corrupted the entry")
         check((content_dwm / "beta" / "pic.png").is_file(),
               "case9: in-place re-publish dropped a bundled asset")

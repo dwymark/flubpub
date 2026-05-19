@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'd=\"${CLAUDE_PROJECT_DIR:-.}\"; f=\"$d/deploy/TODO-dwm-api-lockdown.md\"; if [ -f \"$f\" ]; then printf \"ACTION REQUIRED (dwm security): production danielwymark.com still serves the unauthenticated nginx /api/ proxy. On your laptop with the dwm ssh key, run: flubpub deploy --site dwm  &&  flubpub --site dwm set-index content/dwm/home.md  then  rm deploy/TODO-dwm-api-lockdown.md to silence this. Full runbook: deploy/TODO-dwm-api-lockdown.md\\n\"; fi; exit 0'"
+          }
+        ]
+      }
+    ]
+  }
+}

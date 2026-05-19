@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -47,8 +48,13 @@ def _resolve_display_tz() -> ZoneInfo:
 
 DISPLAY_TZ = _resolve_display_tz()
 
-CUSTOM_INDEX_SRC = DATA_DIR / "custom_index.html"
-CUSTOM_INDEX_SPEC = DATA_DIR / "custom_index_spec.json"
+# The site front page (URL "/") is just a page-type index that lives at this
+# reserved slug. There is exactly one index model — see inject_index_pages and
+# set_custom_index. (Legacy paths data/custom_index.html + custom_index_spec.json
+# are swept on the next set-index/unset-index; see _sweep_legacy_root_index.)
+ROOT_INDEX_SLUG = "index"
+_LEGACY_ROOT_HTML = DATA_DIR / "custom_index.html"
+_LEGACY_ROOT_SPEC = DATA_DIR / "custom_index_spec.json"
 INDEX_PAGES_MARKER_ID = "flubpub-pages"
 
 # Sentinel substituted with a server-rendered HTML <ul> of the index payload.
@@ -190,7 +196,7 @@ def rebuild_site(site_dir: Path) -> None:
         logger.warning("npx not found; skipping 11ty build")
     except subprocess.CalledProcessError as e:
         logger.warning("11ty build failed: %s", e)
-    inject_custom_index()
+    inject_index_pages()
 
 
 def _inject_marker(html: str, spec: IndexSpec, all_pages: list[dict], self_slug: str) -> str:
@@ -207,50 +213,94 @@ def _inject_marker(html: str, spec: IndexSpec, all_pages: list[dict], self_slug:
 
 
 def inject_index_pages() -> None:
-    """For every index page (content_type=='index' in pages.json, plus the
-    legacy root index backed by data/custom_index.html), substitute the
-    #flubpub-pages marker with that page's personalized payload and write the
-    result back to _site."""
+    """For every index page (content_type=='index' in pages.json), substitute
+    the #flubpub-pages marker and the <!--FLUBPUB-LIST--> sentinel with that
+    page's personalized payload and write the result back to _site.
+
+    One model, one loop. The site front page is the entry at ROOT_INDEX_SLUG;
+    its only specialness is mechanical — its URL is "/", so its injected output
+    lands at _site/index.html (overwriting 11ty's src/index.njk build) instead
+    of _site/<slug>/index.html. The routed _site/<ROOT_INDEX_SLUG>/ copy 11ty
+    also emits is then removed as a duplicate."""
     all_pages = load_pages(DATA_DIR)
 
     for entry in all_pages:
         if entry.get("content_type") != "index":
             continue
-        out_path = SITE_OUTPUT / entry["slug"] / "index.html"
-        if not out_path.exists():
+        slug = entry["slug"]
+        built = SITE_OUTPUT / slug / "index.html"
+        if not built.exists():
             continue
         try:
             spec = IndexSpec(**(entry.get("index") or {}))
         except Exception as e:
-            logger.warning("Bad index spec for %s: %s", entry["slug"], e)
+            logger.warning("Bad index spec for %s: %s", slug, e)
             continue
-        html = out_path.read_text()
-        html = _inject_marker(html, spec, all_pages, self_slug=entry["slug"])
-        out_path.write_text(html)
-
-    if CUSTOM_INDEX_SRC.exists():
-        try:
-            html = CUSTOM_INDEX_SRC.read_text()
-        except OSError as e:
-            logger.warning("Could not read custom index source: %s", e)
-            return
-        SITE_OUTPUT.mkdir(parents=True, exist_ok=True)
-        # The root index optionally carries a sidecar IndexSpec written by
-        # set_custom_index. When absent, fall back to the empty default
-        # (sorted-newest-first) for backwards compatibility.
-        spec = IndexSpec()
-        if CUSTOM_INDEX_SPEC.exists():
-            try:
-                spec = IndexSpec(**json.loads(CUSTOM_INDEX_SPEC.read_text()))
-            except Exception as e:
-                logger.warning("Bad sidecar root-index spec: %s", e)
-        html = _inject_marker(html, spec, all_pages, self_slug="")
-        (SITE_OUTPUT / "index.html").write_text(html)
+        html = _inject_marker(built.read_text(), spec, all_pages, self_slug=slug)
+        if slug == ROOT_INDEX_SLUG:
+            SITE_OUTPUT.mkdir(parents=True, exist_ok=True)
+            (SITE_OUTPUT / "index.html").write_text(html)
+            shutil.rmtree(SITE_OUTPUT / slug, ignore_errors=True)
+        else:
+            built.write_text(html)
 
 
-def inject_custom_index() -> None:
-    """Backwards-compat alias. Existing callers keep working."""
-    inject_index_pages()
+def _sweep_legacy_root_index() -> None:
+    """One-shot reclamation: the pre-unification root index stored a rendered
+    blob at data/custom_index.html plus a sidecar spec. Those are dead under
+    the unified model; drop them whenever the root index is (re)written or
+    cleared so no stale artifact lingers on an upgraded install."""
+    _LEGACY_ROOT_HTML.unlink(missing_ok=True)
+    _LEGACY_ROOT_SPEC.unlink(missing_ok=True)
+
+
+def resolve_index(
+    content: str,
+    content_type: str,
+    body_index: IndexSpec | None,
+    *,
+    force_index: bool = False,
+) -> tuple[str, str, IndexSpec | None, str | None]:
+    """Single source of truth for "is this an index page, and in what form?".
+
+    Detection seams, in priority order:
+      1. a leading <!--FLUBPUB ...--> comment (HTML) or an `index:` block in
+         markdown frontmatter — in-file content is authoritative and the
+         triggering block is stripped so it can't leak into the rendered page
+         or 11ty's frontmatter parser;
+      2. an IndexSpec that arrived structurally via the API (e.g. the CLI
+         lifted `.md` frontmatter into a field) on markdown content;
+      3. `force_index` — the caller (the root /api/index endpoint) declares
+         this is an index regardless of content shape; an empty spec defaults
+         to "all pages, newest first".
+
+    Returns (content, content_type, index_spec, index_source_format).
+    `index_source_format` is "markdown" | "html" | None and decides whether a
+    theme may be applied (markdown-sourced indexes may be themed; HTML-sourced
+    ones already declare their own styling).
+
+    create_page and update_page both call this; keep it the only place the
+    promotion rules live."""
+    index_source_format: str | None = None
+    parsed_spec: IndexSpec | None = None
+    if content_type == "markdown":
+        parsed_spec, stripped = parse_index_spec_from_markdown(content)
+        if parsed_spec is not None:
+            index_source_format = "markdown"
+    if parsed_spec is None:
+        parsed_spec, stripped = parse_index_spec_from_html(content)
+        if parsed_spec is not None:
+            index_source_format = "html"
+
+    index_spec = body_index
+    if parsed_spec is not None:
+        return stripped, "index", parsed_spec, index_source_format
+    if index_spec is not None and content_type == "markdown":
+        return content, "index", index_spec, "markdown"
+    if force_index:
+        fmt = "markdown" if content_type == "markdown" else "html"
+        return content, "index", index_spec or IndexSpec(), fmt
+    return content, content_type, index_spec, None
 
 
 def load_pages(data_dir: Path) -> list[dict]:
@@ -282,6 +332,59 @@ def health():
     return {"status": "ok"}
 
 
+def _create_or_replace_page(
+    *, slug: str, title: str, content: str, content_type: str,
+    index_spec: IndexSpec | None, index_source_format: str | None,
+    theme: str | None, color_scheme: str | None,
+    parent: str | None, excerpt: str | None,
+    tags: list[str], tile: dict | None,
+) -> dict:
+    """Write the page file + (re)create the pages.json entry + rebuild. The
+    single create/replace path; create_page and the root /api/index endpoint
+    both funnel through here so there is one persistence model, not two."""
+    # Markdown-sourced indexes may carry a theme; HTML-sourced indexes do not
+    # (the HTML already declares its own styling).
+    can_theme = content_type != "index" or index_source_format == "markdown"
+    applied_theme = theme if can_theme else None
+    applied_cs = color_scheme if can_theme else None
+
+    now = datetime.now(timezone.utc)
+    if content_type == "index":
+        # Markdown-sourced indexes render through the theme (or 11ty base.njk
+        # if no theme); HTML-sourced indexes stay as raw HTML. inject_index_pages
+        # then substitutes the list sentinel and JSON marker on top.
+        write_ct = "markdown" if index_source_format == "markdown" else "html_raw"
+        write_page_file(slug, title, content, now.isoformat(),
+                        theme=applied_theme, color_scheme=applied_cs,
+                        content_type=write_ct)
+    else:
+        write_page_file(slug, title, content, now.isoformat(),
+                        applied_theme, applied_cs, content_type=content_type)
+
+    pages = load_pages(DATA_DIR)
+    pages = [p for p in pages if p["slug"] != slug]  # replace on re-create
+    entry = {
+        "title": title,
+        "slug": slug,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        **({"theme": applied_theme} if applied_theme else {}),
+        **({"color_scheme": applied_cs} if applied_cs else {}),
+        **({"content_type": content_type}
+           if content_type in ("html_raw", "index") else {}),
+        **({"index": index_spec.model_dump()} if index_spec else {}),
+        **({"parent": parent} if parent else {}),
+        **({"excerpt": excerpt} if excerpt else {}),
+        **({"tags": tags} if tags else {}),
+        **({"tile": tile} if tile else {}),
+    }
+    pages.append(entry)
+    save_pages(DATA_DIR, pages)
+
+    rebuild_site(SITE_DIR)
+    return entry
+
+
 @app.post("/api/pages", response_model=PageResponse)
 def create_page(body: PageCreate):
     slug = body.slug or slugify(body.title)
@@ -296,88 +399,42 @@ def create_page(body: PageCreate):
     if cs and cs not in available_color_schemes():
         raise HTTPException(status_code=400, detail=f"Unknown color scheme: {cs}")
 
-    # Detect index page. Two seams: a leading <!--FLUBPUB ...--> comment in
-    # HTML content, or an `index:` block in markdown frontmatter. Either is
-    # authoritative — overrides body.index and forces content_type=index.
-    # The triggering block is stripped before storage so it doesn't leak into
-    # the rendered page or 11ty's frontmatter parser.
-    content = body.content
-    content_type = body.content_type
-    index_source_format: str | None = None
-    parsed_spec: IndexSpec | None = None
-    stripped = content
-    if content_type == "markdown":
-        parsed_spec, stripped = parse_index_spec_from_markdown(content)
-        if parsed_spec is not None:
-            index_source_format = "markdown"
-    if parsed_spec is None:
-        parsed_spec, stripped = parse_index_spec_from_html(content)
-        if parsed_spec is not None:
-            index_source_format = "html"
-    index_spec = body.index
-    if parsed_spec is not None:
-        index_spec = parsed_spec
-        content = stripped
-        content_type = "index"
-    elif index_spec is not None and content_type == "markdown":
-        # Index spec arrived via API (e.g. CLI parsed frontmatter and lifted
-        # it into a structured field). Promote content_type and treat as a
-        # markdown-sourced index.
-        content_type = "index"
-        index_source_format = "markdown"
+    content, content_type, index_spec, index_source_format = resolve_index(
+        body.content, body.content_type, body.index
+    )
 
-    # Markdown-sourced indexes may carry a theme; HTML-sourced indexes do not
-    # (the HTML already declares its own styling).
-    can_theme = content_type != "index" or index_source_format == "markdown"
-    applied_theme = theme if can_theme else None
-    applied_cs = cs if can_theme else None
-
-    now = datetime.now(timezone.utc)
-    if content_type == "index":
-        # Markdown-sourced indexes render through the theme (or 11ty base.njk
-        # if no theme); HTML-sourced indexes stay as raw HTML. inject_index_pages
-        # then substitutes the list sentinel and JSON marker on top.
-        write_ct = "markdown" if index_source_format == "markdown" else "html_raw"
-        write_page_file(slug, body.title, content, now.isoformat(),
-                        theme=applied_theme, color_scheme=applied_cs,
-                        content_type=write_ct)
-    else:
-        write_page_file(slug, body.title, content, now.isoformat(),
-                        applied_theme, applied_cs, content_type=content_type)
-
-    pages = load_pages(DATA_DIR)
-    pages = [p for p in pages if p["slug"] != slug]  # replace on re-create
-    entry = {
-        "title": body.title,
-        "slug": slug,
-        "created_at": now.isoformat(),
-        "updated_at": now.isoformat(),
-        **({"theme": applied_theme} if applied_theme else {}),
-        **({"color_scheme": applied_cs} if applied_cs else {}),
-        **({"content_type": content_type}
-           if content_type in ("html_raw", "index") else {}),
-        **({"index": index_spec.model_dump()} if index_spec else {}),
-        **({"parent": body.parent} if body.parent else {}),
-        **({"excerpt": body.excerpt} if body.excerpt else {}),
-        **({"tags": body.tags} if body.tags else {}),
-        **({"tile": body.tile} if body.tile else {}),
-    }
-    pages.append(entry)
-    save_pages(DATA_DIR, pages)
-
-    rebuild_site(SITE_DIR)
+    entry = _create_or_replace_page(
+        slug=slug, title=body.title, content=content, content_type=content_type,
+        index_spec=index_spec, index_source_format=index_source_format,
+        theme=theme, color_scheme=cs,
+        parent=body.parent, excerpt=body.excerpt,
+        tags=body.tags, tile=body.tile,
+    )
     return PageResponse(**entry, url=f"/{slug}/")
+
+
+# The slug grammar used everywhere else (slugify()): lowercase alnum + hyphen.
+# Anchored, so no "/", ".", or ".." can sneak through into a path segment.
+_SAFE_SLUG_RE = re.compile(r"\A[a-z0-9-]+\Z")
 
 
 @app.post("/api/assets/{slug}")
 async def upload_asset(slug: str, file: UploadFile = File(...)):
+    # Defense in depth: even though nginx no longer proxies /api/ publicly and
+    # uvicorn binds 127.0.0.1, never let a client-controlled slug or filename
+    # escape the assets tree. Both are reduced to a single safe path segment.
+    if not _SAFE_SLUG_RE.match(slug):
+        raise HTTPException(status_code=400, detail=f"Invalid asset slug: {slug!r}")
+    safe_name = Path(file.filename or "").name
+    if not safe_name or safe_name in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid asset filename")
     asset_dir = ASSETS_DIR / slug
     asset_dir.mkdir(parents=True, exist_ok=True)
-    dest = asset_dir / file.filename
+    dest = asset_dir / safe_name
     content = await file.read()
     dest.write_bytes(content)
     rebuild_site(SITE_DIR)
-    return {"path": f"/assets/{slug}/{file.filename}"}
+    return {"path": f"/assets/{slug}/{safe_name}"}
 
 
 @app.get("/api/pages", response_model=list[PageResponse])
@@ -443,27 +500,10 @@ def update_page(slug: str, body: PageUpdate):
     index_spec = body.index
     index_source_format: str | None = None
     if body.content is not None:
-        content = body.content
-        # Re-parse the index seams on update; in-file content is authoritative.
-        parsed_spec: IndexSpec | None = None
-        stripped = content
-        if content_type == "markdown":
-            parsed_spec, stripped = parse_index_spec_from_markdown(content)
-            if parsed_spec is not None:
-                index_source_format = "markdown"
-        if parsed_spec is None:
-            parsed_spec, stripped = parse_index_spec_from_html(content)
-            if parsed_spec is not None:
-                index_source_format = "html"
-        if parsed_spec is not None:
-            index_spec = parsed_spec
-            content = stripped
-            content_type = "index"
-        elif index_spec is not None and content_type == "markdown":
-            # Index spec arrived via API; promote content_type and treat as
-            # markdown-sourced index. Mirrors create_page.
-            content_type = "index"
-            index_source_format = "markdown"
+        # Re-resolve the index seams on update; in-file content is authoritative.
+        content, content_type, index_spec, index_source_format = resolve_index(
+            body.content, content_type, body.index
+        )
     else:
         raw = page_path.read_text()
         parts = raw.split("---", 2)
@@ -546,134 +586,60 @@ def delete_page(slug: str):
 
 
 class IndexBody(BaseModel):
-    """Payload for `/api/index`.
+    """Payload for `/api/index` — the site front page.
 
-    `content` is HTML when content_type='html_raw' (the historic shape, raw
-    HTML with the `<script id="flubpub-pages">` marker baked in) or markdown
-    when content_type='markdown' (rendered server-side, optionally wrapped
-    in a flubpub theme). `index` carries an IndexSpec the post-build
-    injection step uses to filter/sort/group the page list. The remaining
-    fields tune how the markdown shell or themed page is rendered."""
+    `/api/index` is sugar: the front page is just the page-type index at
+    ROOT_INDEX_SLUG, and this endpoint funnels into the same create/replace
+    path every other index uses. `content` is markdown (content_type=
+    'markdown', themed via `theme` or rendered through 11ty base.njk) or raw
+    HTML (content_type='html_raw', e.g. a rendered gallery template carrying
+    the `<script id="flubpub-pages">` marker). `index` is the IndexSpec the
+    post-build injection step filters/sorts/groups the page list with; an
+    absent/empty spec defaults to all pages, newest first."""
     content: str
     content_type: str = "html_raw"
     title: str = "Home"
     theme: str | None = None
     color_scheme: str | None = None
-    style_css: str | None = None
     index: IndexSpec | None = None
-
-
-_MD_ROOT_SHELL = """<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title>
-{cs_block}
-<style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif; max-width: 720px; margin: 0 auto;
-    padding: 1.5rem 1rem 3rem; line-height: 1.6;
-    color: var(--fg, #222); background: var(--bg, #fff); }}
-  a {{ color: var(--link, #0055cc); }}
-  a:visited {{ color: var(--link-visited, #551a8b); }}
-  img {{ max-width: 100%; height: auto; }}
-  h1, h2, h3 {{ line-height: 1.25; color: var(--heading, inherit); }}
-  ul.flubpub-pages {{ list-style: none; padding: 0; }}
-  ul.flubpub-pages li {{ margin: 0.6rem 0; }}
-  .flubpub-date {{ color: var(--muted, #777); }}
-  .flubpub-excerpt {{ color: var(--muted, #555); font-size: 0.95em; margin-top: 0.15rem; }}
-  code, pre {{ background: var(--code-bg, #f4f4f4); color: var(--code-fg, inherit); }}
-  table {{ border-collapse: collapse; }}
-  table td, table th {{ padding: 0.25rem 0.75rem 0.25rem 0; vertical-align: top; }}
-{extra_css}
-</style>
-</head>
-<body>
-<main>
-{body}
-</main>
-<script type="application/json" id="flubpub-pages">[]</script>
-</body>
-</html>
-"""
-
-
-def _render_root_markdown(body: IndexBody) -> str:
-    """Markdown → finished HTML for the root index. When a theme is given,
-    reuse the per-page theme renderer (so the site's theme catalogue applies
-    uniformly to root); otherwise fall back to the standalone shell with
-    optional color-scheme CSS variables and operator-supplied extra CSS."""
-    rendered_body = _render_markdown_to_html(body.content)
-
-    if body.theme:
-        if body.theme not in available_themes():
-            raise HTTPException(status_code=400, detail=f"Unknown theme: {body.theme}")
-        cs = body.color_scheme
-        if cs and cs not in available_color_schemes():
-            raise HTTPException(status_code=400, detail=f"Unknown color scheme: {cs}")
-        # Themed pages expect HTML content; wrap the rendered markdown in
-        # the same .markdown-content div used elsewhere so the theme's CSS
-        # selectors match.
-        wrapped = f'<div class="markdown-content">{rendered_body}</div>'
-        themed = render_themed_page(
-            theme=body.theme,
-            slug="",
-            title=body.title,
-            content=wrapped,
-            date="",
-            color_scheme=cs,
-        )
-        # The themed templates don't carry a JSON marker, so add one before
-        # </body> so inject_index_pages can still publish the payload.
-        marker = f'\n<script type="application/json" id="{INDEX_PAGES_MARKER_ID}">[]</script>\n'
-        if "</body>" in themed:
-            themed = themed.replace("</body>", marker + "</body>", 1)
-        else:
-            themed += marker
-        return themed
-
-    # No theme: use the inline shell. color_scheme still injects CSS vars.
-    cs_block = ""
-    if body.color_scheme:
-        if body.color_scheme not in available_color_schemes():
-            raise HTTPException(
-                status_code=400, detail=f"Unknown color scheme: {body.color_scheme}"
-            )
-        cs_block = color_scheme_css(body.color_scheme)
-    extra_css = body.style_css or ""
-    return _MD_ROOT_SHELL.format(
-        title=body.title,
-        cs_block=cs_block,
-        extra_css=extra_css,
-        body=rendered_body,
-    )
 
 
 @app.post("/api/index")
 def set_custom_index(body: IndexBody):
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    if body.content_type == "markdown":
-        full = _render_root_markdown(body)
-        CUSTOM_INDEX_SRC.write_text(full)
-    else:
-        CUSTOM_INDEX_SRC.write_text(body.content)
-
-    if body.index is not None:
-        CUSTOM_INDEX_SPEC.write_text(
-            json.dumps(body.index.model_dump(), indent=2, default=str)
+    """Install/replace the site front page. Thin adaptor over the unified
+    page-type index model: classify (force_index — this endpoint is by
+    definition the root index), then create/replace the entry at
+    ROOT_INDEX_SLUG. inject_index_pages routes its output to _site/index.html."""
+    if body.theme and body.theme not in available_themes():
+        raise HTTPException(status_code=400, detail=f"Unknown theme: {body.theme}")
+    if body.color_scheme and body.color_scheme not in available_color_schemes():
+        raise HTTPException(
+            status_code=400, detail=f"Unknown color scheme: {body.color_scheme}"
         )
-    else:
-        CUSTOM_INDEX_SPEC.unlink(missing_ok=True)
 
-    rebuild_site(SITE_DIR)
+    content, content_type, index_spec, index_source_format = resolve_index(
+        body.content, body.content_type, body.index, force_index=True
+    )
+    _create_or_replace_page(
+        slug=ROOT_INDEX_SLUG, title=body.title, content=content,
+        content_type=content_type, index_spec=index_spec,
+        index_source_format=index_source_format,
+        theme=body.theme, color_scheme=body.color_scheme,
+        parent=None, excerpt=None, tags=[], tile=None,
+    )
+    _sweep_legacy_root_index()
     return {"status": "ok", "marker": INDEX_PAGES_MARKER_ID}
 
 
 @app.delete("/api/index")
 def clear_custom_index():
-    CUSTOM_INDEX_SRC.unlink(missing_ok=True)
-    CUSTOM_INDEX_SPEC.unlink(missing_ok=True)
+    """Remove the custom front page — delete the ROOT_INDEX_SLUG entry so
+    11ty's default src/index.njk build wins again."""
+    (PAGES_DIR / f"{ROOT_INDEX_SLUG}.md").unlink(missing_ok=True)
+    (PAGES_DIR / f"{ROOT_INDEX_SLUG}.html").unlink(missing_ok=True)
+    pages = [p for p in load_pages(DATA_DIR) if p["slug"] != ROOT_INDEX_SLUG]
+    save_pages(DATA_DIR, pages)
+    _sweep_legacy_root_index()
     rebuild_site(SITE_DIR)
     return {"status": "ok"}
 

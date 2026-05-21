@@ -6,11 +6,13 @@
   <title>{{ title }}</title>
   <style>
     /* ------------------------------------------------------------------
-       _papered/_base — shared DNA for the "papered" theme family.
-       Each child theme extends this base and overrides {% raw %}{% block wallpaper %}{% endraw %}
-       with an inline SVG, plus a small {% raw %}{% block extra_styles %}{% endraw %} for
-       palette nudges or typography swaps. Color values come from the
-       page-level CSS custom properties injected by the server.
+       _papered/_base: shared DNA for the "papered" theme family. Child
+       themes override the wallpaper block with an inline SVG plus a small
+       extra-styles block for palette and typography nudges. Color values
+       come from page-level CSS custom properties injected by the server.
+       Keep literal Jinja delimiters out of this comment: rendered output
+       gets re-parsed by 11ty's Liquid engine and any surviving delimiter
+       pair will trip the build.
        ------------------------------------------------------------------ */
 
     *, *::before, *::after { box-sizing: border-box; }

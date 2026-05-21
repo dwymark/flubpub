@@ -221,15 +221,22 @@ def inject_index_pages() -> None:
     One model, one loop. The site front page is the entry at ROOT_INDEX_SLUG;
     its only specialness is mechanical — its URL is "/", so its injected output
     lands at _site/index.html (overwriting 11ty's src/index.njk build) instead
-    of _site/<slug>/index.html. The routed _site/<ROOT_INDEX_SLUG>/ copy 11ty
-    also emits is then removed as a duplicate."""
+    of _site/<slug>/index.html. 11ty actually builds the root index at
+    _site/pages/index.html (because fileSlug for src/pages/index.html resolves
+    to the parent dir), and the duplicate there is removed after injection."""
     all_pages = load_pages(DATA_DIR)
 
     for entry in all_pages:
         if entry.get("content_type") != "index":
             continue
         slug = entry["slug"]
-        built = SITE_OUTPUT / slug / "index.html"
+        # 11ty's fileSlug for src/pages/index.html resolves to the parent
+        # dir name ("pages"), so the root-index build lands at
+        # _site/pages/index.html, not _site/index/index.html.
+        if slug == ROOT_INDEX_SLUG:
+            built = SITE_OUTPUT / "pages" / "index.html"
+        else:
+            built = SITE_OUTPUT / slug / "index.html"
         if not built.exists():
             continue
         try:
@@ -241,7 +248,7 @@ def inject_index_pages() -> None:
         if slug == ROOT_INDEX_SLUG:
             SITE_OUTPUT.mkdir(parents=True, exist_ok=True)
             (SITE_OUTPUT / "index.html").write_text(html)
-            shutil.rmtree(SITE_OUTPUT / slug, ignore_errors=True)
+            (SITE_OUTPUT / "pages" / "index.html").unlink(missing_ok=True)
         else:
             built.write_text(html)
 

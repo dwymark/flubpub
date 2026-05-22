@@ -1393,7 +1393,11 @@ def sync(ctx, dry_run):
 
     to_push   = sorted(s for s in local_pages if s not in remote_slugs)
     to_revise = sorted(s for s in local_pages if s in remote_slugs)
-    to_recycle = sorted(s for s in remote_slugs if s not in local_pages)
+    # The remote's reserved root-index slug ("index") maps to the manifest's
+    # index entry, not to a top-level page, so it is never remote-only.
+    reserved_index_slugs = {"index"} if index_entry is not None else set()
+    to_recycle = sorted(s for s in remote_slugs
+                        if s not in local_pages and s not in reserved_index_slugs)
 
     click.echo(f"Sync plan for '{site_key}':")
     click.echo(f"  push:    {to_push or '(none)'}")

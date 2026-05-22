@@ -178,7 +178,7 @@
     .colophon a { color: inherit; }
 
     @media (max-width: 720px) {
-      main { margin: 0.5rem 6px; padding: 1.25rem 1rem; }
+      main { margin: 0.75rem 6px; padding: 1.25rem 1rem; }
       h1 { font-size: clamp(1.5rem, 1.3rem + 1.5vw, 2rem); }
       p + p { text-indent: 0; margin-top: 0; }
     }
@@ -194,13 +194,14 @@
   <div class="wallpaper" aria-hidden="true">
     {% block wallpaper %}{% endblock %}
   </div>
-  {# Empty slug = the site index. The crumb and colophon are page chrome, not
-     home-page chrome — suppress them when we are the home page. #}
-  {% if slug %}<nav class="crumb"><a href="/">← danielwymark.com</a></nav>{% endif %}
+  {# Reserved root slug "index" is the site index; empty slug is the legacy
+     pre-unification root. Either way, the crumb and colophon are page chrome,
+     not home-page chrome — suppress them when we are the home page. #}
+  {% if slug and slug != "index" %}<nav class="crumb"><a href="/">← danielwymark.com</a></nav>{% endif %}
   <main>
     {{ content }}
   </main>
-  {% if slug %}<footer class="colophon">
+  {% if slug and slug != "index" %}<footer class="colophon">
     <hr>
     <p>Last revised {{ date }} · typeset on the World Wide Web.</p>
   </footer>{% endif %}

@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Pending design exploration: [`todo/topics-pubsub.md`](./todo/topics-pubsub.md) — retire the "index page" type in favor of a pub/sub topic model where any page can embed any number of subscription lists.
+
 ## What This Is
 
 flubpub is a personal web publishing tool — like `gh gist` but for web pages. A CLI pushes content to a FastAPI server, which writes markdown files into an 11ty site and triggers a static rebuild. The result is a chronological index of published pages.

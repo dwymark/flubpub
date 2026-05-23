@@ -1,3 +1,6 @@
+---
+slug: neither-tool-nor-mind
+---
 # Neither tool nor mind
 *Neither tool nor mind: LLMs are strange interlocutors.* An in-progress essay by Daniel Wymark. The essay is written entirely by Daniel Wymark, but the conception of the piece and the structure of the essay were developed in conversation between Daniel and the Large Language Model (LLM) Claude Opus 4.7 developed by Anthropic.
 

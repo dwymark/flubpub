@@ -23,6 +23,6 @@ Oh, AI. As with most jargon, the term is misleading at best. Nevertheless, we ha
 
 That said, I'm an LLM enthusiast. Many of my experiments and side projects since 2022 have been authored in part with tooling that relies on LLMs. *However:* as a matter of principle, I want to clearly distinguish my own voice from generated text. If I have not marked text as AI-generated, I wrote it by hand without any AI assistance. That includes this document here. Any of the documents I share which were either written wholesale by an LLM, or which are written "in collaboration" with an LLM, will be marked as such unambiguously.
 
-## Projects
+## Pages
 
 <!--FLUBPUB-LIST-->

@@ -60,6 +60,19 @@ INDEX_PAGES_MARKER_ID = "flubpub-pages"
 # Sentinel substituted with a server-rendered HTML <ul> of the index payload.
 # Survives markdown-it as either a bare comment or wrapped in <p>…</p>.
 LIST_SENTINEL = "<!--FLUBPUB-LIST-->"
+
+# Lift a description from raw HTML's <meta name="description" content="..."> so
+# index lists can show a per-page subtitle without a separate CLI flag.
+_META_DESCRIPTION_RE = re.compile(
+    r'<meta\b[^>]*\bname\s*=\s*["\']description["\'][^>]*\bcontent\s*=\s*["\']([^"\']*)["\']',
+    re.IGNORECASE,
+)
+
+
+def _extract_meta_description(content: str) -> str | None:
+    m = _META_DESCRIPTION_RE.search(content)
+    return m.group(1).strip() if m and m.group(1).strip() else None
+
 _LIST_SENTINEL_RE = re.compile(
     r"(<p>\s*)?" + re.escape(LIST_SENTINEL) + r"(\s*</p>)?",
     re.IGNORECASE,
@@ -91,11 +104,14 @@ def _render_pages_list_html(payload: list[dict], show_dates: bool = True) -> str
         url = p.get("url") or f"/{p.get('slug', '')}/"
         date = _date(p) if show_dates else ""
         excerpt = p.get("excerpt")
+        description = p.get("description")
         bits = [f'<a href="{url}">{title}</a>']
         if date:
             bits.append(f' <small class="flubpub-date">{date}</small>')
         if excerpt:
             bits.append(f'<div class="flubpub-excerpt">{excerpt}</div>')
+        if description:
+            bits.append(f'<div class="flubpub-description">{description}</div>')
         return f'<li>{"".join(bits)}</li>'
 
     grouped = payload and isinstance(payload[0], dict) and "pages" in payload[0] and "label" in payload[0]
@@ -345,6 +361,7 @@ def _create_or_replace_page(
     index_spec: IndexSpec | None, index_source_format: str | None,
     theme: str | None, color_scheme: str | None,
     parent: str | None, excerpt: str | None,
+    description: str | None,
     tags: list[str], tile: dict | None,
 ) -> dict:
     """Write the page file + (re)create the pages.json entry + rebuild. The
@@ -369,6 +386,11 @@ def _create_or_replace_page(
         write_page_file(slug, title, content, now.isoformat(),
                         applied_theme, applied_cs, content_type=content_type)
 
+    # Lift a meta description out of raw HTML when the caller didn't pass one
+    # explicitly; markdown pages get this through CLI frontmatter merging.
+    if not description and content_type in ("html_raw", "index"):
+        description = _extract_meta_description(content)
+
     pages = load_pages(DATA_DIR)
     pages = [p for p in pages if p["slug"] != slug]  # replace on re-create
     entry = {
@@ -383,6 +405,7 @@ def _create_or_replace_page(
         **({"index": index_spec.model_dump()} if index_spec else {}),
         **({"parent": parent} if parent else {}),
         **({"excerpt": excerpt} if excerpt else {}),
+        **({"description": description} if description else {}),
         **({"tags": tags} if tags else {}),
         **({"tile": tile} if tile else {}),
     }
@@ -416,6 +439,7 @@ def create_page(body: PageCreate):
         index_spec=index_spec, index_source_format=index_source_format,
         theme=theme, color_scheme=cs,
         parent=body.parent, excerpt=body.excerpt,
+        description=body.description,
         tags=body.tags, tile=body.tile,
     )
     return PageResponse(**entry, url=f"/{slug}/")
@@ -561,6 +585,19 @@ def update_page(slug: str, body: PageUpdate):
             entry["excerpt"] = body.excerpt
         else:
             entry.pop("excerpt", None)
+    # Description handling: explicit body.description wins; on a content
+    # update without an explicit description, re-lift from HTML <meta>.
+    if body.description is not None:
+        if body.description:
+            entry["description"] = body.description
+        else:
+            entry.pop("description", None)
+    elif body.content is not None and content_type in ("html_raw", "index"):
+        lifted = _extract_meta_description(content)
+        if lifted:
+            entry["description"] = lifted
+        else:
+            entry.pop("description", None)
     if body.tags is not None:
         if body.tags:
             entry["tags"] = body.tags
@@ -633,7 +670,7 @@ def set_custom_index(body: IndexBody):
         content_type=content_type, index_spec=index_spec,
         index_source_format=index_source_format,
         theme=body.theme, color_scheme=body.color_scheme,
-        parent=None, excerpt=None, tags=[], tile=None,
+        parent=None, excerpt=None, description=None, tags=[], tile=None,
     )
     _sweep_legacy_root_index()
     return {"status": "ok", "marker": INDEX_PAGES_MARKER_ID}

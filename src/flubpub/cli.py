@@ -64,7 +64,7 @@ def _split_md_frontmatter(text: str) -> tuple[str, dict | None]:
 
 
 def _explicit_overrides(*, title=None, slug=None, theme=None, color_scheme=None,
-                        parent=None, tags=(), excerpt=None) -> dict:
+                        parent=None, tags=(), excerpt=None, description=None) -> dict:
     """Collect only the flags the user actually passed, mapped to their
     frontmatter key. None / empty-tuple means "not given" and is skipped, so
     we never clobber frontmatter with a default."""
@@ -81,6 +81,8 @@ def _explicit_overrides(*, title=None, slug=None, theme=None, color_scheme=None,
         out["parent"] = parent
     if excerpt is not None:
         out["excerpt"] = excerpt
+    if description is not None:
+        out["description"] = description
     if tags:
         out["tags"] = list(tags)
     return out
@@ -132,6 +134,7 @@ def _merge_frontmatter(content: str, suffix: str, *,
                        title: str | None, theme: str | None,
                        color_scheme: str | None, parent: str | None,
                        tags: tuple, excerpt: str | None,
+                       description: str | None = None,
                        slug: str | None = None) -> dict:
     """For .md inputs, parse YAML frontmatter and merge into the supplied
     CLI-flag values — CLI flags always win. Returns a dict with the
@@ -141,7 +144,8 @@ def _merge_frontmatter(content: str, suffix: str, *,
     out = {
         "content": content, "title": title, "theme": theme,
         "color_scheme": color_scheme, "parent": parent,
-        "tags": tags, "excerpt": excerpt, "slug": slug, "index": None,
+        "tags": tags, "excerpt": excerpt, "description": description,
+        "slug": slug, "index": None,
     }
     if suffix != ".md":
         return out
@@ -154,6 +158,7 @@ def _merge_frontmatter(content: str, suffix: str, *,
     out["color_scheme"] = color_scheme or fm.get("color_scheme")
     out["parent"]       = parent       or fm.get("parent")
     out["excerpt"]      = excerpt      or fm.get("excerpt")
+    out["description"]  = description  or fm.get("description")
     out["slug"]         = slug         or fm.get("slug")
     if not tags:
         fm_tags = fm.get("tags") or []
@@ -831,8 +836,9 @@ def cli(ctx, server, remote, site, force_local, no_mirror):
 @click.option("--parent", default=None, help="Slug of the parent index page (for nested sections)")
 @click.option("--tag", "tags", multiple=True, help="Tag this page (repeatable)")
 @click.option("--excerpt", default=None, help="Short summary used by index list rendering")
+@click.option("--description", default=None, help="Longer per-page subtitle displayed under links in custom index lists")
 @click.pass_context
-def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt):
+def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt, description):
     """Push a file to the server as a published page."""
     path = Path(file_path)
 
@@ -840,7 +846,7 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
     # first, so the source file (and its content/ mirror) stays canonical.
     _apply_cli_overrides_to_md_file(path, _explicit_overrides(
         title=title, slug=slug, theme=theme, color_scheme=color_scheme,
-        parent=parent, tags=tags, excerpt=excerpt,
+        parent=parent, tags=tags, excerpt=excerpt, description=description,
     ))
     content = path.read_text()
 
@@ -849,11 +855,13 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
     merged = _merge_frontmatter(
         content, path.suffix.lower(),
         title=title, theme=theme, color_scheme=color_scheme,
-        parent=parent, tags=tags, excerpt=excerpt, slug=slug,
+        parent=parent, tags=tags, excerpt=excerpt, description=description,
+        slug=slug,
     )
     content = merged["content"]
     title, theme, color_scheme = merged["title"], merged["theme"], merged["color_scheme"]
     parent, tags, excerpt = merged["parent"], merged["tags"], merged["excerpt"]
+    description = merged["description"]
     slug = merged["slug"]
     index_spec = merged["index"]
 
@@ -876,6 +884,8 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
             args += f" --tag {shlex.quote(t)}"
         if excerpt:
             args += f" --excerpt {shlex.quote(excerpt)}"
+        if description:
+            args += f" --description {shlex.quote(description)}"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
         if _should_mirror(ctx):
@@ -978,6 +988,8 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
             body["tags"] = list(tags)
         if excerpt:
             body["excerpt"] = excerpt
+        if description:
+            body["description"] = description
         if index_spec:
             body["index"] = index_spec
 
@@ -1060,8 +1072,9 @@ def get(ctx, slug):
 @click.option("--parent", default=None, help="Slug of the parent index page (for nested sections)")
 @click.option("--tag", "tags", multiple=True, help="Tag this page (repeatable; replaces existing tags)")
 @click.option("--excerpt", default=None, help="Short summary used by index list rendering")
+@click.option("--description", default=None, help="Longer per-page subtitle displayed under links in custom index lists")
 @click.pass_context
-def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excerpt):
+def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excerpt, description):
     """Update an existing page with new content."""
     path = Path(file_path)
 
@@ -1069,7 +1082,7 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
     # before anything reads/uploads/mirrors the file (revise has no --slug).
     _apply_cli_overrides_to_md_file(path, _explicit_overrides(
         title=title, theme=theme, color_scheme=color_scheme,
-        parent=parent, tags=tags, excerpt=excerpt,
+        parent=parent, tags=tags, excerpt=excerpt, description=description,
     ))
 
     remote = ctx.obj.get("remote")
@@ -1088,6 +1101,8 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
             args += f" --tag {shlex.quote(t)}"
         if excerpt:
             args += f" --excerpt {shlex.quote(excerpt)}"
+        if description:
+            args += f" --description {shlex.quote(description)}"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
         if _should_mirror(ctx):
@@ -1102,11 +1117,12 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
     merged = _merge_frontmatter(
         content, suffix,
         title=title, theme=theme, color_scheme=color_scheme,
-        parent=parent, tags=tags, excerpt=excerpt,
+        parent=parent, tags=tags, excerpt=excerpt, description=description,
     )
     content = merged["content"]
     title, theme, color_scheme = merged["title"], merged["theme"], merged["color_scheme"]
     parent, tags, excerpt = merged["parent"], merged["tags"], merged["excerpt"]
+    description = merged["description"]
     index_spec = merged["index"]
 
     if suffix == ".md":
@@ -1166,6 +1182,8 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
         body["tags"] = list(tags)
     if excerpt:
         body["excerpt"] = excerpt
+    if description:
+        body["description"] = description
     if index_spec:
         body["index"] = index_spec
 

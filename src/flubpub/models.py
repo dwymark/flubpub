@@ -50,6 +50,7 @@ class PageCreate(BaseModel):
     index: IndexSpec | None = None
     parent: str | None = None
     excerpt: str | None = None
+    description: str | None = None
     tags: list[str] = Field(default_factory=list)
     tile: dict[str, Any] | None = None
 
@@ -70,6 +71,7 @@ class PageUpdate(BaseModel):
     index: IndexSpec | None = None
     parent: str | None = None
     excerpt: str | None = None
+    description: str | None = None
     tags: list[str] | None = None
     tile: dict[str, Any] | None = None
 

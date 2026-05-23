@@ -401,8 +401,8 @@
 <aside class="provenance" role="region" aria-label="AI authorship provenance notice">
   <div class="provenance-full">
     <p class="provenance-header">Provenance Notice</p>
-    <p class="provenance-body">Prose drafted by Claude (Anthropic) from research notes, prior conversations, and an analysis pass by Claude Code. The premise, the choice of primitive types, and the editorial frame are D.W.&apos;s; the wording and the inducer&apos;s implementation are not.</p>
-    <p class="provenance-body">Confidence in the result is mixed and deliberately so. The solver code was largely AI-generated and has not been audited line-by-line, so bugs in the inducer could be shaping what the page reports as findings. The run itself was constrained by a one-and-a-half-gigabyte memory cap, which forced phrases through the solver one at a time rather than as a jointly optimized whole — the induced lexicon is therefore a union of per-phrase minima, not a minimum cover over the corpus. The caveats section spells this out; read the findings as an <em>interim report</em>, not a settled result.</p>
+    <p class="provenance-body">Prose drafted by Claude (Anthropic) from research notes, prior conversations, and an analysis pass by Claude Code. The underlying concept and a first-cut implementation are roughly a year older than this page, developed by Daniel Wymark and Colin Bloomfield. The current inducer elaborates on that starting point, and was worked out in conversation between Daniel and Claude Code, along with the primitive type system used here. The editorial frame is Daniel&apos;s; the wording on this page is Claude&apos;s alone.</p>
+    <p class="provenance-body">Confidence in the result is mixed. The inducer was built together with Claude Code, and Daniel has not reviewed every aspect of it with the care a professional publication would call for. Experiments with the inducer give reasonable confidence that it works at a fundamental level, but it is better read as a proof-of-concept that this kind of induction can work than as a production-quality implementation. The run was further constrained by a one-and-a-half-gigabyte memory cap, which forced phrases through the solver one at a time rather than as a jointly optimized whole; the induced lexicon is therefore a union of per-phrase minima, not a minimum cover over the corpus. Read the findings as an <em>interim report</em>, not a settled result; the caveats section spells this out.</p>
     <label for="ai-banner-toggle" class="provenance-action" tabindex="0">Acknowledge</label>
   </div>
   <div class="provenance-compact">
@@ -764,8 +764,10 @@
     <p><span class="label">Solver</span>Google CP-SAT · batched one phrase at a time</p>
     <p><span class="label">Calculus</span>Lambek · primitives M / At1 / At3 / At5</p>
     <p><span class="label">Type depth</span>up to 2 permitted · only depth-1 returned</p>
+    <p><span class="label">Original concept</span>Daniel Wymark with Colin Bloomfield, ca. 2025</p>
+    <p><span class="label">Current inducer</span>Daniel Wymark with Claude Code</p>
     <p><span class="label">Findings</span>Daniel Wymark</p>
-    <p><span class="label">Analysis pass</span>Claude Code, under D.W.&apos;s instruction</p>
+    <p><span class="label">Analysis pass</span>Claude Code, under Daniel Wymark&apos;s instruction</p>
     <p><span class="label">Prose draft</span>Claude (Anthropic), from the analysis</p>
     <p><span class="label">Set in</span>Iowan Old Style, with Iosevka for the colophon</p>
     <p><span class="label">Status</span>Complete</p>

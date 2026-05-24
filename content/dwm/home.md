@@ -5,6 +5,7 @@ index:
   show_dates: false
   filter:
     exclude_self: true
+    tags_none: [draft]
   sort:
     by: manual
     manual: [blockipelago, a-grammar-of-bach]

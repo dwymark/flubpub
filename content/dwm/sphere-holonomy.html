@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Sphere & Holonomy</title>
+<style>
+  :root {
+    --bg:     #f2efe8;
+    --ink:    #1a1a1a;
+    --slate:  #2d4a6b;
+    --red:    #8a2e2e;
+    --hair:   0.7;
+    --serif:  Georgia, 'Times New Roman', serif;
+    --mono:   ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { overscroll-behavior: none; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 var(--serif);
+    -webkit-text-size-adjust: 100%;
+  }
+  body.dragging { touch-action: none; overflow: hidden; }
+
+  main {
+    max-width: 440px; margin: 0 auto; padding: 1.1rem 1rem 2rem;
+    min-height: 100vh;
+  }
+
+  header { margin-bottom: 0.9rem; }
+  header h1 {
+    font-size: 1.05rem; font-weight: 600; margin: 0;
+    font-variant: small-caps; letter-spacing: 0.08em;
+  }
+  header .sub {
+    font-size: 0.82rem; color: #555; font-style: italic;
+    margin: 0.15rem 0 0;
+  }
+
+  .mode-toggle {
+    display: flex; gap: 0; margin: 0.9rem 0 0.6rem;
+    border-top: 0.5px solid var(--ink);
+    border-bottom: 0.5px solid var(--ink);
+  }
+  .pill {
+    flex: 1; background: none; border: none; color: var(--ink);
+    font: 0.78rem/1 var(--serif); letter-spacing: 0.08em;
+    font-variant: small-caps; padding: 0.7rem 0.4rem;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+    border-right: 0.5px solid var(--ink);
+  }
+  .pill:last-child { border-right: none; }
+  .pill.active { background: var(--ink); color: var(--bg); }
+
+  .stage-wrap {
+    position: relative; width: 100%;
+    margin: 0.2rem 0 0.4rem;
+  }
+  svg#stage {
+    display: block; width: 100%; height: auto;
+    user-select: none; -webkit-user-select: none;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  svg#stage * { touch-action: none; }
+  svg#stage text {
+    font-family: var(--serif); fill: var(--ink);
+    font-style: italic;
+  }
+  svg#stage text.upright { font-style: normal; }
+
+  .handle { cursor: grab; }
+  .handle:active { cursor: grabbing; }
+  .hit { fill: transparent; }
+
+  .readouts {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem 1rem;
+    padding: 0.55rem 0.2rem; margin: 0.1rem 0 0.4rem;
+    border-top: 0.5px solid var(--ink);
+    border-bottom: 0.5px solid var(--ink);
+    font-family: var(--mono); font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .readouts .row { display: flex; justify-content: space-between; align-items: baseline; }
+  .readouts .label {
+    font-family: var(--serif); font-style: italic;
+    color: #555; font-size: 0.85rem;
+  }
+  .readouts .val { color: var(--ink); }
+  .readouts .val.live { color: var(--slate); }
+  .readouts .val.warn { color: var(--red); }
+  .readouts .full { grid-column: 1 / -1; font-size: 0.74rem; color: #555; }
+
+  .controls {
+    display: flex; flex-direction: column; gap: 0.6rem;
+    margin: 0.6rem 0 0.8rem;
+  }
+  .slider-row {
+    display: flex; align-items: center; gap: 0.7rem;
+    font-family: var(--mono); font-size: 0.78rem;
+  }
+  .slider-row label {
+    font-family: var(--serif); font-style: italic;
+    min-width: 4.5rem; color: #555;
+  }
+  input[type=range] {
+    flex: 1; -webkit-appearance: none; appearance: none;
+    background: none; height: 24px; margin: 0;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    background: var(--ink); height: 1px;
+  }
+  input[type=range]::-moz-range-track {
+    background: var(--ink); height: 1px; border: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--bg); border: 1.1px solid var(--ink);
+    margin-top: -8.5px; cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--bg); border: 1.1px solid var(--ink);
+    cursor: pointer;
+  }
+
+  .buttons {
+    display: flex; gap: 0.5rem;
+  }
+  .btn {
+    flex: 1; background: none; border: 0.7px solid var(--ink);
+    color: var(--ink); font: 0.78rem/1 var(--serif);
+    letter-spacing: 0.05em; font-variant: small-caps;
+    padding: 0.7rem 0.5rem; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn.primary { background: var(--ink); color: var(--bg); }
+  .btn:active { opacity: 0.7; }
+
+  .caption {
+    font-size: 0.84rem; color: #333; margin-top: 1rem;
+    padding-top: 0.7rem; border-top: 0.5px solid var(--ink);
+    min-height: 4.2em;
+  }
+  .caption b { font-weight: 600; }
+  .caption .muted { color: #777; }
+
+  details {
+    margin-top: 1rem; font-size: 0.82rem;
+    border-top: 0.5px solid var(--ink); padding-top: 0.7rem;
+  }
+  details summary {
+    cursor: pointer; color: var(--slate); font-style: italic;
+    list-style: none; outline: none;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "▸ "; }
+  details[open] summary::before { content: "▾ "; }
+  details p { margin: 0.5rem 0; color: #333; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Sphere &amp; Holonomy</h1>
+  <p class="sub">What the sphere's topology forces on local geometry.</p>
+</header>
+
+<div class="mode-toggle" role="tablist">
+  <button class="pill active" data-mode="parallactic">Parallactic</button>
+  <button class="pill" data-mode="thrackle">Thrackle</button>
+</div>
+
+<div class="stage-wrap">
+  <svg id="stage" viewBox="-120 -130 240 250"
+       xmlns="http://www.w3.org/2000/svg"
+       role="img" aria-label="Interactive celestial sphere">
+  </svg>
+</div>
+
+<!-- PARALLACTIC MODE controls -->
+<div id="par-panel">
+  <div class="readouts">
+    <div class="row"><span class="label">φ</span><span class="val" id="r-phi">40°</span></div>
+    <div class="row"><span class="label">q</span><span class="val live" id="r-q">0°</span></div>
+    <div class="row"><span class="label">H</span><span class="val" id="r-H">0h 00m</span></div>
+    <div class="row"><span class="label">δ</span><span class="val" id="r-delta">30°</span></div>
+    <div class="row full">
+      <span class="label">∫dq accumulated</span>
+      <span class="val live" id="r-holo">0.0°</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="slider-row">
+      <label for="sl-phi">latitude φ</label>
+      <input type="range" id="sl-phi" min="-85" max="85" step="1" value="40">
+    </div>
+    <div class="buttons">
+      <button class="btn primary" id="btn-play">▶ play</button>
+      <button class="btn" id="btn-reset">↻ reset</button>
+    </div>
+  </div>
+
+  <div class="caption" id="par-caption">
+    Drag the star <em>P</em>. The angle <em>q</em> at <em>P</em> is between the great-circle
+    tangents toward the celestial pole <em>N</em> and the zenith <em>Z</em>.
+    Press <b>play</b> to track Earth's rotation; the accumulated ∫<em>dq</em> is the
+    holonomy the camera field would pick up.
+  </div>
+</div>
+
+<!-- THRACKLE MODE controls -->
+<div id="thr-panel" class="hidden">
+  <div class="readouts">
+    <div class="row"><span class="label">crossings</span><span class="val warn" id="r-cross">2</span></div>
+    <div class="row"><span class="label">parity</span><span class="val warn" id="r-parity">even</span></div>
+    <div class="row full">
+      <span class="label">attempted single-meeting</span>
+      <span class="val" id="r-thrackle">impossible</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="buttons">
+      <button class="btn" id="btn-pinch">pinch toward tangency</button>
+      <button class="btn" id="btn-reset2">↻ reset</button>
+    </div>
+  </div>
+
+  <div class="caption" id="thr-caption">
+    Two simple closed curves on <em>S</em>² must meet in an <b>even</b> number of
+    transverse points — a consequence of the Jordan curve theorem on the sphere.
+    Drag either pole to rotate its great circle; the two crossings ×<sub>1</sub>, ×<sub>2</sub>
+    are always antipodal. Try to pinch them into one.
+  </div>
+</div>
+
+<details>
+  <summary>What are these two modes probing?</summary>
+  <p>
+    Both problems ask what the sphere's global topology forces on local constructions,
+    but they activate <em>different</em> invariants. The <b>parallactic angle</b> probes
+    the tangent bundle's Euler class — a nonzero Euler characteristic (χ = 2 on <em>S</em>²)
+    is why no continuous nonvanishing tangent frame exists and why tracking paths accumulate
+    holonomy. The <b>thrackle parity</b> probes the intersection form on H₁ — which is
+    trivial on <em>S</em>² (every simple closed curve bounds), forcing crossings to come in pairs.
+  </p>
+  <p>
+    The sphere is a clean laboratory because it activates exactly one of these obstructions
+    and leaves the other trivial. A flat torus reverses the roles; a higher-genus surface activates both.
+  </p>
+</details>
+
+</main>
+
+<script>
+"use strict";
+
+// =============================================================
+// Constants & palette
+// =============================================================
+const D2R = Math.PI / 180;
+const R2D = 180 / Math.PI;
+const H2R = 15 * D2R;         // 1 hour = 15°
+const R   = 100;              // sphere radius in SVG user units
+const TILT = 26 * D2R;        // view pitch (tilt sphere top toward viewer)
+const COLORS = {
+  bg: '#f2efe8', ink: '#1a1a1a', slate: '#2d4a6b', red: '#8a2e2e',
+};
+
+// =============================================================
+// 3D vector math
+// =============================================================
+const v  = (x,y,z) => [x,y,z];
+const dot = (a,b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+const crs = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+const sub = (a,b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+const add = (a,b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]];
+const mul = (a,s) => [a[0]*s, a[1]*s, a[2]*s];
+const len = a => Math.sqrt(dot(a,a));
+const nz  = a => { const n = len(a); return n > 1e-12 ? mul(a, 1/n) : [0,0,0]; };
+
+// Tangent at p toward q (both unit on S²)
+function tangentAt(p, q) {
+  return nz(sub(q, mul(p, dot(q,p))));
+}
+
+// Rodrigues rotation about unit axis u by angle θ
+function rodrigues(p, u, th) {
+  const c = Math.cos(th), s = Math.sin(th);
+  return add(add(mul(p, c), mul(crs(u,p), s)), mul(u, dot(u,p) * (1 - c)));
+}
+
+// Spherical linear interpolation on unit sphere
+function slerp(p, q, t) {
+  const c = Math.max(-1, Math.min(1, dot(p,q)));
+  const om = Math.acos(c);
+  if (Math.abs(om) < 1e-9) return p.slice();
+  const s = Math.sin(om);
+  const a = Math.sin((1-t)*om) / s, b = Math.sin(t*om) / s;
+  return add(mul(p, a), mul(q, b));
+}
+
+// =============================================================
+// Celestial coords: observer frame has east=+x, north=+y, zenith=+z.
+// Celestial pole N = (0, cos φ, sin φ).
+// =============================================================
+function starPos(phi, H, delta) {
+  const cp = Math.cos(phi), sp = Math.sin(phi);
+  const e1 = [0, -sp, cp];    // H=0 direction (projection of south onto eq plane)
+  const e2 = [1, 0, 0];       // eq-plane basis perpendicular
+  const e3 = [0, cp, sp];     // pole direction
+  const cd = Math.cos(delta), sd = Math.sin(delta);
+  const cH = Math.cos(H), sH = Math.sin(H);
+  const xe = cd*cH, ye = -cd*sH, ze = sd;
+  return [
+    xe*e1[0] + ye*e2[0] + ze*e3[0],
+    xe*e1[1] + ye*e2[1] + ze*e3[1],
+    xe*e1[2] + ye*e2[2] + ze*e3[2],
+  ];
+}
+
+function toHDelta(p, phi) {
+  const cp = Math.cos(phi), sp = Math.sin(phi);
+  const delta = Math.asin(Math.max(-1, Math.min(1, p[1]*cp + p[2]*sp)));
+  const H = Math.atan2(-p[0], -p[1]*sp + p[2]*cp);
+  return { H, delta };
+}
+
+// Parallactic angle via standard formula
+function parallacticAngle(phi, H, delta) {
+  const num = Math.sin(H);
+  const den = Math.tan(phi)*Math.cos(delta) - Math.sin(delta)*Math.cos(H);
+  return Math.atan2(num, den);
+}
+
+// =============================================================
+// Viewing transformation (orthographic with pitch tilt about x)
+// Screen:  sx =  R * p'.x
+//          sy = -R * p'.z   (SVG y grows downward)
+// Depth:   d  =  p'.y       (negative = front hemisphere, positive = back)
+// =============================================================
+const CT = Math.cos(TILT), ST = Math.sin(TILT);
+
+function viewRot(p) {
+  // Rx(+TILT): rotates so sphere's top tilts toward viewer
+  return [p[0], p[1]*CT - p[2]*ST, p[1]*ST + p[2]*CT];
+}
+function unViewRot(p) {
+  return [p[0], p[1]*CT + p[2]*ST, -p[1]*ST + p[2]*CT];
+}
+function project(p) {
+  const pv = viewRot(p);
+  return { x: R*pv[0], y: -R*pv[2], d: pv[1] };
+}
+
+// Inverse: screen (sx, sy) → front-hemisphere point on sphere
+function unproject(sx, sy) {
+  let px = sx / R, pz = -sy / R;
+  const r2 = px*px + pz*pz;
+  if (r2 > 1) {
+    // Outside limb: clamp to limb
+    const r = Math.sqrt(r2);
+    px /= r; pz /= r;
+    return unViewRot([px, 0, pz]);
+  }
+  const py = -Math.sqrt(1 - r2);   // negative y' = front hemisphere
+  return unViewRot([px, py, pz]);
+}
+
+// =============================================================
+// SVG helpers
+// =============================================================
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('stage');
+
+function el(tag, attrs) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) {
+    if (attrs[k] === null || attrs[k] === undefined) continue;
+    e.setAttribute(k, attrs[k]);
+  }
+  return e;
+}
+function fmt(n) { return n.toFixed(1); }
+
+// Sample a great-circle arc from p0 to p1 (both unit) with N points.
+// Returns { front: [[x,y,d],...], back: [[x,y,d],...] } as polylines split at limb.
+function sampleArc(p0, p1, N = 40) {
+  const pts = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    pts.push(project(slerp(p0, p1, t)));
+  }
+  return splitByVisibility(pts);
+}
+
+// Sample a full circle (closed curve) given its pole n on S², N points.
+function sampleCircle(pole, N = 80) {
+  // Orthonormal basis perpendicular to pole
+  let u = Math.abs(pole[2]) < 0.9 ? [0,0,1] : [1,0,0];
+  const e1 = nz(sub(u, mul(pole, dot(u, pole))));
+  const e2 = crs(pole, e1);
+  const pts = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N * 2 * Math.PI;
+    const q = add(mul(e1, Math.cos(t)), mul(e2, Math.sin(t)));
+    pts.push(project(q));
+  }
+  return splitByVisibility(pts, true);
+}
+
+// Sample a small circle of constant declination at latitude φ, declination δ,
+// as the star sweeps H from 0 to 2π. Used for tracking path.
+function sampleDeclinationCircle(phi, delta, N = 80) {
+  const pts = [];
+  for (let i = 0; i <= N; i++) {
+    const H = i / N * 2 * Math.PI;
+    pts.push(project(starPos(phi, H, delta)));
+  }
+  return splitByVisibility(pts, true);
+}
+
+// Split a polyline into visible (front) and hidden (back) runs.
+// If closed=true, treat last = first.
+function splitByVisibility(pts, closed = false) {
+  const runs = [];
+  let cur = { visible: null, pts: [] };
+  for (const p of pts) {
+    const vis = p.d <= 0;  // front
+    if (cur.visible === null) { cur.visible = vis; cur.pts.push(p); continue; }
+    if (vis === cur.visible) { cur.pts.push(p); continue; }
+    // Crossing the limb — interpolate
+    const prev = cur.pts[cur.pts.length - 1];
+    const t = prev.d / (prev.d - p.d);
+    const limb = {
+      x: prev.x + t * (p.x - prev.x),
+      y: prev.y + t * (p.y - prev.y),
+      d: 0,
+    };
+    cur.pts.push(limb);
+    runs.push(cur);
+    cur = { visible: vis, pts: [limb, p] };
+  }
+  runs.push(cur);
+  return runs;
+}
+
+function runsToPath(runs, filter) {
+  // Render runs; filter is 'front' or 'back' or 'all'.
+  let d = '';
+  for (const run of runs) {
+    if (filter === 'front' && !run.visible) continue;
+    if (filter === 'back' && run.visible) continue;
+    if (run.pts.length < 2) continue;
+    d += `M ${fmt(run.pts[0].x)} ${fmt(run.pts[0].y)} `;
+    for (let i = 1; i < run.pts.length; i++) {
+      d += `L ${fmt(run.pts[i].x)} ${fmt(run.pts[i].y)} `;
+    }
+  }
+  return d.trim();
+}
+
+// =============================================================
+// State
+// =============================================================
+const state = {
+  mode: 'parallactic',
+
+  // Parallactic
+  phi: 40 * D2R,
+  H: 4 * H2R,
+  delta: 20 * D2R,
+  playing: false,
+  lastT: null,
+  holonomy: 0,             // accumulated in radians
+  lastQ: null,             // for unwrapping
+
+  // Thrackle — two great circles defined by their poles
+  poleA: nz([0, 1, 0]),            // pole of circle α (normal to equator)
+  poleB: nz([1, 0.3, 0.2]),        // pole of circle β
+
+  // Drag
+  dragId: null,
+};
+
+// =============================================================
+// Render: assemble full SVG contents based on state
+// =============================================================
+function render() {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const g = el('g', {});
+  svg.appendChild(g);
+
+  // --- Background ink frame: sphere outline ---
+  g.appendChild(el('circle', {
+    cx: 0, cy: 0, r: R, fill: 'none',
+    stroke: COLORS.ink, 'stroke-width': 0.8,
+  }));
+
+  // --- Horizon ellipse (observer's horizon, z=0 plane) ---
+  // Horizon point = (cos t, sin t, 0). After tilt: y' = sin t · cos(tilt), z' = sin t · sin(tilt).
+  // sy = -R sin t sin(tilt). Ellipse: rx=R, ry=R·|sin(tilt)|
+  g.appendChild(el('ellipse', {
+    cx: 0, cy: 0, rx: R, ry: R * Math.abs(ST),
+    fill: 'none', stroke: COLORS.ink, 'stroke-width': 0.4,
+    'stroke-dasharray': '2 2', opacity: 0.5,
+  }));
+
+  if (state.mode === 'parallactic') renderParallactic(g);
+  else renderThrackle(g);
+}
+
+// =============================================================
+// Parallactic-mode rendering
+// =============================================================
+function renderParallactic(g) {
+  const { phi, H, delta } = state;
+  const Z = [0, 0, 1];
+  const N = [0, Math.cos(phi), Math.sin(phi)];
+  const P = starPos(phi, H, delta);
+
+  const pN = project(N), pZ = project(Z), pP = project(P);
+
+  // --- Celestial equator (great circle perpendicular to N) ---
+  const eqRuns = sampleCircle(N, 96);
+  // Back first (faded), then front (visible)
+  g.appendChild(el('path', {
+    d: runsToPath(eqRuns, 'back'),
+    fill: 'none', stroke: COLORS.ink,
+    'stroke-width': 0.35, 'stroke-dasharray': '2 2.5', opacity: 0.35,
+  }));
+  g.appendChild(el('path', {
+    d: runsToPath(eqRuns, 'front'),
+    fill: 'none', stroke: COLORS.ink,
+    'stroke-width': 0.45, 'stroke-dasharray': '2 2.5', opacity: 0.6,
+  }));
+
+  // --- Tracking path: circle of constant δ ---
+  const trackRuns = sampleDeclinationCircle(phi, delta, 96);
+  g.appendChild(el('path', {
+    d: runsToPath(trackRuns, 'back'),
+    fill: 'none', stroke: COLORS.slate,
+    'stroke-width': 0.35, 'stroke-dasharray': '1 2.2', opacity: 0.35,
+  }));
+  g.appendChild(el('path', {
+    d: runsToPath(trackRuns, 'front'),
+    fill: 'none', stroke: COLORS.slate,
+    'stroke-width': 0.55, 'stroke-dasharray': '1 2.2', opacity: 0.7,
+  }));
+
+  // --- Great-circle arcs P→N and P→Z ---
+  const arcPN = sampleArc(P, N, 40);
+  const arcPZ = sampleArc(P, Z, 40);
+  for (const [runs, filter, sw, dash, op] of [
+    [arcPN, 'back',  0.7, '2 2', 0.45],
+    [arcPN, 'front', 1.2, null,  1],
+    [arcPZ, 'back',  0.7, '2 2', 0.45],
+    [arcPZ, 'front', 1.2, null,  1],
+  ]) {
+    g.appendChild(el('path', {
+      d: runsToPath(runs, filter),
+      fill: 'none', stroke: COLORS.slate,
+      'stroke-width': sw, 'stroke-dasharray': dash, opacity: op,
+    }));
+  }
+
+  // --- Parallactic angle arc at P ---
+  drawAngleArc(g, P, N, Z);
+
+  // --- Markers. Z at top, N may be close to Z; offset N to the left. ---
+  drawPoint(g, pZ, 'Z', 'upright', 2.2, COLORS.ink, pZ.d > 0, { dx: 6, dy: -4 });
+  drawPoint(g, pN, 'N', 'upright', 2.2, COLORS.ink, pN.d > 0, { dx: -7, dy: -4 });
+
+  // Star P — draggable handle
+  drawStarHandle(g, pP);
+}
+
+function drawAngleArc(g, P, N, Z) {
+  // Draw a small arc in the tangent plane at P, between the tangent-to-N
+  // and the tangent-to-Z directions. Arc radius small in 3D.
+  const tN = tangentAt(P, N);
+  const tZ = tangentAt(P, Z);
+  if (len(tN) < 1e-6 || len(tZ) < 1e-6) return;
+  const q = Math.acos(Math.max(-1, Math.min(1, dot(tN, tZ))));
+  if (q < 0.02) return;  // too small to draw
+
+  // Arc: from P + r·tN to P + r·tZ, along the shorter arc in the tangent plane.
+  // Use 12 samples interpolating the unit tangent direction via Slerp in 2D.
+  const r = 0.15;
+  const pts = [];
+  const Np = 14;
+  for (let i = 0; i <= Np; i++) {
+    const t = i / Np;
+    // Tangent direction Slerp
+    const s = Math.sin(q);
+    const w1 = Math.sin((1-t)*q) / s, w2 = Math.sin(t*q) / s;
+    const td = add(mul(tN, w1), mul(tZ, w2));
+    const pp = add(mul(P, Math.sqrt(1 - r*r)), mul(td, r));
+    pts.push(project(nz(pp)));
+  }
+  const runs = splitByVisibility(pts);
+  g.appendChild(el('path', {
+    d: runsToPath(runs, 'front'),
+    fill: 'none', stroke: COLORS.slate, 'stroke-width': 1.1,
+  }));
+  g.appendChild(el('path', {
+    d: runsToPath(runs, 'back'),
+    fill: 'none', stroke: COLORS.slate, 'stroke-width': 0.6,
+    'stroke-dasharray': '1.5 1.5', opacity: 0.5,
+  }));
+
+  // q label at arc midpoint
+  const mid = pts[Math.floor(Np/2)];
+  if (mid.d <= 0) {
+    g.appendChild(el('text', {
+      x: mid.x + 4, y: mid.y - 2,
+      'font-size': 9, fill: COLORS.slate,
+      'font-style': 'italic',
+    })).textContent = 'q';
+  }
+}
+
+function drawPoint(g, proj, label, labelClass, size, color, hidden, offset) {
+  const op = hidden ? 0.45 : 1;
+  const fill = hidden ? COLORS.bg : color;
+  const stroke = color;
+  g.appendChild(el('circle', {
+    cx: fmt(proj.x), cy: fmt(proj.y), r: size,
+    fill, stroke, 'stroke-width': 0.9, opacity: op,
+  }));
+  if (label) {
+    const dx = offset ? offset.dx : (proj.x < 0 ? -5 : 5);
+    const dy = offset ? offset.dy : (proj.y < 0 ? -6 : 10);
+    const anchor = offset ? (dx < 0 ? 'end' : 'start') : (proj.x < 0 ? 'end' : 'start');
+    const t = el('text', {
+      x: fmt(proj.x + dx), y: fmt(proj.y + dy),
+      'font-size': 10, 'text-anchor': anchor,
+      fill: color, class: labelClass, opacity: op,
+    });
+    t.textContent = label;
+    g.appendChild(t);
+  }
+}
+
+function drawStarHandle(g, proj) {
+  const hidden = proj.d > 0;
+  const op = hidden ? 0.5 : 1;
+  // Invisible hit area (fat-finger forgiveness)
+  const hit = el('circle', {
+    cx: fmt(proj.x), cy: fmt(proj.y), r: 16,
+    class: 'hit handle', 'data-id': 'star',
+  });
+  g.appendChild(hit);
+  // Outer ring
+  g.appendChild(el('circle', {
+    cx: fmt(proj.x), cy: fmt(proj.y), r: 5,
+    fill: COLORS.bg, stroke: COLORS.slate,
+    'stroke-width': 1.2, opacity: op,
+    'pointer-events': 'none',
+  }));
+  // Inner dot
+  g.appendChild(el('circle', {
+    cx: fmt(proj.x), cy: fmt(proj.y), r: 1.7,
+    fill: COLORS.slate, opacity: op,
+    'pointer-events': 'none',
+  }));
+  // P label — bounds-aware so it doesn't spill past the viewBox edge
+  const textW = 8;
+  const wantRight = proj.x + 8 + textW < 118;
+  const dx = wantRight ? 8 : -8;
+  const dy = proj.y < 0 ? -8 : 14;
+  const t = el('text', {
+    x: fmt(proj.x + dx), y: fmt(proj.y + dy),
+    'font-size': 10, 'text-anchor': wantRight ? 'start' : 'end',
+    fill: COLORS.slate, 'pointer-events': 'none',
+  });
+  t.textContent = 'P';
+  g.appendChild(t);
+}
+
+// =============================================================
+// Thrackle-mode rendering
+// =============================================================
+function renderThrackle(g) {
+  const { poleA, poleB } = state;
+
+  // Circle α (ink)
+  const runsA = sampleCircle(poleA, 96);
+  g.appendChild(el('path', {
+    d: runsToPath(runsA, 'back'), fill: 'none', stroke: COLORS.ink,
+    'stroke-width': 0.5, 'stroke-dasharray': '2 2', opacity: 0.5,
+  }));
+  g.appendChild(el('path', {
+    d: runsToPath(runsA, 'front'), fill: 'none', stroke: COLORS.ink,
+    'stroke-width': 1.3,
+  }));
+
+  // Circle β (red)
+  const runsB = sampleCircle(poleB, 96);
+  g.appendChild(el('path', {
+    d: runsToPath(runsB, 'back'), fill: 'none', stroke: COLORS.red,
+    'stroke-width': 0.5, 'stroke-dasharray': '2 2', opacity: 0.5,
+  }));
+  g.appendChild(el('path', {
+    d: runsToPath(runsB, 'front'), fill: 'none', stroke: COLORS.red,
+    'stroke-width': 1.3,
+  }));
+
+  // Two antipodal intersection points
+  const normal = crs(poleA, poleB);
+  const nlen = len(normal);
+  let crossings = 2;
+  let isTangent = false;
+  if (nlen < 0.03) {
+    // Poles nearly parallel — circles coincide; treat as a limit case
+    isTangent = true;
+    crossings = 0;
+  } else {
+    const x1 = mul(normal, 1/nlen);
+    const x2 = mul(x1, -1);
+    const px1 = project(x1), px2 = project(x2);
+
+    // Check if the two crossings are "near" each other in projection
+    // (i.e., the circles are close to tangent)
+    // This only happens when one is at the limb
+    const sep = len([px1.x - px2.x, px1.y - px2.y, 0]);
+    isTangent = sep < 6;
+
+    drawCrossingPoint(g, px1, '×₁', false);
+    drawCrossingPoint(g, px2, '×₂', true);
+  }
+
+  // Pole handles — draggable
+  const pA = project(state.poleA);
+  const pB = project(state.poleB);
+  drawPoleHandle(g, pA, 'poleA', COLORS.ink, 'α');
+  drawPoleHandle(g, pB, 'poleB', COLORS.red, 'β');
+
+  // Update readouts
+  document.getElementById('r-cross').textContent = String(crossings);
+  document.getElementById('r-parity').textContent =
+    crossings === 0 ? 'tangent' : (crossings % 2 === 0 ? 'even' : 'odd');
+  document.getElementById('r-thrackle').textContent =
+    isTangent ? 'limit of tangency' : 'impossible — parity forbids it';
+}
+
+function drawCrossingPoint(g, proj, label, antipode) {
+  const hidden = proj.d > 0;
+  const op = hidden ? 0.55 : 1;
+  // For antipode on back, draw as hollow
+  if (hidden) {
+    g.appendChild(el('circle', {
+      cx: fmt(proj.x), cy: fmt(proj.y), r: 2.8,
+      fill: COLORS.bg, stroke: COLORS.red,
+      'stroke-width': 0.8, 'stroke-dasharray': '1.2 1.1',
+      opacity: op,
+    }));
+  } else {
+    g.appendChild(el('circle', {
+      cx: fmt(proj.x), cy: fmt(proj.y), r: 2.8,
+      fill: COLORS.red, stroke: COLORS.red,
+      'stroke-width': 0.7, opacity: op,
+    }));
+  }
+  if (label) {
+    const dx = proj.x < 0 ? -5 : 5;
+    const dy = proj.y < 0 ? -6 : 12;
+    const t = el('text', {
+      x: fmt(proj.x + dx), y: fmt(proj.y + dy),
+      'font-size': 9, 'text-anchor': proj.x < 0 ? 'end' : 'start',
+      fill: COLORS.red, class: 'upright', opacity: op,
+      'pointer-events': 'none',
+    });
+    t.textContent = label;
+    g.appendChild(t);
+  }
+}
+
+function drawPoleHandle(g, proj, id, color, label) {
+  const hidden = proj.d > 0;
+  const op = hidden ? 0.5 : 1;
+  g.appendChild(el('circle', {
+    cx: fmt(proj.x), cy: fmt(proj.y), r: 16,
+    class: 'hit handle', 'data-id': id,
+  }));
+  g.appendChild(el('circle', {
+    cx: fmt(proj.x), cy: fmt(proj.y), r: 4.5,
+    fill: COLORS.bg, stroke: color,
+    'stroke-width': 1.2, opacity: op,
+    'pointer-events': 'none',
+  }));
+  g.appendChild(el('circle', {
+    cx: fmt(proj.x), cy: fmt(proj.y), r: 1.4,
+    fill: color, opacity: op, 'pointer-events': 'none',
+  }));
+  // Bounds-aware placement: "pole α" is ~40 user units wide at 10px.
+  // viewBox right edge is +120, left is -120. Prefer right-side label, but
+  // flip to left if the label would spill past the right edge.
+  const text = 'pole ' + label;
+  const textW = text.length * 5.5;  // rough char width at 10px serif
+  const wantRight = proj.x + 7 + textW < 118;
+  const dx = wantRight ? 7 : -7;
+  const dy = proj.y < 0 ? -7 : 12;
+  const t = el('text', {
+    x: fmt(proj.x + dx), y: fmt(proj.y + dy),
+    'font-size': 10, 'text-anchor': wantRight ? 'start' : 'end',
+    fill: color, opacity: op, 'pointer-events': 'none',
+  });
+  t.textContent = text;
+  g.appendChild(t);
+}
+
+// =============================================================
+// Readouts update (parallactic mode)
+// =============================================================
+function updateReadouts() {
+  if (state.mode !== 'parallactic') return;
+  const q = parallacticAngle(state.phi, state.H, state.delta);
+  document.getElementById('r-phi').textContent =
+    (state.phi * R2D).toFixed(0) + '°';
+  document.getElementById('r-delta').textContent =
+    (state.delta * R2D).toFixed(1) + '°';
+  // H in hours/minutes, wrapped to ±12h for readability
+  let Hh = state.H * R2D / 15;
+  while (Hh > 12) Hh -= 24;
+  while (Hh < -12) Hh += 24;
+  const sign = Hh < 0 ? '−' : '+';
+  const Habs = Math.abs(Hh);
+  const Hw = Math.floor(Habs);
+  const Hm = Math.round((Habs - Hw) * 60);
+  document.getElementById('r-H').textContent =
+    `${sign}${Hw}h ${String(Hm).padStart(2,'0')}m`;
+  document.getElementById('r-q').textContent = (q * R2D).toFixed(1) + '°';
+  document.getElementById('r-holo').textContent =
+    (state.holonomy * R2D).toFixed(1) + '°';
+}
+
+// =============================================================
+// Drag handling
+// =============================================================
+function screenToSvg(cx, cy) {
+  const pt = svg.createSVGPoint();
+  pt.x = cx; pt.y = cy;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function findHandleId(target) {
+  if (!target) return null;
+  const h = target.closest && target.closest('.handle');
+  if (h && h.dataset.id) return h.dataset.id;
+  return null;
+}
+
+function applyDrag(id, svgPt) {
+  if (id === 'star') {
+    const p = unproject(svgPt.x, svgPt.y);
+    const { H, delta } = toHDelta(p, state.phi);
+    state.H = H;
+    state.delta = delta;
+    // Reset holonomy tracking on manual drag
+    state.lastQ = null;
+    state.holonomy = 0;
+  } else if (id === 'poleA' || id === 'poleB') {
+    const p = unproject(svgPt.x, svgPt.y);
+    if (id === 'poleA') state.poleA = nz(p);
+    else state.poleB = nz(p);
+  }
+}
+
+svg.addEventListener('touchstart', e => {
+  const id = findHandleId(e.target);
+  if (!id) return;
+  state.dragId = id;
+  document.body.classList.add('dragging');
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchmove', e => {
+  if (!state.dragId) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  if (!t) return;
+  const pt = screenToSvg(t.clientX, t.clientY);
+  applyDrag(state.dragId, pt);
+  render(); updateReadouts();
+}, { passive: false, capture: true });
+
+const endTouch = () => {
+  state.dragId = null;
+  document.body.classList.remove('dragging');
+};
+document.addEventListener('touchend', endTouch, { capture: true });
+document.addEventListener('touchcancel', endTouch, { capture: true });
+
+svg.addEventListener('mousedown', e => {
+  const id = findHandleId(e.target);
+  if (!id) return;
+  state.dragId = id;
+  e.preventDefault();
+});
+window.addEventListener('mousemove', e => {
+  if (!state.dragId) return;
+  const pt = screenToSvg(e.clientX, e.clientY);
+  applyDrag(state.dragId, pt);
+  render(); updateReadouts();
+});
+window.addEventListener('mouseup', () => { state.dragId = null; });
+
+// =============================================================
+// Mode toggle
+// =============================================================
+document.querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    state.mode = p.dataset.mode;
+    document.getElementById('par-panel').classList.toggle('hidden', state.mode !== 'parallactic');
+    document.getElementById('thr-panel').classList.toggle('hidden', state.mode !== 'thrackle');
+    state.playing = false;
+    document.getElementById('btn-play').textContent = '▶ play';
+    render();
+    if (state.mode === 'parallactic') updateReadouts();
+  });
+});
+
+// =============================================================
+// Latitude slider
+// =============================================================
+document.getElementById('sl-phi').addEventListener('input', e => {
+  state.phi = +e.target.value * D2R;
+  state.holonomy = 0;
+  state.lastQ = null;
+  render(); updateReadouts();
+});
+
+// =============================================================
+// Play / pause / reset (parallactic)
+// =============================================================
+const btnPlay = document.getElementById('btn-play');
+btnPlay.addEventListener('click', () => {
+  state.playing = !state.playing;
+  btnPlay.textContent = state.playing ? '❚❚ pause' : '▶ play';
+  if (state.playing) {
+    state.lastT = performance.now();
+    state.lastQ = parallacticAngle(state.phi, state.H, state.delta);
+    requestAnimationFrame(tick);
+  }
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  state.H = 4 * H2R;
+  state.delta = 20 * D2R;
+  state.holonomy = 0;
+  state.lastQ = null;
+  state.playing = false;
+  btnPlay.textContent = '▶ play';
+  render(); updateReadouts();
+});
+
+function tick(now) {
+  if (!state.playing || state.mode !== 'parallactic') return;
+  const dt = (now - state.lastT) / 1000;
+  state.lastT = now;
+  // Advance H at ~15°/sec (one hour of sky per 4 seconds)
+  const rate = 15 * D2R;
+  state.H += rate * dt;
+  if (state.H > Math.PI) state.H -= 2 * Math.PI;
+  // Unwrap q for holonomy integration
+  const q = parallacticAngle(state.phi, state.H, state.delta);
+  if (state.lastQ !== null) {
+    let dq = q - state.lastQ;
+    while (dq > Math.PI) dq -= 2 * Math.PI;
+    while (dq < -Math.PI) dq += 2 * Math.PI;
+    state.holonomy += dq;
+  }
+  state.lastQ = q;
+  render(); updateReadouts();
+  requestAnimationFrame(tick);
+}
+
+// =============================================================
+// Thrackle controls
+// =============================================================
+document.getElementById('btn-pinch').addEventListener('click', () => {
+  // Nudge poleB slightly toward being parallel to poleA (circles become close-to-tangent)
+  const target = state.poleA;
+  state.poleB = nz(add(mul(state.poleB, 0.65), mul(target, 0.4)));
+  render();
+});
+
+document.getElementById('btn-reset2').addEventListener('click', () => {
+  state.poleA = nz([0, 1, 0]);
+  state.poleB = nz([1, 0.3, 0.2]);
+  render();
+});
+
+// =============================================================
+// Initial render
+// =============================================================
+render();
+updateReadouts();
+</script>
+</body>
+</html>

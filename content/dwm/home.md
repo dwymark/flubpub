@@ -5,10 +5,10 @@ index:
   show_dates: false
   filter:
     exclude_self: true
-    tags_none: [draft]
+    tags_none: [draft, vibe-coded]
   sort:
     by: manual
-    manual: [blockipelago, a-grammar-of-bach]
+    manual: [vibe-coded-nonsense, research]
 ---
 # Daniel Wymark's Home Page
 

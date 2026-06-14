@@ -1,0 +1,14 @@
+{% extends "_papered/_base.html" %}
+{# sweep - indigo monochrome; p1 meander trajectory #}
+{% block wallpaper %}
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <pattern id="papered-sweep" patternUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <path d="M 0 128 L 32 128 L 32 96 L 64 96 L 64 160 L 96 160 L 96 64 L 128 64
+               L 128 192 L 160 192 L 160 32 L 192 32 L 192 224 L 224 224 L 224 0"
+            stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#papered-sweep)"/>
+</svg>
+{% endblock %}

@@ -119,9 +119,13 @@ def _render_pages_list_html(payload: list[dict], show_dates: bool = True) -> str
         sections = []
         for sec in payload:
             items = "\n  ".join(_li(p) for p in sec.get("pages") or [])
+            desc = sec.get("description")
+            desc_html = (
+                f'<p class="flubpub-section-description">{desc}</p>' if desc else ""
+            )
             sections.append(
                 f'<section class="flubpub-section">'
-                f'<h2>{sec.get("label", "")}</h2>'
+                f'<h2>{sec.get("label", "")}</h2>{desc_html}'
                 f'<ul class="flubpub-pages">\n  {items}\n</ul></section>'
             )
         return "\n".join(sections)

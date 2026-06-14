@@ -1,0 +1,19 @@
+{% extends "_papered/_base.html" %}
+{# ledger - ink-blue editorial; pm temporal columns #}
+{% block wallpaper %}
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <pattern id="papered-ledger" patternUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <path d="M 32 0 L 32 256 M 96 0 L 96 256"
+            stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+      <path d="M 224 0 L 224 256 M 160 0 L 160 256"
+            stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+      <circle cx="64" cy="64" r="6" fill="var(--pattern-accent)"/>
+      <circle cx="64" cy="192" r="6" fill="var(--pattern-accent)"/>
+      <circle cx="192" cy="64" r="6" fill="var(--pattern-accent)"/>
+      <circle cx="192" cy="192" r="6" fill="var(--pattern-accent)"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#papered-ledger)"/>
+</svg>
+{% endblock %}

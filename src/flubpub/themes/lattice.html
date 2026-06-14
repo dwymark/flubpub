@@ -1,0 +1,17 @@
+{% extends "_papered/_base.html" %}
+{# lattice - warm structural; p4m instantiation lattice #}
+{% block wallpaper %}
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <pattern id="papered-lattice" patternUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <path d="M 0 64 L 256 64 M 0 192 L 256 192 M 64 0 L 64 256 M 192 0 L 192 256"
+            stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+      <circle cx="64" cy="64" r="4" fill="var(--pattern-accent)"/>
+      <circle cx="192" cy="64" r="4" fill="var(--pattern-accent)"/>
+      <circle cx="64" cy="192" r="4" fill="var(--pattern-accent)"/>
+      <circle cx="192" cy="192" r="4" fill="var(--pattern-accent)"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#papered-lattice)"/>
+</svg>
+{% endblock %}

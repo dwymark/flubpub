@@ -281,9 +281,24 @@ def _shaper_grouped(
     return _group_pages(pages, spec.group_by)
 
 
+def _shaper_sections(
+    pages: list[dict[str, Any]], spec: IndexSpec
+) -> list[dict[str, Any]]:
+    """Resolve each declared section's `manual` slug list against the filtered
+    pages, preserving the listed order. Missing slugs are dropped silently.
+    Emits `{label, description, pages}` sections."""
+    by_slug = {p.get("slug"): p for p in pages}
+    return [
+        {"label": sec.label, "description": sec.description,
+         "pages": [by_slug[s] for s in sec.manual if s in by_slug]}
+        for sec in spec.sections
+    ]
+
+
 SHAPERS: dict[str, Callable[[list[dict[str, Any]], IndexSpec], list[dict[str, Any]]]] = {
     "flat": _shaper_flat,
     "grouped": _shaper_grouped,
+    "sections": _shaper_sections,
 }
 
 
@@ -307,7 +322,9 @@ def build_index_payload(
     if spec.limit is not None:
         sorted_pages = sorted_pages[: spec.limit]
 
-    shaper_name = spec.shaper or ("grouped" if spec.group_by else "flat")
+    shaper_name = spec.shaper or (
+        "sections" if spec.sections else "grouped" if spec.group_by else "flat"
+    )
     shaper = SHAPERS.get(shaper_name, _shaper_flat)
     return shaper(sorted_pages, spec)
 

@@ -1,0 +1,15 @@
+{% extends "_papered/_base.html" %}
+{# mirror - silver-green; cm reflected chevrons #}
+{% block wallpaper %}
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <pattern id="papered-mirror" patternUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <path d="M 32 64 L 64 32 L 96 64 L 64 96 Z M 160 64 L 192 32 L 224 64 L 192 96 Z"
+            stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+      <path d="M 96 192 L 128 160 L 160 192 L 128 224 Z"
+            stroke="var(--pattern-fg)" stroke-width="var(--pattern-stroke)" fill="none"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#papered-mirror)"/>
+</svg>
+{% endblock %}

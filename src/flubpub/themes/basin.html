@@ -1,0 +1,17 @@
+{% extends "_papered/_base.html" %}
+{# basin - plum analogous; pgg swirls into attractors #}
+{% block wallpaper %}
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <pattern id="papered-basin" patternUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <path d="M 64 32 Q 96 64 64 96 Q 32 64 64 32 Z" fill="var(--pattern-fg)"/>
+      <path d="M 192 32 Q 224 64 192 96 Q 160 64 192 32 Z"
+            fill="var(--pattern-accent)"/>
+      <path d="M 64 224 Q 96 192 64 160 Q 32 192 64 224 Z"
+            fill="var(--pattern-accent)"/>
+      <path d="M 192 224 Q 224 192 192 160 Q 160 192 192 224 Z" fill="var(--pattern-fg)"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#papered-basin)"/>
+</svg>
+{% endblock %}

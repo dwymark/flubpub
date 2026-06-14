@@ -28,12 +28,21 @@ class IndexSort(BaseModel):
     manual: list[str] = Field(default_factory=list)
 
 
+class IndexSection(BaseModel):
+    """One labelled, described group on an index page. `manual` lists member
+    slugs in display order; missing or self slugs are dropped at render time."""
+    label: str
+    description: str = ""
+    manual: list[str] = Field(default_factory=list)
+
+
 class IndexSpec(BaseModel):
     """Per-page configuration for an index page. Lives at pages.json[i].index."""
     template: str = "gallery"     # name of a folder under templates/
     vars: dict[str, Any] = Field(default_factory=dict)
     filter: IndexFilter = Field(default_factory=IndexFilter)
     sort: IndexSort = Field(default_factory=IndexSort)
+    sections: list[IndexSection] = Field(default_factory=list)  # explicit described groups; wins over group_by
     limit: int | None = None
     group_by: str | None = None   # year | month | quarter | theme | color_scheme | tags[0]
     shaper: str | None = None     # named function in flubpub.index_payload.SHAPERS

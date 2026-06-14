@@ -75,15 +75,15 @@ def stamp(head, body, corner):
 #dwm-disc{{position:fixed;{pos}z-index:2147483000;display:flex;flex-direction:column;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;}}
 #dwm-disc *{{box-sizing:border-box;}}
 #dwm-disc-cb{{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}}
-#dwm-disc .dwm-disc-pill{{display:inline-flex;align-items:center;gap:.4em;cursor:pointer;font-size:.7rem;letter-spacing:.04em;padding:.36em .75em;border-radius:999px;background:rgba(18,18,20,.82);color:#f2efe6;border:1px solid rgba(255,255,255,.25);box-shadow:0 2px 12px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);user-select:none;white-space:nowrap;}}
+#dwm-disc .dwm-disc-pill{{display:none;align-items:center;gap:.4em;cursor:pointer;font-size:.7rem;letter-spacing:.04em;padding:.36em .75em;border-radius:999px;background:rgba(18,18,20,.82);color:#f2efe6;border:1px solid rgba(255,255,255,.25);box-shadow:0 2px 12px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);user-select:none;white-space:nowrap;}}
 #dwm-disc .dwm-disc-pill:hover{{background:rgba(18,18,20,.96);}}
-#dwm-disc .dwm-disc-panel{{display:none;width:min(23rem,calc(100vw - 1.4rem));background:rgba(16,16,18,.97);color:#f2efe6;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:1.05rem 1.1rem .95rem;box-shadow:0 12px 40px rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}}
+#dwm-disc .dwm-disc-panel{{display:block;width:min(23rem,calc(100vw - 1.4rem));background:rgba(16,16,18,.97);color:#f2efe6;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:1.05rem 1.1rem .95rem;box-shadow:0 12px 40px rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}}
 #dwm-disc .dwm-disc-h{{margin:0 0 .5rem;font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;opacity:.6;}}
 #dwm-disc .dwm-disc-b{{margin:0 0 .85rem;font-family:Georgia,'Times New Roman',serif;font-size:.9rem;line-height:1.5;}}
 #dwm-disc .dwm-disc-btn{{display:inline-block;cursor:pointer;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;padding:.42em .95em;border:1px solid rgba(242,239,230,.5);color:#f2efe6;border-radius:7px;}}
 #dwm-disc .dwm-disc-btn:hover{{background:#f2efe6;color:#121214;}}
-#dwm-disc-cb:checked~.dwm-disc-pill{{display:none;}}
-#dwm-disc-cb:checked~.dwm-disc-panel{{display:block;}}
+#dwm-disc-cb:checked~.dwm-disc-pill{{display:inline-flex;}}
+#dwm-disc-cb:checked~.dwm-disc-panel{{display:none;}}
 </style>
 <div id="dwm-disc">
 <input type="checkbox" id="dwm-disc-cb" aria-hidden="true">
@@ -103,15 +103,15 @@ def dock(head, body):
 #dwm-disc{{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:2147483000;display:flex;flex-direction:column;align-items:center;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;}}
 #dwm-disc *{{box-sizing:border-box;}}
 #dwm-disc-cb{{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}}
-#dwm-disc .dwm-disc-tab{{display:inline-block;cursor:pointer;font-size:.68rem;letter-spacing:.05em;padding:.4em .95em;border-radius:9px 9px 0 0;background:rgba(18,18,20,.85);color:#f2efe6;border:1px solid rgba(255,255,255,.22);border-bottom:none;box-shadow:0 -2px 12px rgba(0,0,0,.3);white-space:nowrap;}}
+#dwm-disc .dwm-disc-tab{{display:none;cursor:pointer;font-size:.68rem;letter-spacing:.05em;padding:.4em .95em;border-radius:9px 9px 0 0;background:rgba(18,18,20,.85);color:#f2efe6;border:1px solid rgba(255,255,255,.22);border-bottom:none;box-shadow:0 -2px 12px rgba(0,0,0,.3);white-space:nowrap;}}
 #dwm-disc .dwm-disc-tab:hover{{background:rgba(18,18,20,.96);}}
-#dwm-disc .dwm-disc-sheet{{display:none;width:min(30rem,calc(100vw - 1rem));background:rgba(16,16,18,.97);color:#f2efe6;border:1px solid rgba(255,255,255,.2);border-bottom:none;border-radius:12px 12px 0 0;padding:1.05rem 1.2rem 1rem;box-shadow:0 -8px 40px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}}
+#dwm-disc .dwm-disc-sheet{{display:block;width:min(30rem,calc(100vw - 1rem));background:rgba(16,16,18,.97);color:#f2efe6;border:1px solid rgba(255,255,255,.2);border-bottom:none;border-radius:12px 12px 0 0;padding:1.05rem 1.2rem 1rem;box-shadow:0 -8px 40px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}}
 #dwm-disc .dwm-disc-h{{margin:0 0 .5rem;font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;opacity:.6;}}
 #dwm-disc .dwm-disc-b{{margin:0 0 .85rem;font-family:Georgia,'Times New Roman',serif;font-size:.9rem;line-height:1.5;}}
 #dwm-disc .dwm-disc-btn{{display:inline-block;cursor:pointer;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;padding:.42em .95em;border:1px solid rgba(242,239,230,.5);color:#f2efe6;border-radius:7px;}}
 #dwm-disc .dwm-disc-btn:hover{{background:#f2efe6;color:#121214;}}
-#dwm-disc-cb:checked~.dwm-disc-tab{{display:none;}}
-#dwm-disc-cb:checked~.dwm-disc-sheet{{display:block;}}
+#dwm-disc-cb:checked~.dwm-disc-tab{{display:inline-block;}}
+#dwm-disc-cb:checked~.dwm-disc-sheet{{display:none;}}
 </style>
 <div id="dwm-disc">
 <input type="checkbox" id="dwm-disc-cb" aria-hidden="true">

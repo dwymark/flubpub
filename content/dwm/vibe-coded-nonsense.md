@@ -41,7 +41,8 @@ description: A cabinet of interactive toys and experiments, built fast and by fe
 <aside class="dwm-disc-banner" role="region" aria-label="Authorship disclosure">
 <div class="dwm-disc-full">
 <p class="dwm-disc-h">Who wrote this?</p>
-<p class="dwm-disc-b">The framing and the blurbs on this page were written by Claude (Anthropic); each item below carries its own note. Daniel Wymark curated the collection and set the direction.</p>
+<p class="dwm-disc-b">This is a page-type index that Claude (Anthropic) wrote and assembled end to end: the heading, the framing above the list, and every one-line blurb below. Daniel Wymark decided which experiments belong in the collection and set its direction, but did not write the words on this page.</p>
+<p class="dwm-disc-b">Each linked artifact carries its own authorship note. The 🤖 Claude badge beside a blurb marks that blurb, specifically, as Claude's — separate from whoever made the thing it describes.</p>
 <label for="dwm-disc-cb" class="dwm-disc-btn" tabindex="0">Noted</label>
 </div>
 <label for="dwm-disc-cb" class="dwm-disc-compact" tabindex="0">AI-written · noted</label>

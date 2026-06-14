@@ -28,16 +28,28 @@ Not for: non-vibe pages, the home page, research, or theme/index plumbing.
    to `content/dwm/<slug>.html` (the SSOT). If it has sibling assets, copy them
    alongside and let flubpub's bundle upload carry them.
 
-2. **Pick a disclosure format** by how the page is built:
+2. **Disclose on-page — customize to the artifact.** Daniel's artifacts have
+   diverse design philosophies, so the disclosure should fit each one rather than
+   be stamped on uniformly. `disclose.py` ships three formats as *starting
+   points*; reach past them when a page wants something bespoke (match the
+   palette, and integrate the disclosure into the page's own layout when a fixed
+   overlay would cover content). The hare-lynx toy is the worked example: its
+   bottom dock covered the footnotes, so its disclosure is hand-written in-flow
+   beneath the footnotes in the app's own paper palette.
+
+   The three starting-point formats:
    - **banner** — scrolling/document-like pages (an essay, a card grid, an
      atlas). Sits at the top, collapses to a compact line. Needs a `<body>` tag.
-   - **stamp** — immersive full-screen pages (a canvas/WebGL/SVG toy). A small
-     corner pill that expands to a panel. Choose a `--corner` (tr/br/tl/bl) that
-     the toy's own UI leaves free.
-   - **dock** — immersive pages whose corners are busy. A bottom-center tab that
-     expands upward. Works on tagless minimal HTML (no `<body>` needed).
+   - **stamp** — immersive full-screen pages (a canvas/WebGL/SVG toy). A corner
+     pill that expands to a panel. Choose a `--corner` (tr/br/tl/bl) that the
+     toy's own UI leaves free.
+   - **dock** — immersive pages whose corners are busy. A bottom-center tab.
+     Works on tagless minimal HTML (no `<body>` needed). Watch for content pinned
+     to the bottom edge — integrate in-flow instead if it would be covered.
 
-   Inject it (idempotent; safe to re-run):
+   All three are no-JS, **default to open** (the full notice shows on load and
+   collapses to a persistent marker when the reader clicks "Noted"), and the
+   marker reopens on click. Inject (idempotent; safe to re-run):
    ```bash
    uv run python3 .claude/skills/nonsense/assets/disclose.py \
        --file content/dwm/<slug>.html --format stamp --corner br \
@@ -47,8 +59,7 @@ Not for: non-vibe pages, the home page, research, or theme/index plumbing.
    Keep the body to one or two honest sentences (allocation or dialogue shape,
    per the /disclosure skill). Add a one-line behavior note when the page runs
    code that touches the network or stores anything; these toys are client-only,
-   so "runs in your browser, no network, no storage" is the usual line. All three
-   formats are no-JS, dismissable, and leave a persistent marker.
+   so "runs in your browser, no network, no storage" is the usual line.
 
 3. **Write a listing blurb + badge.** One sentence describing the toy, followed
    by the inline Claude badge. The badge is raw HTML carried in the page's

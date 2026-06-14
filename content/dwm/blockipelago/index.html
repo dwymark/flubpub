@@ -529,15 +529,15 @@ body {
 <body>
 
 <input type="checkbox" id="ai-banner-toggle" class="banner-toggle">
-<aside class="provenance" role="region" aria-label="AI authorship provenance notice">
+<aside class="provenance" role="region" aria-label="Authorship disclosure">
   <div class="provenance-full">
-    <p class="provenance-header">Provenance Notice</p>
+    <p class="provenance-header">Who wrote this?</p>
     <p class="provenance-body">This page (prose, code, and design) was authored and implemented by <strong>Claude Opus 4.7</strong> (Anthropic) under Daniel Wymark's direction. The findings, design choices, and direction are Daniel's; the wording and implementation are Claude's.</p>
     <p class="provenance-behavior">This page runs WebGL in your browser. No network calls beyond Google Fonts, no telemetry, no cookies, no storage.</p>
-    <label for="ai-banner-toggle" class="provenance-action" tabindex="0">Acknowledge</label>
+    <label for="ai-banner-toggle" class="provenance-action" tabindex="0">Noted</label>
   </div>
   <div class="provenance-compact">
-    <label for="ai-banner-toggle" class="provenance-restore" tabindex="0">AI-authored tech demo &middot; acknowledged</label>
+    <label for="ai-banner-toggle" class="provenance-restore" tabindex="0">AI-authored tech demo &middot; noted</label>
   </div>
 </aside>
 
@@ -605,30 +605,5 @@ body {
 
 <script src="data.js"></script>
 <script src="app.js"></script>
-<!-- dwm-disclosure -->
-<style>
-#dwm-disc{position:fixed;bottom:.6rem;right:.6rem;align-items:flex-end;z-index:2147483000;display:flex;flex-direction:column;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;}
-#dwm-disc *{box-sizing:border-box;}
-#dwm-disc-cb{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
-#dwm-disc .dwm-disc-pill{display:inline-flex;align-items:center;gap:.4em;cursor:pointer;font-size:.7rem;letter-spacing:.04em;padding:.36em .75em;border-radius:999px;background:rgba(18,18,20,.82);color:#f2efe6;border:1px solid rgba(255,255,255,.25);box-shadow:0 2px 12px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);user-select:none;white-space:nowrap;}
-#dwm-disc .dwm-disc-pill:hover{background:rgba(18,18,20,.96);}
-#dwm-disc .dwm-disc-panel{display:none;width:min(23rem,calc(100vw - 1.4rem));background:rgba(16,16,18,.97);color:#f2efe6;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:1.05rem 1.1rem .95rem;box-shadow:0 12px 40px rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
-#dwm-disc .dwm-disc-h{margin:0 0 .5rem;font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;opacity:.6;}
-#dwm-disc .dwm-disc-b{margin:0 0 .85rem;font-family:Georgia,'Times New Roman',serif;font-size:.9rem;line-height:1.5;}
-#dwm-disc .dwm-disc-btn{display:inline-block;cursor:pointer;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;padding:.42em .95em;border:1px solid rgba(242,239,230,.5);color:#f2efe6;border-radius:7px;}
-#dwm-disc .dwm-disc-btn:hover{background:#f2efe6;color:#121214;}
-#dwm-disc-cb:checked~.dwm-disc-pill{display:none;}
-#dwm-disc-cb:checked~.dwm-disc-panel{display:block;}
-</style>
-<div id="dwm-disc">
-<input type="checkbox" id="dwm-disc-cb" aria-hidden="true">
-<label for="dwm-disc-cb" class="dwm-disc-pill" tabindex="0">🤖 AI-made</label>
-<div class="dwm-disc-panel" role="region" aria-label="Authorship disclosure">
-<p class="dwm-disc-h">Who made this?</p>
-<p class="dwm-disc-b">A vibe-coded WebGL toy, made with Claude (Anthropic) under Daniel Wymark's direction. It renders WebGL locally in your browser, with no network calls and no storage.</p>
-<label for="dwm-disc-cb" class="dwm-disc-btn" tabindex="0">Noted</label>
-</div>
-</div>
-<!-- /dwm-disclosure -->
 </body>
 </html>

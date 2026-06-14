@@ -2,6 +2,9 @@
 title: Research & Publications
 theme: quarry
 slug: research
+description: 'Selected linguistics work: dictionary editing, an IPA proposal, and
+  an undergraduate thesis on Boolean intensional semantics. <span class="ai-tag" title="This
+  blurb was written by Claude (Anthropic), not by Daniel.">🤖 Claude</span>'
 ---
 ## Research & Publications
 

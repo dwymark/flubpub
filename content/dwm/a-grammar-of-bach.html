@@ -396,6 +396,36 @@
 </style>
 </head>
 <body>
+<!-- dwm-disclosure -->
+<style>
+#dwm-disc{position:relative;width:100%;z-index:60;}
+#dwm-disc *{box-sizing:border-box;}
+#dwm-disc-cb{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+.dwm-disc-banner{background:var(--card-bg,var(--bg,#f6f1e7));border-bottom:1px solid var(--rule,var(--border,#cbb89c));color:var(--fg,var(--ink,#23201a));font-family:var(--prose-font,var(--serif,Georgia,'Times New Roman',serif));}
+.dwm-disc-banner .dwm-disc-full{max-width:42em;margin:0 auto;padding:1.2rem 1.4rem 1.1rem;}
+.dwm-disc-h{margin:0 0 .5rem;font-size:.68rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;opacity:.6;}
+.dwm-disc-b{margin:0 0 .85rem;font-size:.94rem;line-height:1.5;max-width:36em;}
+.dwm-disc-btn{display:inline-block;cursor:pointer;border:1px solid currentColor;padding:.34em 1em;font-family:var(--mono-font,var(--mono,ui-monospace,Menlo,Consolas,monospace));font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;opacity:.82;transition:background .15s,color .15s,border-color .15s;}
+.dwm-disc-btn:hover{background:var(--accent,#8a5a2a);color:var(--card-bg,var(--bg,#f6f1e7));border-color:var(--accent,#8a5a2a);}
+.dwm-disc-compact{display:none;cursor:pointer;max-width:42em;margin:0 auto;padding:.5rem 1.4rem;text-align:center;font-family:var(--mono-font,var(--mono,ui-monospace,Menlo,Consolas,monospace));font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;opacity:.58;}
+.dwm-disc-compact::after{content:" \21BA";opacity:.7;}
+#dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-full{display:none;}
+#dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-compact{display:block;}
+</style>
+<div id="dwm-disc">
+<input type="checkbox" id="dwm-disc-cb" aria-hidden="true">
+<aside class="dwm-disc-banner" role="region" aria-label="Authorship disclosure">
+<div class="dwm-disc-full">
+<p class="dwm-disc-h">Who wrote this?</p>
+<p class="dwm-disc-b">A vibe-coded essay: the prose and the interactive type-diagrams were made with Claude (Anthropic) under Daniel Wymark's direction. Offered as play rather than scholarship, and it runs entirely in your browser with no network calls and no storage.</p>
+<label for="dwm-disc-cb" class="dwm-disc-btn" tabindex="0">Noted</label>
+</div>
+<label for="dwm-disc-cb" class="dwm-disc-compact" tabindex="0">AI-made essay · noted</label>
+</aside>
+</div>
+<!-- /dwm-disclosure -->
+
+
 
 <input type="checkbox" id="ai-banner-toggle" class="banner-toggle">
 <aside class="provenance" role="region" aria-label="AI authorship provenance notice">

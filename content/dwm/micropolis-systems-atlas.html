@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Micropolis Systems Atlas</title>
+<style>
+:root {
+  --surface: #f4efe6; --ink: #2a2520; --ink-light: #6b6156; --dim: #e8e1d4;
+  --res: #5c6b4e; --com: #8b5e3c; --ind: #4a6572; --fire: #9e3b33;
+  --gold: #c19a3e; --power: #6b5b8a; --shadow: #2a2520;
+  --mono: ui-monospace, 'SF Mono', Menlo, 'Courier New', monospace;
+  --body: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--surface);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45;overflow-x:hidden;width:100%}
+.header{background:var(--ink);color:var(--surface);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:12px}
+.header-title{font-family:var(--mono);font-weight:700;font-size:17px;letter-spacing:2.5px;text-transform:uppercase}
+.header-sub{font-family:var(--mono);font-size:12px;letter-spacing:.5px;opacity:.7;margin-top:2px}
+.header-readout{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.5px;border:2px solid var(--surface);padding:5px 14px;flex-shrink:0}
+.filter-bar{display:flex;gap:8px;padding:14px 18px;border-bottom:2px solid var(--ink);align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.filter-label{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink-light);margin-right:6px;flex-shrink:0}
+.fbtn{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase;background:var(--surface);color:var(--ink);border:2px solid var(--ink);padding:9px 14px;cursor:pointer;box-shadow:3px 3px 0 var(--shadow);display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0}
+.fbtn:active,.fbtn.active{transform:translate(3px,3px);box-shadow:none}
+.fbtn.active{background:var(--ink);color:var(--surface)}
+.fbtn svg{width:17px;height:17px;flex-shrink:0}
+.intro{padding:18px;border-bottom:2px solid var(--ink);max-width:960px}
+.intro p{margin-bottom:8px}
+.intro p:last-child{margin-bottom:0}
+.src-tag{font-family:var(--mono);font-size:12px;font-weight:700;background:var(--dim);border:1px solid var(--ink);padding:1px 6px;white-space:nowrap}
+.dither{height:14px;background-image:repeating-linear-gradient(45deg,var(--ink) 0,var(--ink) 1px,var(--surface) 1px,var(--surface) 3px)}
+.grid{display:grid;grid-template-columns:1fr;gap:0}
+@media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+.card{border-bottom:2px solid var(--ink);border-right:2px solid var(--ink);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.card-header{display:flex;align-items:center;gap:10px;padding:9px 14px;font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:1.2px;text-transform:uppercase;color:var(--surface)}
+.card-header .card-num{font-size:12px;opacity:.6}
+.card-header .card-src{margin-left:auto;font-size:10px;font-weight:400;letter-spacing:.3px;opacity:.7}
+.card-header svg{width:18px;height:18px;flex-shrink:0}
+.cat-sim .card-header{background:var(--ink)}
+.cat-zone .card-header{background:var(--res)}
+.cat-infra .card-header{background:var(--ind)}
+.cat-econ .card-header{background:var(--gold);color:var(--ink)}
+.cat-hazard .card-header{background:var(--fire)}
+.cat-eval .card-header{background:var(--power)}
+.card-body{flex:1;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card-diagram{background:#fff;border:2px solid var(--ink);box-shadow:4px 4px 0 var(--shadow);padding:4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.card-diagram svg{display:block;height:auto}
+@media(max-width:600px){
+  .header{flex-wrap:wrap;padding:10px 14px}
+  .header-title{font-size:14px;letter-spacing:1.5px}
+  .header-readout{font-size:11px;padding:3px 8px}
+  .filter-bar{padding:10px 14px;gap:6px}
+  .fbtn{padding:7px 10px;font-size:12px}
+  .intro{padding:14px}
+  .card-body{padding:10px}
+}
+.card-notes{font-size:13px;line-height:1.45}
+.card-notes p{margin-bottom:6px}
+.card-notes p:last-child{margin-bottom:0}
+.fn{font-family:var(--mono);font-size:11px;font-weight:700;background:var(--dim);border:1px solid var(--ink);padding:0 4px;white-space:nowrap}
+.val{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--fire)}
+.const-tbl{font-family:var(--mono);font-size:12px;border-collapse:collapse;width:100%;margin:6px 0}
+.const-tbl th{text-align:left;font-size:10px;letter-spacing:.5px;text-transform:uppercase;border-bottom:2px solid var(--ink);padding:3px 8px 3px 0;color:var(--ink-light)}
+.const-tbl td{padding:3px 8px 3px 0;border-bottom:1px solid var(--dim)}
+.footer{padding:14px 18px;font-family:var(--mono);font-size:11px;letter-spacing:.5px;color:var(--ink-light);border-top:2px solid var(--ink)}
+.footer a{color:var(--ink)}
+</style>
+</head>
+<body>
+<!-- dwm-disclosure -->
+<style>
+#dwm-disc{position:relative;width:100%;z-index:60;}
+#dwm-disc *{box-sizing:border-box;}
+#dwm-disc-cb{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+.dwm-disc-banner{background:var(--card-bg,var(--bg,#f6f1e7));border-bottom:1px solid var(--rule,var(--border,#cbb89c));color:var(--fg,var(--ink,#23201a));font-family:var(--prose-font,var(--serif,Georgia,'Times New Roman',serif));}
+.dwm-disc-banner .dwm-disc-full{max-width:42em;margin:0 auto;padding:1.2rem 1.4rem 1.1rem;}
+.dwm-disc-h{margin:0 0 .5rem;font-size:.68rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;opacity:.6;}
+.dwm-disc-b{margin:0 0 .85rem;font-size:.94rem;line-height:1.5;max-width:36em;}
+.dwm-disc-btn{display:inline-block;cursor:pointer;border:1px solid currentColor;padding:.34em 1em;font-family:var(--mono-font,var(--mono,ui-monospace,Menlo,Consolas,monospace));font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;opacity:.82;transition:background .15s,color .15s,border-color .15s;}
+.dwm-disc-btn:hover{background:var(--accent,#8a5a2a);color:var(--card-bg,var(--bg,#f6f1e7));border-color:var(--accent,#8a5a2a);}
+.dwm-disc-compact{display:none;cursor:pointer;max-width:42em;margin:0 auto;padding:.5rem 1.4rem;text-align:center;font-family:var(--mono-font,var(--mono,ui-monospace,Menlo,Consolas,monospace));font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;opacity:.58;}
+.dwm-disc-compact::after{content:" \21BA";opacity:.7;}
+#dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-full{display:none;}
+#dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-compact{display:block;}
+</style>
+<div id="dwm-disc">
+<input type="checkbox" id="dwm-disc-cb" aria-hidden="true">
+<aside class="dwm-disc-banner" role="region" aria-label="Authorship disclosure">
+<div class="dwm-disc-full">
+<p class="dwm-disc-h">Who made this?</p>
+<p class="dwm-disc-b">A vibe-coded atlas, made with Claude (Anthropic) under Daniel Wymark's direction. The diagrams were reverse-engineered from the Micropolis C source and should be read as a careful sketch, not gospel. It runs entirely in your browser, with no network calls and no storage.</p>
+<label for="dwm-disc-cb" class="dwm-disc-btn" tabindex="0">Noted</label>
+</div>
+<label for="dwm-disc-cb" class="dwm-disc-compact" tabindex="0">AI-made atlas · noted</label>
+</aside>
+</div>
+<!-- /dwm-disclosure -->
+
+
+<div class="header"><div><div class="header-title">Micropolis Systems Atlas</div><div class="header-sub">Simulation Dynamics of SimCity Classic (1989)</div></div><div class="header-readout">SRC: osgcc/simcity</div></div>
+<div class="filter-bar">
+<span class="filter-label">Show:</span>
+<button class="fbtn active" onclick="filt('all',this)"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6"/><rect x="9" y="1" width="6" height="6"/><rect x="1" y="9" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/></svg>ALL</button>
+<button class="fbtn" onclick="filt('cat-sim',this)"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>CORE</button>
+<button class="fbtn" onclick="filt('cat-zone',this)"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="5" width="12" height="9" fill="none" stroke="currentColor" stroke-width="1.2"/><polygon points="8,2 2,5 14,5"/></svg>ZONES</button>
+<button class="fbtn" onclick="filt('cat-infra',this)"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 13h12M5 13V7M11 13V7M5 7h6M8 7V3" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>INFRA</button>
+<button class="fbtn" onclick="filt('cat-econ',this)"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="8" y="11" text-anchor="middle" font-size="8" font-weight="bold" font-family="monospace">$</text></svg>ECON</button>
+<button class="fbtn" onclick="filt('cat-hazard',this)"><svg viewBox="0 0 16 16" fill="currentColor"><polygon points="8,2 14,14 2,14" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="6" x2="8" y2="10" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="12" r=".8"/></svg>HAZARD</button>
+<button class="fbtn" onclick="filt('cat-eval',this)"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2"/><polyline points="3,12 6,5 9,9 13,3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>EVAL</button>
+</div>
+<div class="intro">
+<p>This atlas documents the system dynamics in the Micropolis simulation engine — the GPL source of the original SimCity (1989). Every diagram was reverse-engineered from <span class="src-tag">src/sim/s_*.c</span> in the <a href="https://github.com/osgcc/simcity" style="color:var(--ink)">osgcc/simcity</a> repository. Arrows are code paths; labels are C function names, constants, and thresholds governing each transition.</p>
+<p>The simulation runs on a 120×100 tile map. Each tick, <span class="fn">Simulate()</span> executes one of 16 phases in round-robin: phase 0 advances the clock and recomputes demand valves; phases 1–8 scan the map in 15-column strips; phases 9–15 handle census, taxes, power, pollution, crime, population density, fire coverage, and disasters.</p>
+</div>
+<div class="dither"></div>
+<div class="grid" id="grid"></div>
+<div class="dither"></div>
+<div class="footer">Source: <a href="https://github.com/osgcc/simcity">github.com/osgcc/simcity</a> (GPL v3) · Micropolis, Unix Version · Copyright 1989–2007 Electronic Arts Inc. · Atlas compiled June 2026</div>
+
+<script>
+const diagrams = [{"id": "tick", "cat": "cat-sim", "title": "Simulation Tick Cycle", "num": "01", "src": "s_sim.c:113", "w": 700, "h": 260, "nw": 130, "nh": 52, "nodes": [{"id": "p0", "x": 20, "y": 20, "label": "Phase 0\nClock + Valves", "color": "#2a2520", "header": "MOD16=0"}, {"id": "p9", "x": 180, "y": 20, "label": "Phase 9\nCensus + Tax", "color": "#c19a3e", "header": "MOD16=9"}, {"id": "p11", "x": 340, "y": 20, "label": "Phase 11\nPower Scan", "color": "#6b5b8a", "header": "MOD16=11"}, {"id": "p13", "x": 500, "y": 20, "label": "Phase 13\nCrime Scan", "color": "#6b5b8a", "header": "MOD16=13"}, {"id": "p18", "x": 20, "y": 100, "label": "Phases 1-8\nMapScan 8 strips", "color": "#2a2520", "header": "MOD16=1..8"}, {"id": "p10", "x": 180, "y": 100, "label": "Phase 10\nTraffic Decay", "color": "#4a6572", "header": "MOD16=10"}, {"id": "p12", "x": 340, "y": 100, "label": "Phase 12\nPTL Scan", "color": "#6b5b8a", "header": "MOD16=12"}, {"id": "p14", "x": 500, "y": 100, "label": "Phase 14\nPop Density", "color": "#6b5b8a", "header": "MOD16=14"}, {"id": "p15", "x": 400, "y": 180, "w": 150, "label": "Phase 15\nFire + Disasters", "color": "#9e3b33", "header": "MOD16=15"}], "edges": [{"from": "p0", "to": "p18"}, {"from": "p9", "to": "p10"}, {"from": "p11", "to": "p12", "label": "SpdPwr"}, {"from": "p13", "to": "p14", "label": "SpdCri"}, {"from": "p14", "to": "p15", "label": "SpdPop"}, {"from": "p18", "to": "p9", "via": [163, 126, 163, 46]}, {"from": "p10", "to": "p11", "via": [323, 126, 323, 46]}, {"from": "p12", "to": "p13", "via": [483, 126, 483, 46]}], "notes": "<p>Each call to <span class=\"fn\">SimFrame()</span> fires <span class=\"fn\">Simulate(Fcycle &amp; 15)</span>, executing exactly one of 16 phases. The map scan is split into 8 strips of 15 columns each (120/8), distributing zone processing across 8 ticks. Speed-gated phases only fire when <span class=\"fn\">Scycle</span> is divisible by a speed-dependent value:</p><table class=\"const-tbl\"><tr><th>Subsystem</th><th>Spd 0</th><th>Spd 1</th><th>Spd 2</th><th>Spd 3</th></tr><tr><td>Power</td><td>1</td><td>2</td><td>4</td><td>5</td></tr><tr><td>Pollution</td><td>1</td><td>2</td><td>7</td><td>17</td></tr><tr><td>Crime</td><td>1</td><td>1</td><td>8</td><td>18</td></tr><tr><td>PopDen</td><td>1</td><td>1</td><td>9</td><td>19</td></tr><tr><td>Fire</td><td>1</td><td>1</td><td>10</td><td>20</td></tr></table>", "icon": "<circle cx=\"8\" cy=\"8\" r=\"3\"/><path d=\"M8 1v3M8 12v3M1 8h3M12 8h3\" stroke=\"currentColor\" stroke-width=\"1.2\" fill=\"none\"/>"}, {"id": "valve", "cat": "cat-econ", "title": "RCI Demand Valves", "num": "02", "src": "s_sim.c:414", "w": 710, "h": 275, "nw": 140, "nh": 52, "nodes": [{"id": "emp", "x": 20, "y": 20, "label": "Employment =\n(Com+Ind)/ResPop", "color": "#c19a3e", "header": "STEP 1"}, {"id": "mig", "x": 190, "y": 20, "label": "Migration =\nResPop*(Emp-1)", "color": "#c19a3e", "header": "STEP 2"}, {"id": "births", "x": 360, "y": 20, "label": "Births =\nResPop * 0.02", "color": "#c19a3e", "header": "STEP 3"}, {"id": "pjr", "x": 530, "y": 20, "label": "Projected\nResPop", "color": "#5c6b4e", "header": "RES PROJ"}, {"id": "lab", "x": 20, "y": 100, "label": "LaborBase =\nRes/(Com+Ind)", "color": "#c19a3e", "header": "STEP 4"}, {"id": "pjc", "x": 190, "y": 100, "label": "Projected\nComPop", "color": "#8b5e3c", "header": "COM PROJ"}, {"id": "pji", "x": 360, "y": 100, "label": "Projected\nIndPop", "color": "#4a6572", "header": "IND PROJ"}, {"id": "ratio", "x": 530, "y": 100, "label": "Ratios:\nProjected/Actual", "color": "#2a2520", "header": "COMPARE"}, {"id": "tax", "x": 190, "y": 185, "w": 180, "label": "TaxTable[CityTax+Level]\n21 entries: +200 to -600", "color": "#c19a3e", "header": "TAX EFFECT"}, {"id": "clamp", "x": 430, "y": 185, "w": 180, "label": "Integrate + Clamp\nR:-2000..2000  CI:-1500", "color": "#2a2520", "header": "VALVE OUTPUT"}], "edges": [{"from": "emp", "to": "mig", "straight": true}, {"from": "mig", "to": "births", "straight": true}, {"from": "births", "to": "pjr", "straight": true}, {"from": "emp", "to": "lab"}, {"from": "lab", "to": "pjc", "straight": true}, {"from": "pjc", "to": "pji", "straight": true}, {"from": "pji", "to": "ratio", "straight": true}, {"from": "pjr", "to": "ratio"}, {"from": "ratio", "to": "tax", "via": [680, 155, 680, 250, 280, 250, 280, 237]}, {"from": "tax", "to": "clamp", "straight": true}], "notes": "<p><span class=\"fn\">SetValves()</span> projects future population for each sector using employment ratios, a 2% birth rate, and labor-base clamping. It computes projected-to-actual ratios, applies a 21-entry <span class=\"fn\">TaxTable</span> (from <span class=\"val\">+200</span> at 0% to <span class=\"val\">-600</span> at 20%), and integrates into bounded accumulators. The \"caps\" (ResCap, ComCap, IndCap) zero positive demand when stadiums, seaports, or airports are absent. <span class=\"fn\">EMarket</span> (starting at <span class=\"val\">4.0</span>) is stored but never modified at runtime \u2014 a vestigial knob.</p>", "icon": "<circle cx=\"8\" cy=\"8\" r=\"5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><text x=\"8\" y=\"11\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"bold\" font-family=\"monospace\">$</text>"}, {"id": "res", "cat": "cat-zone", "title": "Residential Zone Lifecycle", "num": "03", "src": "s_zone.c:230", "w": 660, "h": 270, "nw": 130, "nh": 52, "nodes": [{"id": "free", "x": 20, "y": 20, "label": "FREEZ\nEmpty 3x3 zone", "color": "#5c6b4e", "header": "EMPTY"}, {"id": "hut", "x": 180, "y": 20, "label": "Houses\n1-8 small huts", "color": "#5c6b4e", "header": "POP 1-8"}, {"id": "sml", "x": 340, "y": 20, "label": "Small Res\npop 16", "color": "#5c6b4e", "header": "POP 16"}, {"id": "lrg", "x": 500, "y": 20, "label": "Large Res\npop 24-40", "color": "#5c6b4e", "header": "POP 24-40"}, {"id": "eval", "x": 20, "y": 110, "w": 150, "label": "zscore =\nRValve + EvalRes", "color": "#2a2520", "header": "EVALUATE"}, {"id": "evalr", "x": 200, "y": 110, "w": 160, "label": "EvalRes =\n(LandVal-Poll) << 5", "color": "#6b5b8a", "header": "LOCAL SCORE"}, {"id": "traf", "x": 400, "y": 110, "w": 140, "label": "MakeTraf(0)\nseek Com or Ind", "color": "#4a6572", "header": "TRAFFIC"}, {"id": "grow", "x": 20, "y": 195, "label": "DoResIn\nBuildHouse", "color": "#5c6b4e", "header": "GROW"}, {"id": "decay", "x": 200, "y": 195, "w": 140, "label": "DoResOut\nDepopulate", "color": "#9e3b33", "header": "SHRINK"}], "edges": [{"from": "free", "to": "hut", "straight": true, "label": "BuildHouse"}, {"from": "hut", "to": "sml", "straight": true, "label": "density>64"}, {"from": "sml", "to": "lrg", "straight": true, "label": "ResPlop"}, {"from": "free", "to": "eval"}, {"from": "traf", "to": "eval", "straight": true, "via": [470, 95, 95, 95]}, {"from": "eval", "to": "evalr", "straight": true}, {"from": "eval", "to": "grow", "label": "score>rand"}, {"from": "eval", "to": "decay", "label": "score<rand", "via": [95, 165, 270, 165]}], "notes": "<p><span class=\"fn\">DoResidential()</span> first attempts traffic (<span class=\"fn\">MakeTraf(0)</span>) \u2014 no road means immediate depopulation. Otherwise, with 1-in-8 probability, it computes <span class=\"fn\">zscore = RValve + EvalRes</span>. <span class=\"fn\">EvalRes</span> returns <span class=\"fn\">(LandValue - Pollution) &lt;&lt; 5</span>, capped at 6000, minus 3000. Growth is gated by comparison against <span class=\"fn\">Rand16Signed()</span> offset by \u00b126380.</p><p>The <span class=\"fn\">FREEZ</span> state always evaluates (no 1-in-8 gate) and uses <span class=\"fn\">BuildHouse()</span>, scoring 8 surrounding lots by road adjacency. Land value class (0\u20133) selects building sprite tier.</p>", "icon": "<rect x=\"2\" y=\"5\" width=\"12\" height=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><polygon points=\"8,2 2,5 14,5\"/>"}, {"id": "traf", "cat": "cat-infra", "title": "Traffic Resolution", "num": "04", "src": "s_traf.c:77", "w": 640, "h": 190, "nw": 125, "nh": 52, "nodes": [{"id": "req", "x": 20, "y": 20, "label": "MakeTraf\n(Zsource 0/1/2)", "color": "#4a6572", "header": "REQUEST"}, {"id": "road", "x": 175, "y": 20, "label": "FindPRoad\nscan 12 perim", "color": "#4a6572", "header": "FIND ROAD"}, {"id": "walk", "x": 330, "y": 20, "label": "TryDrive\nmax 30 steps", "color": "#4a6572", "header": "WALK"}, {"id": "noroad", "x": 490, "y": 20, "label": "Return -1\nno road found", "color": "#9e3b33", "header": "NO ROAD"}, {"id": "trygo", "x": 20, "y": 110, "label": "TryGo\nrandom dir", "color": "#2a2520", "header": "STEP"}, {"id": "done", "x": 175, "y": 110, "label": "DriveDone\ncheck neighbors", "color": "#2a2520", "header": "ARRIVED?"}, {"id": "ink", "x": 330, "y": 110, "label": "SetTrafMem\nink path +50", "color": "#5c6b4e", "header": "SUCCESS"}, {"id": "pass", "x": 490, "y": 110, "label": "Return TRUE\ntraffic passed", "color": "#5c6b4e", "header": "PASS"}], "edges": [{"from": "req", "to": "road", "straight": true}, {"from": "road", "to": "walk", "straight": true, "label": "found"}, {"from": "road", "to": "noroad", "straight": true, "label": "none", "via": [300, 14, 490, 14]}, {"from": "walk", "to": "trygo", "via": [392, 84, 20, 84]}, {"from": "trygo", "to": "done", "straight": true, "label": "road tile"}, {"from": "done", "to": "trygo", "label": "continue", "via": [175, 100, 80, 100]}, {"from": "done", "to": "ink", "straight": true, "label": "target found"}, {"from": "ink", "to": "pass", "straight": true}], "notes": "<p>Traffic is the critical constraint. <span class=\"fn\">MakeTraf(Zsource)</span> performs a bounded random walk from the zone perimeter, seeking a destination: R seeks C/I; C seeks I/R; I seeks R. Max walk is <span class=\"val\">MAXDIS = 30</span> tiles. The walker picks a random direction (excluding reverse) each step, following road/rail. Every other step is stacked; dead ends backtrack 3 steps.</p><p>On success, <span class=\"fn\">SetTrafMem()</span> walks the stack incrementing <span class=\"fn\">TrfDensity</span> by 50 per cell, capped at 240. At 240, a helicopter sprite is dispatched.</p>", "icon": "<path d=\"M2 13h12M5 13V7M11 13V7M5 7h6M8 7V3\" stroke=\"currentColor\" stroke-width=\"1.2\" fill=\"none\"/>"}, {"id": "pwr", "cat": "cat-infra", "title": "Power Grid Scan", "num": "05", "src": "s_power.c:186", "w": 640, "h": 200, "nw": 125, "nh": 52, "nodes": [{"id": "clear", "x": 20, "y": 20, "label": "Clear\nPowerMap", "color": "#6b5b8a", "header": "INIT"}, {"id": "max", "x": 175, "y": 20, "w": 140, "label": "MaxPower =\nCoal*700+Nuc*2000", "color": "#6b5b8a", "header": "CAPACITY"}, {"id": "pop", "x": 345, "y": 20, "label": "Pop\nPowerStack", "color": "#2a2520", "header": "NEXT PLANT"}, {"id": "walk", "x": 495, "y": 20, "label": "Walk + set\nPWRBIT", "color": "#6b5b8a", "header": "FLOOD FILL"}, {"id": "test", "x": 20, "y": 110, "label": "TestForCond\n4 directions", "color": "#2a2520", "header": "TEST"}, {"id": "one", "x": 175, "y": 110, "label": "1 neighbor:\ncontinue walk", "color": "#5c6b4e", "header": "CONTINUE"}, {"id": "branch", "x": 345, "y": 110, "w": 130, "label": "2+ neighbors:\npush + branch", "color": "#c19a3e", "header": "BRANCH"}, {"id": "over", "x": 495, "y": 110, "label": "NumPwr >\nMaxPower", "color": "#9e3b33", "header": "BROWNOUT"}], "edges": [{"from": "clear", "to": "max", "straight": true}, {"from": "max", "to": "pop", "straight": true}, {"from": "pop", "to": "walk", "straight": true}, {"from": "walk", "to": "test", "via": [560, 84, 10, 84]}, {"from": "test", "to": "one", "straight": true}, {"from": "test", "to": "branch", "straight": true, "via": [82, 168, 410, 168, 410, 162]}, {"from": "one", "to": "walk", "via": [237, 90, 558, 90, 558, 0]}, {"from": "branch", "to": "pop", "via": [440, 80, 408, 0]}, {"from": "walk", "to": "over", "label": "exceeded"}], "notes": "<p>Power is a flood-fill from plant locations. Each power plant pushes onto <span class=\"fn\">PowerStack</span> during the map scan. In phase 11, <span class=\"fn\">DoPowerScan()</span> pops each and walks outward through <span class=\"fn\">CONDBIT</span> tiles (wires, roads, rails, zones all conduct). At branches (2+ conductive neighbors), the position is pushed for backtracking.</p><p>Capacity: <span class=\"fn\">CoalPop*700 + NuclearPop*2000</span>. Exceeded \u2192 message 40 (\"Brownout!\"). Unpowered zones get <span class=\"val\">\u2212500</span> zscore \u2014 halting all growth.</p>", "icon": "<path d=\"M2 13h12M5 13V7M11 13V7M5 7h6M8 7V3\" stroke=\"currentColor\" stroke-width=\"1.2\" fill=\"none\"/>"}, {"id": "ptl", "cat": "cat-eval", "title": "Land Value / PTL Scan", "num": "06", "src": "s_scan.c:167", "w": 680, "h": 190, "nw": 135, "nh": 52, "nodes": [{"id": "scan", "x": 20, "y": 20, "label": "Scan 60x50\nhalf-res grid", "color": "#6b5b8a", "header": "PTL SCAN"}, {"id": "pol", "x": 185, "y": 20, "w": 140, "label": "Pollution\nGetPValue(tile)", "color": "#9e3b33", "header": "POLLUTION"}, {"id": "lv", "x": 355, "y": 20, "w": 170, "label": "LandVal = 34-dist\n+ terrain - poll", "color": "#5c6b4e", "header": "LAND VALUE"}, {"id": "smooth", "x": 20, "y": 110, "label": "Smooth\npollution 2x", "color": "#2a2520", "header": "SMOOTH"}, {"id": "pmax", "x": 185, "y": 110, "w": 140, "label": "Track maximum\nPolMaxX / PolMaxY", "color": "#9e3b33", "header": "POLL MAX"}, {"id": "lvavg", "x": 355, "y": 110, "w": 140, "label": "LVAverage =\nLVtot / LVnum", "color": "#5c6b4e", "header": "LV AVERAGE"}, {"id": "ter", "x": 525, "y": 110, "label": "Smooth\nTerrain", "color": "#2a2520", "header": "TERRAIN"}], "edges": [{"from": "scan", "to": "pol", "straight": true}, {"from": "pol", "to": "lv", "straight": true}, {"from": "lv", "to": "smooth", "via": [440, 75, 90, 75]}, {"from": "smooth", "to": "pmax", "straight": true}, {"from": "pmax", "to": "lvavg", "straight": true}, {"from": "lvavg", "to": "ter", "straight": true}], "notes": "<p><span class=\"fn\">PTLScan()</span> computes three coupled layers in one pass. Pollution accumulates from tile types: roads 50\u201375, industry 50, power plants 100, radioactive tiles <span class=\"val\">255</span>. Land value uses Manhattan distance from the city\u2019s center of mass (<span class=\"fn\">CCx, CCy</span>), boosted by terrain (trees, water) and reduced by pollution and extreme crime (&gt;190 subtracts 20).</p><p>The center-of-mass makes downtown inherently valuable \u2014 a deliberate monocentric urban model.</p>", "icon": "<rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><polyline points=\"3,12 6,5 9,9 13,3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/>"}, {"id": "crime", "cat": "cat-eval", "title": "Crime Computation", "num": "07", "src": "s_scan.c:300", "w": 700, "h": 190, "nw": 135, "nh": 52, "nodes": [{"id": "smooth", "x": 20, "y": 20, "label": "SmoothPSMap\nx3 passes", "color": "#6b5b8a", "header": "POLICE MAP"}, {"id": "base", "x": 185, "y": 20, "w": 165, "label": "crime = 128\n- LandVal + PopDensity", "color": "#2a2520", "header": "BASE CRIME"}, {"id": "sub", "x": 380, "y": 20, "w": 140, "label": "crime -=\nPoliceMap[x/4]", "color": "#6b5b8a", "header": "SUBTRACT"}, {"id": "clamp", "x": 548, "y": 20, "label": "Clamp\n0..250", "color": "#2a2520", "header": "CLAMP"}, {"id": "max", "x": 20, "y": 110, "w": 140, "label": "Track CrimeMax\nlocation for monster", "color": "#9e3b33", "header": "MAX LOCATION"}, {"id": "avg", "x": 190, "y": 110, "w": 140, "label": "CrimeAverage =\ntotal / count", "color": "#2a2520", "header": "AVERAGE"}, {"id": "copy", "x": 360, "y": 110, "w": 160, "label": "PoliceMapEffect\n= PoliceMap", "color": "#6b5b8a", "header": "COPY OUT"}], "edges": [{"from": "smooth", "to": "base", "straight": true}, {"from": "base", "to": "sub", "straight": true}, {"from": "sub", "to": "clamp", "straight": true}, {"from": "clamp", "to": "max", "via": [615, 75, 90, 75]}, {"from": "max", "to": "avg", "straight": true}, {"from": "avg", "to": "copy", "straight": true}], "notes": "<p>Crime is <span class=\"fn\">128 \u2212 LandValue + PopDensity \u2212 PoliceMap</span>. Low land value increases crime (the 128 baseline means values below 128 contribute positively). Police stations contribute <span class=\"fn\">PoliceEffect</span> (funding ratio) halved if not road-connected. <span class=\"fn\">SmoothPSMap</span> runs 3\u00d7 creating Gaussian-like falloff from each station.</p><p><span class=\"fn\">CrimeMax</span> coordinates target the monster sprite. The crime average feeds into city evaluation.</p>", "icon": "<rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><polyline points=\"3,12 6,5 9,9 13,3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/>"}, {"id": "dis", "cat": "cat-hazard", "title": "Disaster System", "num": "08", "src": "s_disast.c:74", "w": 700, "h": 260, "nw": 120, "nh": 52, "nodes": [{"id": "dis", "x": 20, "y": 20, "label": "DoDisasters\nphase 15", "color": "#9e3b33", "header": "ENTRY"}, {"id": "scen", "x": 20, "y": 110, "w": 130, "label": "Scenario\nDisaster", "color": "#c19a3e", "header": "SCENARIO"}, {"id": "gate", "x": 180, "y": 20, "w": 130, "label": "Rand(DisChance)\n480 / 240 / 60", "color": "#2a2520", "header": "PROBABILITY"}, {"id": "fire", "x": 180, "y": 110, "label": "SetFire\n25%", "color": "#9e3b33", "header": "FIRE"}, {"id": "flood", "x": 330, "y": 110, "label": "MakeFlood\n25%", "color": "#4a6572", "header": "FLOOD"}, {"id": "nop", "x": 330, "y": 20, "label": "No-op\n12.5%", "color": "#e8e1d4", "header": "MERCY"}, {"id": "torn", "x": 330, "y": 185, "label": "Tornado\n12.5%", "color": "#9e3b33", "header": "TORNADO"}, {"id": "eq", "x": 480, "y": 20, "label": "Earthquake\n12.5%", "color": "#9e3b33", "header": "QUAKE"}, {"id": "mon", "x": 480, "y": 110, "w": 130, "label": "Monster\nif PollAvg > 60", "color": "#9e3b33", "header": "MONSTER"}, {"id": "nope", "x": 480, "y": 185, "label": "Nothing\nPollAvg <= 60", "color": "#e8e1d4", "header": "BLOCKED"}], "edges": [{"from": "dis", "to": "gate", "straight": true, "label": "NoDisasters?"}, {"from": "dis", "to": "scen", "label": "DisasterEvent"}, {"from": "gate", "to": "fire", "label": "roll 0-1"}, {"from": "gate", "to": "flood", "straight": true, "via": [310, 46, 310, 136]}, {"from": "gate", "to": "nop", "straight": true, "label": "roll 4"}, {"from": "gate", "to": "torn", "via": [170, 75, 170, 211]}, {"from": "gate", "to": "eq", "straight": true, "via": [310, 14, 540, 8]}, {"from": "gate", "to": "mon", "via": [310, 14, 680, 14, 680, 136]}], "notes": "<p>Probability scales with difficulty: <span class=\"fn\">DisChance = {480, 240, 60}</span>. Roll 0\u20138 uniform: fire and flood 25% each, tornado and earthquake 12.5%, monster 25% <em>but only if</em> <span class=\"fn\">PolluteAverage &gt; 60</span>. Roll 4 is a deliberate no-op \u2014 a mercy reprieve.</p><p>Earthquakes destroy 300\u20131000 random tiles. Nuclear meltdowns scatter 200 <span class=\"fn\">RADTILE</span> in a 40\u00d730 area \u2014 pollution 255 <em>forever</em>. No game mechanism removes them.</p>", "icon": "<polygon points=\"8,2 14,14 2,14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><line x1=\"8\" y1=\"6\" x2=\"8\" y2=\"10\" stroke=\"currentColor\" stroke-width=\"1.2\"/><circle cx=\"8\" cy=\"12\" r=\".8\"/>"}, {"id": "bud", "cat": "cat-econ", "title": "Budget Cycle", "num": "09", "src": "s_sim.c:641", "w": 660, "h": 180, "nw": 140, "nh": 52, "nodes": [{"id": "tax", "x": 20, "y": 20, "label": "CollectTax\nevery 48 ticks", "color": "#c19a3e", "header": "TRIGGER"}, {"id": "oblig", "x": 190, "y": 20, "w": 160, "label": "Police*100 + Fire*100\n+ Roads*RLevel", "color": "#9e3b33", "header": "OBLIGATIONS"}, {"id": "rev", "x": 380, "y": 20, "w": 160, "label": "Pop*LVAvg/120\n* CityTax * FLevel", "color": "#5c6b4e", "header": "REVENUE"}, {"id": "cash", "x": 20, "y": 110, "w": 150, "label": "CashFlow =\nRevenue - Obligations", "color": "#c19a3e", "header": "CASH FLOW"}, {"id": "fx", "x": 200, "y": 110, "w": 165, "label": "Effect = Spend/Fund\nRoad*32  Police*1000", "color": "#6b5b8a", "header": "FUND EFFECTS"}, {"id": "fb", "x": 400, "y": 110, "w": 160, "label": "Underfunding cascade:\ncrime > LV > revenue", "color": "#9e3b33", "header": "FEEDBACK LOOP"}], "edges": [{"from": "tax", "to": "oblig", "straight": true}, {"from": "oblig", "to": "rev", "straight": true}, {"from": "rev", "to": "cash", "via": [540, 75, 100, 75]}, {"from": "cash", "to": "fx", "straight": true}, {"from": "fx", "to": "fb", "straight": true}], "notes": "<p>Taxes collect every <span class=\"val\">48</span> ticks. Revenue scales with population, land value, tax rate, and difficulty (<span class=\"fn\">FLevels = {1.4, 1.2, 0.8}</span>). Each police/fire station costs 100. Roads/rails have per-tile maintenance scaled by <span class=\"fn\">RLevels = {0.7, 0.9, 1.2}</span>.</p><p><span class=\"fn\">Effect</span> variables are spending-to-need ratios feeding back into the sim: weak police raises crime, raising crime lowers land value, lowering revenue \u2014 a reinforcing feedback loop.</p>", "icon": "<circle cx=\"8\" cy=\"8\" r=\"5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><text x=\"8\" y=\"11\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"bold\" font-family=\"monospace\">$</text>"}, {"id": "score", "cat": "cat-eval", "title": "City Score", "num": "10", "src": "s_eval.c:276", "w": 700, "h": 190, "nw": 130, "nh": 52, "nodes": [{"id": "prob", "x": 20, "y": 20, "w": 140, "label": "Sum 7 problems:\ncrime poll tax...", "color": "#6b5b8a", "header": "PROBLEMS"}, {"id": "base", "x": 190, "y": 20, "w": 140, "label": "z = (256-sum/3)*4\ncap 0..1000", "color": "#2a2520", "header": "BASE SCORE"}, {"id": "caps", "x": 360, "y": 20, "w": 135, "label": "Caps penalty\n*= 0.85 each", "color": "#9e3b33", "header": "INFRA CAPS"}, {"id": "fund", "x": 525, "y": 20, "w": 140, "label": "Fund penalties:\nroad/police/fire", "color": "#c19a3e", "header": "FUNDING"}, {"id": "valve", "x": 20, "y": 110, "w": 140, "label": "Valve penalty\nR/C/I < -1000", "color": "#c19a3e", "header": "DEMAND"}, {"id": "growth", "x": 190, "y": 110, "w": 140, "label": "Growth mult =\ndeltaPop / Pop", "color": "#5c6b4e", "header": "GROWTH"}, {"id": "pwr", "x": 360, "y": 110, "w": 140, "label": "Power ratio:\npwrd/(pwrd+unpwrd)", "color": "#6b5b8a", "header": "POWER"}, {"id": "smooth", "x": 525, "y": 110, "w": 140, "label": "CityScore =\n(old + new) / 2", "color": "#2a2520", "header": "EMA SMOOTH"}], "edges": [{"from": "prob", "to": "base", "straight": true}, {"from": "base", "to": "caps", "straight": true}, {"from": "caps", "to": "fund", "straight": true}, {"from": "fund", "to": "valve", "via": [595, 75, 90, 75]}, {"from": "valve", "to": "growth", "straight": true}, {"from": "growth", "to": "pwr", "straight": true}, {"from": "pwr", "to": "smooth", "straight": true}], "notes": "<p>Seven problem metrics combine into a 0\u20131000 composite. Problems are voted on via Monte Carlo (100 simulated votes). Score cascades through multipliers: missing infrastructure caps (\u00d70.85 each), underfunded services, negative demand valves.</p><p>Final value: <span class=\"fn\">Score = (old + new) / 2</span> \u2014 exponential moving average creating inertia where reputation lags conditions. City class: Village (&lt;2K), Town (&lt;10K), City (&lt;50K), Capital (&lt;100K), Metropolis (&lt;500K), Megalopolis (\u2265500K).</p>", "icon": "<rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><polyline points=\"3,12 6,5 9,9 13,3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/>"}, {"id": "map", "cat": "cat-sim", "title": "Map Tile Dispatch", "num": "11", "src": "s_sim.c:695", "w": 680, "h": 260, "nw": 115, "nh": 52, "nodes": [{"id": "tile", "x": 20, "y": 20, "label": "MapScan\nread tile", "color": "#2a2520", "header": "DISPATCH"}, {"id": "flood", "x": 165, "y": 20, "label": "DoFlood\n< RADTILE", "color": "#4a6572", "header": "FLOOD"}, {"id": "rad", "x": 310, "y": 20, "label": "DoRadTile\nRAD..FIRE", "color": "#9e3b33", "header": "RADIATION"}, {"id": "fire", "x": 455, "y": 20, "label": "DoFire\n1/4 chance", "color": "#9e3b33", "header": "FIRE"}, {"id": "road", "x": 455, "y": 100, "label": "DoRoad\nROAD..PWR", "color": "#4a6572", "header": "ROAD"}, {"id": "zone", "x": 20, "y": 100, "label": "DoZone\nZONEBIT", "color": "#2a2520", "header": "ZONE"}, {"id": "res", "x": 165, "y": 100, "label": "DoRes\n< HOSPITAL", "color": "#5c6b4e", "header": "RES"}, {"id": "hosp", "x": 165, "y": 185, "w": 120, "label": "DoHospChur\nHOSP..COM", "color": "#5c6b4e", "header": "HOSP/CHURCH"}, {"id": "com", "x": 310, "y": 100, "label": "DoCom\nCOM..IND", "color": "#8b5e3c", "header": "COM"}, {"id": "ind", "x": 310, "y": 185, "label": "DoInd\nIND..PORT", "color": "#4a6572", "header": "IND"}, {"id": "sp", "x": 455, "y": 185, "w": 120, "label": "DoSPZone\n> PORTBASE", "color": "#6b5b8a", "header": "SPECIAL"}], "edges": [{"from": "tile", "to": "flood", "straight": true}, {"from": "tile", "to": "zone"}, {"from": "zone", "to": "res", "straight": true}, {"from": "zone", "to": "hosp", "via": [82, 155, 227, 155]}, {"from": "zone", "to": "com", "straight": true, "via": [82, 80, 367, 80]}, {"from": "zone", "to": "ind", "via": [10, 155, 10, 248, 295, 248, 295, 211]}, {"from": "zone", "to": "sp", "via": [10, 155, 10, 250, 440, 250, 440, 211]}], "notes": "<p><span class=\"fn\">MapScan()</span> reads each tile\u2019s 16-bit word, masks off the lower 10 bits for type (<span class=\"fn\">CChr9</span>), and routes through range checks. The tile ID space is linear: 0=dirt, 2\u201320=water, 21\u201339=trees, 40\u201343=rubble, 44\u201347=flood, 48\u201351=radioactive, 52\u201355=fire, 64+=roads, through residential (240+), commercial (423+), industrial (612+), special (745+). The upper 6 bits encode: power (15), conductivity (14), burnability (13), bulldozability (12), animation (11), zone-center (10).</p>", "icon": "<circle cx=\"8\" cy=\"8\" r=\"3\"/><path d=\"M8 1v3M8 12v3M1 8h3M12 8h3\" stroke=\"currentColor\" stroke-width=\"1.2\" fill=\"none\"/>"}, {"id": "ci", "cat": "cat-zone", "title": "Commercial and Industrial Zones", "num": "12", "src": "s_zone.c:161", "w": 680, "h": 190, "nw": 135, "nh": 52, "nodes": [{"id": "com", "x": 20, "y": 20, "w": 145, "label": "DoCommercial\nzscore=CValve+Eval", "color": "#8b5e3c", "header": "COMMERCIAL"}, {"id": "evalc", "x": 195, "y": 20, "w": 150, "label": "EvalCom =\nComRate[x/8][y/8]", "color": "#8b5e3c", "header": "COM EVAL"}, {"id": "comr", "x": 375, "y": 20, "w": 155, "label": "ComRate =\n64 - dist*4 from CC", "color": "#2a2520", "header": "DISTANCE"}, {"id": "ind", "x": 20, "y": 110, "w": 145, "label": "DoIndustrial\nzscore=IValve+Eval", "color": "#4a6572", "header": "INDUSTRIAL"}, {"id": "evali", "x": 195, "y": 110, "w": 150, "label": "EvalInd =\nalways returns 0", "color": "#4a6572", "header": "IND EVAL"}, {"id": "note", "x": 375, "y": 110, "w": 155, "label": "Location-insensitive:\nonly IValve + power", "color": "#2a2520", "header": "DESIGN NOTE"}, {"id": "grow", "x": 560, "y": 20, "label": "Growth\nPlop", "color": "#5c6b4e", "header": "GROW", "w": 95}, {"id": "decay", "x": 560, "y": 110, "label": "Decay\nOut", "color": "#9e3b33", "header": "SHRINK", "w": 95}], "edges": [{"from": "com", "to": "evalc", "straight": true}, {"from": "evalc", "to": "comr", "straight": true}, {"from": "comr", "to": "grow", "straight": true}, {"from": "ind", "to": "evali", "straight": true}, {"from": "evali", "to": "note", "straight": true}, {"from": "note", "to": "decay", "straight": true}], "notes": "<p>Commercial zones are location-sensitive: <span class=\"fn\">EvalCom()</span> returns <span class=\"fn\">ComRate = 64 \u2212 GetDisCC*4</span>, purely a function of distance from center. Growth is also gated by land value.</p><p>Industrial zones are the simplest: <span class=\"fn\">EvalInd()</span> always returns 0. Growth depends almost entirely on the global <span class=\"fn\">IValve</span> and power \u2014 factories seek cheap peripheral land by design. Industrial tiles set smoke via <span class=\"fn\">SetSmoke()</span> when powered.</p>", "icon": "<rect x=\"2\" y=\"5\" width=\"12\" height=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><polygon points=\"8,2 2,5 14,5\"/>"}];
+
+function renderDiagram(def) {
+  const W = def.w || 680, H = def.h || 380;
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 '+W+' '+H);
+  svg.style.minWidth = W + 'px';
+
+  const defs = document.createElementNS(ns, 'defs');
+  const marker = document.createElementNS(ns, 'marker');
+  marker.setAttribute('id', 'ah-'+def.id);
+  marker.setAttribute('viewBox', '0 0 10 7');
+  marker.setAttribute('refX', '9'); marker.setAttribute('refY', '3.5');
+  marker.setAttribute('markerWidth', '7'); marker.setAttribute('markerHeight', '5');
+  marker.setAttribute('orient', 'auto');
+  const mp = document.createElementNS(ns, 'path');
+  mp.setAttribute('d', 'M0,0 L10,3.5 L0,7 Z');
+  mp.setAttribute('fill', '#6b6156');
+  marker.appendChild(mp); defs.appendChild(marker); svg.appendChild(defs);
+
+  const NW = def.nw || 130, NH = def.nh || 52;
+  const nodeMap = {};
+  for (const n of def.nodes) nodeMap[n.id] = n;
+  const labelEls = [];  // collected here, appended after nodes for z-order
+
+  // Edges (drawn first, under nodes)
+  for (const e of (def.edges || [])) {
+    const a = nodeMap[e.from], b = nodeMap[e.to];
+    if (!a || !b) continue;
+    const aw = a.w||NW, ah = a.h||NH, bw = b.w||NW, bh = b.h||NH;
+    const ax = a.x+aw/2, ay = a.y+ah/2, bx = b.x+bw/2, by = b.y+bh/2;
+    const dx = bx-ax, dy = by-ay;
+    let x1,y1,x2,y2;
+    // Departure direction: toward first via point or dest center
+    let fpx = bx, fpy = by;
+    if (e.via && e.via.length >= 2) { fpx = e.via[0]; fpy = e.via[1]; }
+    const depDx = fpx-ax, depDy = fpy-ay;
+    if (Math.abs(depDx) > Math.abs(depDy)*1.1) {
+      x1 = depDx>0?a.x+aw:a.x; y1 = ay;
+    } else {
+      x1 = ax; y1 = depDy>0?a.y+ah:a.y;
+    }
+    // Arrival direction: from last via point or source center
+    let lpx = ax, lpy = ay;
+    if (e.via && e.via.length >= 2) { lpx = e.via[e.via.length-2]; lpy = e.via[e.via.length-1]; }
+    const arrDx = bx-lpx, arrDy = by-lpy;
+    const inset = 8;
+    if (Math.abs(arrDx) > Math.abs(arrDy)*1.1) {
+      x2 = arrDx>0?b.x-inset:b.x+bw+inset; y2 = by;
+    } else {
+      x2 = bx; y2 = arrDy>0?b.y-inset:b.y+bh+inset;
+    }
+
+    // Snap near-axis final segments to clean vertical/horizontal
+    const sRef = (e.via&&e.via.length>=2)?[e.via[e.via.length-2],e.via[e.via.length-1]]:[x1,y1];
+    const sdx=Math.abs(x2-sRef[0]),sdy=Math.abs(y2-sRef[1]);
+    if(sdy>5&&sdx<sdy*.25)x2=sRef[0];
+    if(sdx>5&&sdy<sdx*.25)y2=sRef[1];
+    const dRef=(e.via&&e.via.length>=2)?[e.via[0],e.via[1]]:[x2,y2];
+    const ddx=Math.abs(dRef[0]-x1),ddy=Math.abs(dRef[1]-y1);
+    if(ddy>5&&ddx<ddy*.25)x1=dRef[0];
+    if(ddx>5&&ddy<ddx*.25)y1=dRef[1];
+
+    let points;
+    if (e.via) {
+      points = x1+','+y1;
+      for (let i=0;i<e.via.length;i+=2) points += ' '+e.via[i]+','+e.via[i+1];
+      points += ' '+x2+','+y2;
+    } else if (!e.straight && Math.abs(dx)>15 && Math.abs(dy)>15) {
+      if (Math.abs(dx) > Math.abs(dy)) points = x1+','+y1+' '+x2+','+y1+' '+x2+','+y2;
+      else points = x1+','+y1+' '+x1+','+y2+' '+x2+','+y2;
+    } else {
+      points = x1+','+y1+' '+x2+','+y2;
+    }
+
+    const pl = document.createElementNS(ns, 'polyline');
+    pl.setAttribute('points', points);
+    pl.setAttribute('fill', 'none');
+    pl.setAttribute('stroke', '#9e9488');
+    pl.setAttribute('stroke-width', '1.5');
+    pl.setAttribute('marker-end', 'url(#ah-'+def.id+')');
+    svg.appendChild(pl);
+
+    if (e.label) {
+      const pts = points.split(' ').map(p => p.split(',').map(Number));
+      const mi = Math.floor(pts.length / 2);
+      const lx = (pts[mi-1][0]+pts[mi][0])/2;
+      const ly = (pts[mi-1][1]+pts[mi][1])/2;
+      const tw = e.label.length * 5.8 + 8;
+      const bg = document.createElementNS(ns, 'rect');
+      bg.setAttribute('x', lx-tw/2); bg.setAttribute('y', ly-8);
+      bg.setAttribute('width', tw); bg.setAttribute('height', 15);
+      bg.setAttribute('fill', '#fff'); bg.setAttribute('rx', '0');
+      labelEls.push(bg);
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', lx); t.setAttribute('y', ly+4);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('font-family', "ui-monospace, 'Courier New', monospace");
+      t.setAttribute('font-size', '10'); t.setAttribute('fill', '#6b6156');
+      t.textContent = e.label;
+      labelEls.push(t);
+    }
+  }
+
+  // Nodes
+  for (const n of def.nodes) {
+    const w = n.w||NW, h = n.h||NH;
+    const c = n.color || '#e8e1d4';
+    // shadow
+    const sh = document.createElementNS(ns, 'rect');
+    sh.setAttribute('x', n.x+3); sh.setAttribute('y', n.y+3);
+    sh.setAttribute('width', w); sh.setAttribute('height', h);
+    sh.setAttribute('fill', '#2a2520'); svg.appendChild(sh);
+    // body
+    const r = document.createElementNS(ns, 'rect');
+    r.setAttribute('x', n.x); r.setAttribute('y', n.y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', '#fff');
+    r.setAttribute('stroke', '#2a2520'); r.setAttribute('stroke-width', '1.5');
+    svg.appendChild(r);
+    // header
+    if (n.header) {
+      const hr = document.createElementNS(ns, 'rect');
+      hr.setAttribute('x', n.x); hr.setAttribute('y', n.y);
+      hr.setAttribute('width', w); hr.setAttribute('height', 16);
+      hr.setAttribute('fill', c);
+      hr.setAttribute('stroke', '#2a2520'); hr.setAttribute('stroke-width', '1.5');
+      svg.appendChild(hr);
+      const ht = document.createElementNS(ns, 'text');
+      ht.setAttribute('x', n.x+6); ht.setAttribute('y', n.y+12);
+      ht.setAttribute('font-family', "ui-monospace, 'Courier New', monospace");
+      ht.setAttribute('font-size', '8.5'); ht.setAttribute('font-weight', '700');
+      ht.setAttribute('fill', (c==='#c19a3e'||c==='#e8e1d4') ? '#2a2520' : '#f4efe6');
+      ht.setAttribute('letter-spacing', '.5');
+      ht.textContent = n.header.toUpperCase();
+      svg.appendChild(ht);
+    }
+    // label
+    const lines = n.label.split('\n');
+    const bodyTop = n.header ? n.y+16 : n.y;
+    const bodyH = h - (n.header ? 16 : 0);
+    const lh = 12;
+    const totalTextH = lines.length * lh;
+    const startY = bodyTop + (bodyH - totalTextH)/2 + lh - 2;
+    for (let i=0; i<lines.length; i++) {
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', n.x + w/2);
+      t.setAttribute('y', startY + i*lh);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('font-family', "ui-monospace, 'Courier New', monospace");
+      t.setAttribute('font-size', '10'); t.setAttribute('fill', '#2a2520');
+      t.textContent = lines[i];
+      svg.appendChild(t);
+    }
+  }
+  // Edge labels drawn last — on top of both edges and nodes
+  for (const el of labelEls) svg.appendChild(el);
+  return svg;
+}
+
+const grid = document.getElementById('grid');
+for (const d of diagrams) {
+  const card = document.createElement('div');
+  card.className = 'card '+d.cat;
+  card.dataset.cat = d.cat;
+  card.innerHTML =
+    '<div class="card-header">'+
+    '<svg viewBox="0 0 16 16" fill="currentColor">'+d.icon+'</svg>'+
+    '<span>'+d.title+'</span>'+
+    '<span class="card-num">'+d.num+'</span>'+
+    '<span class="card-src">'+d.src+'</span>'+
+    '</div>'+
+    '<div class="card-body">'+
+    '<div class="card-diagram" id="dia-'+d.id+'"></div>'+
+    '<div class="card-notes">'+d.notes+'</div>'+
+    '</div>';
+  grid.appendChild(card);
+  document.getElementById('dia-'+d.id).appendChild(renderDiagram(d));
+}
+
+function filt(cat, btn) {
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.card').forEach(c => {
+    c.style.display = (cat==='all'||c.dataset.cat===cat) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

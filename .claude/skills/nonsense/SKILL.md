@@ -61,14 +61,18 @@ Not for: non-vibe pages, the home page, research, or theme/index plumbing.
    code that touches the network or stores anything; these toys are client-only,
    so "runs in your browser, no network, no storage" is the usual line.
 
-3. **Write a listing blurb + byline.** One sentence describing the toy, followed
-   by an inline author byline marking the blurb as Claude's. It is raw HTML
-   carried in the page's `--description` (flubpub injects descriptions into the
-   index list unescaped); it renders as its own italic line beneath the blurb:
+3. **Write a listing blurb + byline.** One sentence describing the toy, then a
+   trailing author byline that credits the *work* (not the blurb — a byline under
+   the title reads as page authorship, which misleads). It is raw HTML carried in
+   the page's `--description`, placed last so it renders as a right-aligned italic
+   line at the lower right of the entry:
    ```
-   <span class="ai-byline" title="This blurb was written by Claude (Anthropic), not by Daniel.">Written by Claude</span>
+   <one-line blurb> <span class="ai-byline" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel Wymark, with Claude (Anthropic)</span>
    ```
-   The `.ai-byline` CSS lives in the `<style>` block at the top of
+   Use "Daniel Wymark, with Claude (Anthropic)" for collaborative work; for a
+   piece that is Daniel's alone, use just "Daniel Wymark" (gloss "Written by
+   Daniel Wymark."). The `.ai-byline` CSS (italic, muted, `display:block;
+   text-align:right`) lives in the `<style>` at the top of
    `content/dwm/vibe-coded-nonsense.md`; the byline inherits it there.
 
 4. **Push to dwm.** Tag `vibe-coded` and pass the badged description:

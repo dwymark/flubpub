@@ -1,9 +1,14 @@
 ---
 title: Memory without a brain
 slug: memory-without-a-brain
-theme: harbor
+theme: tide
 tags:
 - draft
+description: '<span class="ai-work" title="Written by Daniel Wymark; planned in dialogue
+  with an LLM, prose by hand.">Daniel Wymark</span> Memory with no self to own it:
+  a flatworm holds its body plan in a bioelectric field. <span class="ai-desc" title="This
+  one-line description was written by Claude (Anthropic).">Description: written by
+  Claude</span>'
 ---
 # Memory without a brain
 

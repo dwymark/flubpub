@@ -61,19 +61,23 @@ Not for: non-vibe pages, the home page, research, or theme/index plumbing.
    code that touches the network or stores anything; these toys are client-only,
    so "runs in your browser, no network, no storage" is the usual line.
 
-3. **Write a listing blurb + byline.** One sentence describing the toy, then a
-   trailing author byline that credits the *work* (not the blurb — a byline under
-   the title reads as page authorship, which misleads). It is raw HTML carried in
-   the page's `--description`, placed last so it renders as a right-aligned italic
-   line at the lower right of the entry:
+3. **Write a listing blurb + two credits.** The `--description` carries raw HTML
+   (flubpub injects it into the list unescaped) holding, in order: a work credit,
+   the one-line blurb, then a description credit. They keep the two questions
+   separate — who made the thing vs who wrote this blurb — so neither misreads as
+   the other:
    ```
-   <one-line blurb> <span class="ai-byline" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel Wymark, with Claude (Anthropic)</span>
+   <span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel Wymark, with Claude (Anthropic)</span> <one-line blurb> <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">Description: written by Claude</span>
    ```
-   Use "Daniel Wymark, with Claude (Anthropic)" for collaborative work; for a
-   piece that is Daniel's alone, use just "Daniel Wymark" (gloss "Written by
-   Daniel Wymark."). The `.ai-byline` CSS (italic, muted, `display:block;
-   text-align:right`) lives in the `<style>` at the top of
-   `content/dwm/vibe-coded-nonsense.md`; the byline inherits it there.
+   - **`.ai-work`** renders as a line under the title — who made the linked work.
+     "Daniel Wymark, with Claude (Anthropic)" for collaborative pieces; just
+     "Daniel Wymark" (gloss "Written by Daniel Wymark.") for Daniel's own.
+   - **`.ai-desc`** renders smaller, right-aligned at the lower right — who wrote
+     the blurb. Claude wrote every blurb, so this is constant.
+
+   Both CSS rules (italic, muted; `.ai-desc` a touch smaller and
+   `text-align:right`) live in the `<style>` at the top of
+   `content/dwm/vibe-coded-nonsense.md`; the spans inherit them there.
 
 4. **Push to dwm.** Tag `vibe-coded` and pass the badged description:
    ```bash

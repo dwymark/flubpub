@@ -2,9 +2,10 @@
 title: Research & Publications
 theme: quarry
 slug: research
-description: 'Selected linguistics work: dictionary editing, an IPA proposal, and
-  an undergraduate thesis on Boolean intensional semantics. <span class="ai-byline"
-  title="Written by Daniel Wymark.">Daniel Wymark</span>'
+description: '<span class="ai-work" title="Written by Daniel Wymark.">Daniel Wymark</span>
+  Selected linguistics work: dictionary editing, an IPA proposal, and an undergraduate
+  thesis on Boolean intensional semantics. <span class="ai-desc" title="This one-line
+  description was written by Claude (Anthropic).">Description: written by Claude</span>'
 ---
 <style>
 #dwm-disc{position:relative;width:100%;z-index:60;margin-bottom:1.5rem;}

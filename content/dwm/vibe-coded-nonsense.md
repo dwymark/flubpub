@@ -16,9 +16,10 @@ index:
     - combinatorics-workbench
     - micropolis-systems-atlas
 slug: vibe-coded-nonsense
-description: A cabinet of interactive toys and experiments, built fast and by feel.
-  <span class="ai-byline" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel
-  Wymark, with Claude (Anthropic)</span>
+description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel
+  Wymark, with Claude (Anthropic)</span> A cabinet of interactive toys and experiments,
+  built fast and by feel. <span class="ai-desc" title="This one-line description was
+  written by Claude (Anthropic).">Description: written by Claude</span>'
 ---
 <style>
 #dwm-disc{position:relative;width:100%;z-index:60;margin-bottom:1.5rem;}
@@ -34,7 +35,8 @@ description: A cabinet of interactive toys and experiments, built fast and by fe
 .dwm-disc-compact::after{content:" \21BA";opacity:.7;}
 #dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-full{display:none;}
 #dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-compact{display:block;}
-.flubpub-pages .ai-byline,.ai-byline{display:block;text-align:right;margin-top:.4rem;font-family:var(--prose-font,Georgia,'Times New Roman',serif);font-size:.78em;font-style:italic;letter-spacing:.01em;color:inherit;opacity:.6;cursor:help;}
+.flubpub-pages .ai-work,.ai-work{display:block;margin:.25rem 0 .45rem;font-family:var(--prose-font,Georgia,'Times New Roman',serif);font-size:.78em;font-style:italic;letter-spacing:.01em;color:inherit;opacity:.62;cursor:help;}
+.flubpub-pages .ai-desc,.ai-desc{display:block;text-align:right;margin-top:.4rem;font-family:var(--prose-font,Georgia,'Times New Roman',serif);font-size:.68em;font-style:italic;letter-spacing:.01em;color:inherit;opacity:.55;cursor:help;}
 </style>
 <div id="dwm-disc">
 <input type="checkbox" id="dwm-disc-cb" aria-hidden="true">
@@ -42,7 +44,7 @@ description: A cabinet of interactive toys and experiments, built fast and by fe
 <div class="dwm-disc-full">
 <p class="dwm-disc-h">Who wrote this?</p>
 <p class="dwm-disc-b">This is a page-type index that Claude (Anthropic) wrote and assembled end to end: the heading, the framing above the list, and every one-line blurb below. Daniel Wymark decided which experiments belong in the collection and set its direction, but did not write the words on this page.</p>
-<p class="dwm-disc-b">The byline at the lower right of each entry credits the work it links to — Daniel Wymark, with Claude (Anthropic) where Claude helped build it. Each artifact also carries its own fuller authorship note on its own page.</p>
+<p class="dwm-disc-b">Each entry carries two credits: the line under the title names who made the work it links to (Daniel Wymark, with Claude where Claude helped build it), and the smaller note at the lower right marks who wrote that entry's one-line description (Claude, throughout). Each artifact also carries its own fuller authorship note on its own page.</p>
 <label for="dwm-disc-cb" class="dwm-disc-btn" tabindex="0">Noted</label>
 </div>
 <label for="dwm-disc-cb" class="dwm-disc-compact" tabindex="0">AI-written · noted</label>

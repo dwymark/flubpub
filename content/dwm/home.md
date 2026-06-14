@@ -27,7 +27,8 @@ That said, I'm an LLM enthusiast. Many of my experiments and side projects since
 ## Pages
 
 <style>
-.flubpub-pages .ai-byline,.ai-byline{display:block;text-align:right;margin-top:.4rem;font-family:var(--prose-font,Georgia,'Times New Roman',serif);font-size:.78em;font-style:italic;letter-spacing:.01em;color:inherit;opacity:.6;cursor:help;}
+.flubpub-pages .ai-work,.ai-work{display:block;margin:.25rem 0 .45rem;font-family:var(--prose-font,Georgia,'Times New Roman',serif);font-size:.78em;font-style:italic;letter-spacing:.01em;color:inherit;opacity:.62;cursor:help;}
+.flubpub-pages .ai-desc,.ai-desc{display:block;text-align:right;margin-top:.4rem;font-family:var(--prose-font,Georgia,'Times New Roman',serif);font-size:.68em;font-style:italic;letter-spacing:.01em;color:inherit;opacity:.55;cursor:help;}
 </style>
 
 <!--FLUBPUB-LIST-->

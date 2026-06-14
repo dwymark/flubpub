@@ -1,6 +1,6 @@
 ---
 title: Vibe-coded nonsense
-theme: quarry
+theme: axon
 index:
   filter:
     exclude_self: true
@@ -9,6 +9,7 @@ index:
   sort:
     by: manual
     manual:
+    - a322111-pairing-theorem
     - blockipelago
     - a-grammar-of-bach
     - sphere-holonomy

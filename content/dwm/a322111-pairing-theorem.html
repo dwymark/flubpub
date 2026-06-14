@@ -1,0 +1,3544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tutorial #14: A Pairing Theorem in A322111 — Notes in Enumerative Combinatorics</title>
+<style>
+  /* ─── Webmail Blue palette ────────────────────────── */
+  :root {
+    --bg: #ffffff;
+    --bg-alt: #e8eef5;
+    --bg-page: #d8e0e8;
+    --text: #000000;
+    --text-dim: #555555;
+    --link: #0055aa;
+    --link-visited: #551a8b;
+    --accent: #003366;
+    --accent-mid: #3366aa;
+    --accent-light: #6688aa;
+    --border: #6688aa;
+    --border-light: #b8c4d4;
+    --surface: #d0dce8;
+    --warn-bg: #fff8dc;
+    --warn-border: #cc9933;
+    --def-bg: #e8f0f8;
+    --def-border: #4477aa;
+    --thm-bg: #fff5d8;
+    --thm-border: #c89030;
+    --ex-bg: #f4f4f0;
+    --ex-border: #888888;
+    --exer-bg: #e8f3e8;
+    --exer-border: #559955;
+    --rule: #6688aa;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    background: var(--bg-page);
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ─── Top banner: navy bar with title and crumbs ────── */
+  header.banner {
+    background: var(--accent);
+    color: #fff;
+    border-bottom: 3px solid #000;
+    padding: 0;
+  }
+  .banner-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .banner-title {
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .banner-title .tagline {
+    display: block;
+    font-size: 11px;
+    font-weight: normal;
+    color: #b8d4f0;
+    margin-top: 2px;
+    letter-spacing: 0;
+  }
+  .banner-meta {
+    font-size: 11px;
+    color: #b8d4f0;
+    text-align: right;
+  }
+  .banner-meta strong { color: #fff; }
+
+  /* ─── Secondary nav bar (tabs) ──────────────────────── */
+  nav.tabs {
+    background: var(--bg-alt);
+    border-bottom: 2px solid var(--accent);
+    padding: 0;
+  }
+  .tabs-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 16px;
+    display: flex;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .tabs-inner a {
+    padding: 6px 14px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: bold;
+    border-right: 1px solid var(--border-light);
+    background: var(--bg-alt);
+  }
+  .tabs-inner a.current {
+    background: #fff;
+    color: var(--text);
+    border-bottom: 2px solid #fff;
+    margin-bottom: -2px;
+    position: relative;
+  }
+  .tabs-inner a:hover { background: #fff; color: var(--accent); }
+
+  /* ─── Layout: sidebar + content ────────────────────── */
+  .layout {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: #fff;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    min-height: 80vh;
+  }
+  @media (max-width: 760px) {
+    .layout {
+      grid-template-columns: 1fr;
+      border-left: none;
+      border-right: none;
+    }
+  }
+
+  /* ─── Sidebar ──────────────────────────────────────── */
+  aside.sidebar {
+    background: var(--bg-alt);
+    border-right: 1px solid var(--border-light);
+    padding: 0;
+  }
+  @media (max-width: 760px) {
+    aside.sidebar {
+      border-right: none;
+      border-bottom: 2px solid var(--border-light);
+    }
+  }
+
+  .sb-module {
+    border-bottom: 1px solid var(--border-light);
+  }
+  .sb-module-head {
+    background: var(--accent-mid);
+    color: #fff;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--accent);
+  }
+  .sb-module-body {
+    padding: 8px 10px;
+    background: var(--bg-alt);
+    font-size: 12px;
+  }
+  .sb-module-body ul, .sb-module-body ol {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .sb-module-body li {
+    margin-bottom: 3px;
+    line-height: 1.35;
+  }
+  .sb-module-body a {
+    color: var(--link);
+    text-decoration: none;
+  }
+  .sb-module-body a:hover { text-decoration: underline; }
+  .sb-module-body a.current {
+    font-weight: bold;
+    color: var(--accent);
+  }
+  .sb-module-body .small {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  /* ─── Main content area ───────────────────────────── */
+  main.content {
+    padding: 16px 24px 32px 24px;
+    background: #fff;
+    overflow: hidden;
+  }
+  @media (max-width: 760px) {
+    main.content { padding: 12px 14px 24px 14px; }
+  }
+
+  /* Article header */
+  .article-header {
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+  .article-header .crumbs {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .article-header .crumbs a { color: var(--link); text-decoration: none; }
+  .article-header h1 {
+    font-size: 22px;
+    margin: 0 0 4px 0;
+    color: var(--accent);
+  }
+  .article-header .subhead {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* ─── Section headings ──────────────────────────── */
+  h2 {
+    font-size: 16px;
+    background: var(--bg-alt);
+    color: var(--accent);
+    padding: 5px 10px;
+    margin: 28px -10px 12px -10px;
+    border-left: 4px solid var(--accent);
+    border-bottom: 1px solid var(--border-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  h2 .secnum {
+    font-weight: normal;
+    color: var(--accent-mid);
+    margin-right: 8px;
+  }
+  h3 {
+    font-size: 14px;
+    color: var(--accent);
+    margin: 18px 0 6px 0;
+    padding-bottom: 2px;
+    border-bottom: 1px dotted var(--border-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ─── Body text ────────────────────────────────── */
+  p { margin: 0 0 10px 0; }
+  p.lead {
+    background: var(--def-bg);
+    border: 1px solid var(--def-border);
+    padding: 10px 14px;
+    margin: 0 0 16px 0;
+    font-size: 14px;
+  }
+
+  a { color: var(--link); }
+  a:visited { color: var(--link-visited); }
+  a:hover { background: #ffff99; }
+
+  ul, ol { margin: 4px 0 12px 0; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+
+  .inline-math {
+    font-style: italic;
+    white-space: nowrap;
+  }
+
+  /* ─── Math display ─────────────────────────────── */
+  .math-display {
+    text-align: center;
+    margin: 12px 0;
+    padding: 10px;
+    background: #f8f8f4;
+    border: 1px solid var(--border-light);
+    font-family: "Courier New", Courier, monospace;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  code.inline {
+    font-family: "Courier New", Courier, monospace;
+    background: #f0f0e8;
+    border: 1px solid #c0c0b0;
+    padding: 0 3px;
+    font-size: 13px;
+  }
+
+  /* ─── Boxes: definition, theorem, example, exercise ─── */
+  .box {
+    border: 1px solid;
+    margin: 12px 0;
+    padding: 0;
+  }
+  .box-title {
+    padding: 4px 10px;
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid;
+  }
+  .box-body { padding: 10px 12px; }
+  .box-body > p:last-child { margin-bottom: 0; }
+
+  .def {
+    border-color: var(--def-border);
+    background: var(--def-bg);
+  }
+  .def .box-title {
+    background: var(--def-border);
+    color: #fff;
+    border-bottom-color: var(--accent);
+  }
+
+  .thm {
+    border-color: var(--thm-border);
+    background: var(--thm-bg);
+  }
+  .thm .box-title {
+    background: var(--thm-border);
+    color: #fff;
+    border-bottom-color: #8a6020;
+  }
+
+  .lem {
+    border-color: #6c8b3f;
+    background: #f0f4e0;
+  }
+  .lem .box-title {
+    background: #6c8b3f;
+    color: #fff;
+    border-bottom-color: #455a28;
+  }
+
+  .ex {
+    border-color: var(--ex-border);
+    background: var(--ex-bg);
+  }
+  .ex .box-title {
+    background: var(--ex-border);
+    color: #fff;
+    border-bottom-color: #555;
+  }
+
+  .exer {
+    border-color: var(--exer-border);
+    background: var(--exer-bg);
+  }
+  .exer .box-title {
+    background: var(--exer-border);
+    color: #fff;
+    border-bottom-color: #335533;
+  }
+
+  .note {
+    border: 1px dashed var(--accent-mid);
+    background: #f8f8ff;
+    padding: 8px 12px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .note strong { color: var(--accent); }
+
+  .proof {
+    margin: 10px 0 14px 0;
+    padding: 8px 0 8px 14px;
+    border-left: 3px solid var(--border-light);
+    font-size: 13px;
+  }
+  .proof .label {
+    font-weight: bold;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+  .proof .qed { float: right; color: var(--text-dim); font-weight: bold; }
+  .proof::after { content: ""; display: block; clear: both; }
+
+  /* ─── Figures ──────────────────────────────────── */
+  figure.illus {
+    margin: 16px 0;
+    border: 1px solid var(--border);
+    background: #fff;
+  }
+  figure.illus .fig-title {
+    background: var(--accent);
+    color: #fff;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #000;
+  }
+  figure.illus .fig-body {
+    padding: 8px;
+    background: #fff;
+    text-align: center;
+  }
+  figure.illus svg {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+    background: #faf5e8;
+    border: 1px solid #ccbb99;
+  }
+  figure.illus figcaption {
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 8px 12px;
+    background: var(--bg-alt);
+    border-top: 1px solid var(--border-light);
+    text-align: left;
+  }
+
+  /* ─── Tables ──────────────────────────────────── */
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 13px;
+    background: #fff;
+  }
+  table.data caption {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 4px 0;
+    text-align: left;
+  }
+  table.data th, table.data td {
+    border: 1px solid var(--border-light);
+    padding: 4px 8px;
+    text-align: right;
+  }
+  table.data th {
+    background: var(--accent);
+    color: #fff;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+  }
+  table.data td.n { color: var(--text-dim); font-style: italic; }
+  table.data tr.new td { background: #fff8dc; }
+
+  /* ─── Stutter display (ASCII) ──────────────────── */
+  .stutter-display {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 13px;
+    background: #f0f0e8;
+    border: 1px solid #c0c0b0;
+    padding: 10px;
+    margin: 12px 0;
+    overflow-x: auto;
+    line-height: 1.6;
+  }
+  .stutter-display .pair { color: #cc6600; font-weight: bold; }
+
+  /* ─── Lean code blocks ───────────────────────── */
+  pre.lean {
+    background: #1e2230;
+    color: #d8e0f0;
+    padding: 10px 12px;
+    border: 1px solid #444;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+  pre.lean .kw { color: #88aaff; }
+  pre.lean .ty { color: #88dd88; }
+  pre.lean .op { color: #ffaa66; }
+  pre.lean .cm { color: #888899; font-style: italic; }
+  pre.lean .name { color: #ffdd99; }
+
+  /* ─── Beveled HR ──────────────────────────────── */
+  hr.bevel {
+    border: none;
+    height: 0;
+    border-top: 1px solid #999;
+    border-bottom: 1px solid #fff;
+    margin: 18px 0;
+  }
+
+  /* ─── Page footer ─────────────────────────────── */
+  footer.page-footer {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--bg-alt);
+    border: 1px solid var(--border-light);
+    border-top: 2px solid var(--accent);
+    padding: 12px 20px;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+  footer.page-footer .links {
+    margin: 6px 0;
+  }
+  footer.page-footer a { color: var(--link); text-decoration: none; }
+  footer.page-footer a:hover { text-decoration: underline; }
+
+  /* ─── small caps utility ──────────────────────── */
+  .sc { text-transform: uppercase; font-size: 0.85em; letter-spacing: 0.5px; }
+
+  /* ─── Section divider ─────────────────────────── */
+  .section-divider {
+    text-align: center;
+    margin: 24px 0;
+    color: var(--accent-mid);
+    font-size: 12px;
+    letter-spacing: 4px;
+  }
+
+  /* ─── Inline mini-diagrams ────────────────────── */
+  .minifig {
+    margin: 14px auto 18px auto;
+    max-width: 480px;
+    text-align: center;
+  }
+  .minifig svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  .minifig .mf-caption {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12px;
+    font-style: italic;
+    color: var(--text-dim);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+<!-- dwm-disclosure -->
+<style>
+#dwm-disc{position:relative;width:100%;z-index:60;}
+#dwm-disc *{box-sizing:border-box;}
+#dwm-disc-cb{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+.dwm-disc-banner{background:var(--card-bg,var(--bg,#f6f1e7));border-bottom:1px solid var(--rule,var(--border,#cbb89c));color:var(--fg,var(--ink,#23201a));font-family:var(--prose-font,var(--serif,Georgia,'Times New Roman',serif));}
+.dwm-disc-banner .dwm-disc-full{max-width:42em;margin:0 auto;padding:1.2rem 1.4rem 1.1rem;}
+.dwm-disc-h{margin:0 0 .5rem;font-size:.68rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;opacity:.6;}
+.dwm-disc-b{margin:0 0 .85rem;font-size:.94rem;line-height:1.5;max-width:36em;}
+.dwm-disc-btn{display:inline-block;cursor:pointer;border:1px solid currentColor;padding:.34em 1em;font-family:var(--mono-font,var(--mono,ui-monospace,Menlo,Consolas,monospace));font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;opacity:.82;transition:background .15s,color .15s,border-color .15s;}
+.dwm-disc-btn:hover{background:var(--accent,#8a5a2a);color:var(--card-bg,var(--bg,#f6f1e7));border-color:var(--accent,#8a5a2a);}
+.dwm-disc-compact{display:none;cursor:pointer;max-width:42em;margin:0 auto;padding:.5rem 1.4rem;text-align:center;font-family:var(--mono-font,var(--mono,ui-monospace,Menlo,Consolas,monospace));font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;opacity:.58;}
+.dwm-disc-compact::after{content:" \21BA";opacity:.7;}
+#dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-full{display:none;}
+#dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-compact{display:block;}
+</style>
+<div id="dwm-disc">
+<input type="checkbox" id="dwm-disc-cb" aria-hidden="true">
+<aside class="dwm-disc-banner" role="region" aria-label="Authorship disclosure">
+<div class="dwm-disc-full">
+<p class="dwm-disc-h">Who made this?</p>
+<p class="dwm-disc-b">A vibe-coded math tutorial, made with Claude (Anthropic) under Daniel Wymark's direction. The mathematics has not been verified.</p>
+<label for="dwm-disc-cb" class="dwm-disc-btn" tabindex="0">Noted</label>
+</div>
+<label for="dwm-disc-cb" class="dwm-disc-compact" tabindex="0">AI-made · noted</label>
+</aside>
+</div>
+<!-- /dwm-disclosure -->
+
+
+<!-- ════════ TOP BANNER ════════ -->
+<header class="banner">
+  <div class="banner-inner">
+    <h1 class="banner-title">
+      Notes in Enumerative Combinatorics
+      <span class="tagline">A Tutorial Series for Mathematics Undergraduates</span>
+    </h1>
+    <div class="banner-meta">
+      Tutorial <strong>#14</strong> of 22<br>
+      Last revised: April 2026
+    </div>
+  </div>
+</header>
+
+<!-- ════════ MAIN LAYOUT ════════ -->
+<div class="layout">
+
+<!-- ─── SIDEBAR ─── -->
+<aside class="sidebar">
+
+  <div class="sb-module">
+    <div class="sb-module-head">This Tutorial</div>
+    <div class="sb-module-body">
+      <ol>
+        <li><a href="#s1">Multiset partitions</a></li>
+        <li><a href="#s2">The bipartite tree picture</a></li>
+        <li><a href="#s3">A stuttering mystery</a></li>
+        <li><a href="#s4">Graph automorphisms &amp; the lemma</a></li>
+        <li><a href="#s5">The bijection</a></li>
+        <li><a href="#s6">Generating functions</a></li>
+        <li><a href="#s7">The numbers</a></li>
+        <li><a href="#s8">A computer-checked proof</a></li>
+        <li><a href="#s9">Further reading</a></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="sb-module">
+    <div class="sb-module-head">Prerequisites</div>
+    <div class="sb-module-body">
+      <p class="small" style="margin:0">
+      Familiarity with sets and functions; basic graph theory (vertices, edges, trees, bipartite graphs);
+      a bit of group theory (groups, permutations, orbits); intro generating functions. Tutorials 1, 2, 3, and 9
+      cover everything you need.
+      </p>
+    </div>
+  </div>
+
+  <div class="sb-module">
+    <div class="sb-module-head">Estimated Time</div>
+    <div class="sb-module-body">
+      <p class="small" style="margin:0">
+        First reading: 60–90 minutes.<br>
+        With exercises: 2–3 hours.
+      </p>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ─── MAIN CONTENT ─── -->
+<main class="content">
+
+<div class="article-header">
+  <h1>Tutorial #14: A Pairing Theorem in A322111</h1>
+  <div class="subhead">Self-dual multiset partitions, bipartite trees, generating functions, and an unexpected meeting at the OEIS</div>
+</div>
+
+<p class="lead">
+<strong>What you will learn in this tutorial.</strong>
+We meet a curious sequence of integers from the Online Encyclopedia of Integer Sequences and notice that
+its values come in pairs: 1, 1, 1, <em>2, 2</em>, <em>5, 5</em>, <em>13, 13</em>, <em>37, 37</em>, …
+The bulk of the tutorial is devoted to explaining <em>why</em>. Along the way we'll meet multiset partitions and
+their duals, learn how a number-theoretic statistic called "density" secretly encodes a tree structure, prove
+a small but load-bearing graph-theoretic lemma, build a bijection that establishes the pairing, derive a
+generating function, and discover that our "helper sequence" had been quietly sitting in the OEIS for
+twenty-six years under a completely different name. At the very end we'll peek at how the load-bearing
+lemma can be checked by a computer.
+</p>
+
+<p>
+The story is more interesting than the statement, so I recommend reading sequentially rather than jumping
+to the punchline. Each section builds on the previous one. You'll find <strong>Definition</strong>,
+<strong>Example</strong>, <strong>Theorem</strong>, and <strong>Exercise</strong> boxes throughout —
+exercises appear at the end of the section whose material they exercise, so you can practice each idea
+while it's fresh. Stars (★) indicate harder problems. If you get
+stuck on a definition, the answer is almost always to write down a small example.
+</p>
+
+<!-- ════════ §1: MULTISET PARTITIONS ════════ -->
+<h2 id="s1"><span class="secnum">§1.</span> Multiset partitions: definitions and examples</h2>
+
+<p>
+We begin with the central object of study, building it up piece by piece. If you haven't seen multisets
+before, the first definition is the only conceptual leap; everything afterward is bookkeeping.
+</p>
+
+<div class="box def">
+<div class="box-title">Definition 1.1 (Multiset)</div>
+<div class="box-body">
+<p>A <strong>multiset</strong> is a collection of objects in which repetitions are allowed and order does
+not matter. We write multisets with curly braces, just like sets, but a multiset records how many copies
+of each element it contains. Thus <span class="inline-math">{1, 1, 2}</span> and <span class="inline-math">{1, 2}</span>
+are <em>different</em> multisets, even though they contain the same set of distinct elements. The number of
+copies of element <span class="inline-math">x</span> in a multiset <span class="inline-math">M</span> is called the
+<strong>multiplicity</strong> of <span class="inline-math">x</span> in <span class="inline-math">M</span>.</p>
+</div>
+</div>
+
+<div class="box ex">
+<div class="box-title">Example 1.2</div>
+<div class="box-body">
+<p>The multiset <span class="inline-math">{1, 1, 1, 2, 3, 3}</span> has six elements. Element 1 has multiplicity
+3, element 2 has multiplicity 1, and element 3 has multiplicity 2. The set of distinct elements is
+<span class="inline-math">{1, 2, 3}</span>, but the multiset contains six elements counted with multiplicity.</p>
+</div>
+</div>
+
+<div class="minifig">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 130" role="img" aria-label="The multiset 1,1,1,2,3,3 drawn as stacks of labeled disks, one column per distinct element, with multiplicity shown below.">
+  <style>
+    .mf-disk { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.3; }
+    .mf-label { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 15px; fill: #2a2419; }
+    .mf-mult { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #cc6600; font-weight: bold; }
+    .mf-tick { stroke: #5a4f38; stroke-width: 0.8; }
+    .mf-brace { font-family: "Times New Roman", Times, serif; font-size: 50px; fill: #5a4f38; }
+  </style>
+
+  <!-- element 1: three disks stacked -->
+  <g transform="translate(90, 65)">
+    <circle cx="0" cy="-24" r="15" class="mf-disk"/>
+    <text y="-19" text-anchor="middle" class="mf-label">1</text>
+    <circle cx="0" cy="0" r="15" class="mf-disk"/>
+    <text y="5" text-anchor="middle" class="mf-label">1</text>
+    <circle cx="0" cy="24" r="15" class="mf-disk"/>
+    <text y="29" text-anchor="middle" class="mf-label">1</text>
+    <text y="58" text-anchor="middle" class="mf-mult">multiplicity 3</text>
+  </g>
+
+  <!-- element 2: one disk -->
+  <g transform="translate(180, 65)">
+    <circle cx="0" cy="0" r="15" class="mf-disk"/>
+    <text y="5" text-anchor="middle" class="mf-label">2</text>
+    <text y="58" text-anchor="middle" class="mf-mult">multiplicity 1</text>
+  </g>
+
+  <!-- element 3: two disks stacked -->
+  <g transform="translate(270, 65)">
+    <circle cx="0" cy="-12" r="15" class="mf-disk"/>
+    <text y="-7" text-anchor="middle" class="mf-label">3</text>
+    <circle cx="0" cy="12" r="15" class="mf-disk"/>
+    <text y="17" text-anchor="middle" class="mf-label">3</text>
+    <text y="58" text-anchor="middle" class="mf-mult">multiplicity 2</text>
+  </g>
+
+  <!-- surrounding "multiset braces" -->
+  <text x="48" y="65" text-anchor="middle" dominant-baseline="central" class="mf-brace">{</text>
+  <text x="312" y="65" text-anchor="middle" dominant-baseline="central" class="mf-brace">}</text>
+</svg>
+<div class="mf-caption">The multiset <span class="inline-math">{1, 1, 1, 2, 3, 3}</span> as stacks of chips. The stack heights are the multiplicities; the set of distinct elements is <span class="inline-math">{1, 2, 3}</span>.</div>
+</div>
+
+<p>
+The next object is built out of multisets, and it has a slightly recursive flavor: we'll be looking at
+multisets <em>whose elements are themselves multisets</em>. Don't let this throw you. The standard mental
+picture is "a partition of a multiset into smaller pieces."
+</p>
+
+<div class="box def">
+<div class="box-title">Definition 1.3 (Multiset partition)</div>
+<div class="box-body">
+<p>A <strong>multiset partition</strong> is a multiset whose elements are themselves nonempty multisets.
+The inner multisets are called <strong>parts</strong>, and the elements appearing inside the parts (with
+their multiplicities counted across all parts) are called <strong>vertices</strong>. The
+<strong>weight</strong> of a multiset partition is the total number of elements across all parts, counted
+with multiplicity.</p>
+</div>
+</div>
+
+<div class="box ex">
+<div class="box-title">Example 1.4</div>
+<div class="box-body">
+<p>Consider <span class="inline-math">M = { {1,1}, {1,2}, {2,3,3} }</span>. This is a multiset of three
+parts. The first part is the multiset <span class="inline-math">{1, 1}</span>, the second is
+<span class="inline-math">{1, 2}</span>, and the third is <span class="inline-math">{2, 3, 3}</span>.</p>
+<p>The vertices appearing in <span class="inline-math">M</span> are 1, 2, and 3 — three distinct vertices in
+total. The weight of <span class="inline-math">M</span> is 2 + 2 + 3 = 7, the sum of the sizes of the parts.</p>
+<p>It's important to remember that the vertices are unordered labels; we could just as well have used
+<span class="inline-math">{a, b, c}</span> in place of <span class="inline-math">{1, 2, 3}</span>. Two multiset
+partitions are considered the same if one can be obtained from the other by relabeling vertices, a notion
+made precise in Definition 1.6.</p>
+</div>
+</div>
+
+<div class="minifig">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 140" role="img" aria-label="The multiset partition { {1,1}, {1,2}, {2,3,3} } drawn as three boxes, each containing disks labeled with the elements they hold.">
+  <style>
+    .mf-box { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.4; }
+    .mf-disk { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.1; }
+    .mf-label { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 14px; fill: #2a2419; }
+    .mf-small { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #5a4f38; font-style: italic; }
+    .mf-brace { font-family: "Times New Roman", Times, serif; font-size: 50px; fill: #5a4f38; }
+  </style>
+
+  <!-- Part L0 = {1,1} -->
+  <g transform="translate(110, 55)">
+    <rect x="-42" y="-30" width="84" height="60" rx="6" class="mf-box"/>
+    <circle cx="-15" cy="0" r="13" class="mf-disk"/>
+    <text x="-15" y="5" text-anchor="middle" class="mf-label">1</text>
+    <circle cx="15" cy="0" r="13" class="mf-disk"/>
+    <text x="15" y="5" text-anchor="middle" class="mf-label">1</text>
+    <text y="52" text-anchor="middle" class="mf-small">L₀ = {1, 1}</text>
+  </g>
+
+  <!-- Part L1 = {1,2} -->
+  <g transform="translate(235, 55)">
+    <rect x="-42" y="-30" width="84" height="60" rx="6" class="mf-box"/>
+    <circle cx="-15" cy="0" r="13" class="mf-disk"/>
+    <text x="-15" y="5" text-anchor="middle" class="mf-label">1</text>
+    <circle cx="15" cy="0" r="13" class="mf-disk"/>
+    <text x="15" y="5" text-anchor="middle" class="mf-label">2</text>
+    <text y="52" text-anchor="middle" class="mf-small">L₁ = {1, 2}</text>
+  </g>
+
+  <!-- Part L2 = {2,3,3} -->
+  <g transform="translate(380, 55)">
+    <rect x="-52" y="-30" width="104" height="60" rx="6" class="mf-box"/>
+    <circle cx="-28" cy="0" r="13" class="mf-disk"/>
+    <text x="-28" y="5" text-anchor="middle" class="mf-label">2</text>
+    <circle cx="0" cy="0" r="13" class="mf-disk"/>
+    <text x="0" y="5" text-anchor="middle" class="mf-label">3</text>
+    <circle cx="28" cy="0" r="13" class="mf-disk"/>
+    <text x="28" y="5" text-anchor="middle" class="mf-label">3</text>
+    <text y="52" text-anchor="middle" class="mf-small">L₂ = {2, 3, 3}</text>
+  </g>
+
+  <!-- outer braces -->
+  <text x="41" y="55" text-anchor="middle" dominant-baseline="central" class="mf-brace">{</text>
+  <text x="459" y="55" text-anchor="middle" dominant-baseline="central" class="mf-brace">}</text>
+</svg>
+<div class="mf-caption">The partition <span class="inline-math">M = { {1,1}, {1,2}, {2,3,3} }</span> as three boxes of chips. Boxes don't care about the order of chips inside them, and the outer multiset doesn't care about the order of boxes — only the contents matter.</div>
+</div>
+
+<div class="note">
+<strong>Note.</strong> The word "partition" here is being used in a generalized sense. A classical
+<em>set partition</em> of a set <span class="inline-math">S</span> divides <span class="inline-math">S</span>
+into disjoint nonempty subsets. A multiset partition is more permissive: vertices may appear in multiple
+parts, and may appear with multiplicity within a single part. So multiset partitions are <em>not</em> a
+special case of set partitions, despite the similar name.
+</div>
+
+<div class="box def">
+<div class="box-title">Definition 1.5 (Dual of a multiset partition)</div>
+<div class="box-body">
+<p>The <strong>dual</strong> of a multiset partition <span class="inline-math">M</span> is constructed as
+follows. For each vertex <span class="inline-math">v</span> appearing in <span class="inline-math">M</span>,
+form a new "part" consisting of the indices of those parts of <span class="inline-math">M</span> that contain
+<span class="inline-math">v</span>, counted with multiplicity (so if <span class="inline-math">v</span>
+appears <span class="inline-math">k</span> times in part <span class="inline-math">i</span>, the index
+<span class="inline-math">i</span> appears <span class="inline-math">k</span> times in this new part). The
+dual is the multiset of all such new parts, one for each vertex.</p>
+</div>
+</div>
+
+<div class="box ex">
+<div class="box-title">Example 1.6 (Computing a dual carefully)</div>
+<div class="box-body">
+<p>Let <span class="inline-math">M = { {1,2}, {2,2} }</span>. Number the parts 0 and 1, so part 0 is
+<span class="inline-math">{1, 2}</span> and part 1 is <span class="inline-math">{2, 2}</span>.</p>
+<ul>
+<li>Vertex 1 appears in part 0 (once) and not in part 1. The new part for vertex 1 is <span class="inline-math">{0}</span>.</li>
+<li>Vertex 2 appears in part 0 (once) and in part 1 (twice). The new part for vertex 2 is
+<span class="inline-math">{0, 1, 1}</span>.</li>
+</ul>
+<p>So the dual of <span class="inline-math">M</span> is <span class="inline-math">{ {0}, {0,1,1} }</span>.
+Notice that since these new parts use 0 and 1 as labels rather than 1 and 2, the dual is on a "different"
+vertex set, but the labels are arbitrary; we relabel freely.</p>
+</div>
+</div>
+
+<div class="minifig">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 200" role="img" aria-label="The dual operation shown as a matrix transpose: the incidence matrix of M has rows indexed by parts and columns by vertices; transposing it gives the incidence matrix of the dual.">
+  <style>
+    .mf-cell { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.2; }
+    .mf-cell-hi { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.2; }
+    .mf-entry { font-family: "Times New Roman", Times, serif; font-size: 15px; fill: #2a2419; }
+    .mf-head { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 12px; fill: #5a4f38; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #5a4f38; font-style: italic; }
+    .mf-arrow-stroke { stroke: #cc6600; stroke-width: 2; fill: none; }
+    .mf-arrow-label { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #cc6600; font-style: italic; font-weight: bold; }
+  </style>
+
+  <defs>
+    <marker id="mf-arr-orange" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#cc6600"/>
+    </marker>
+  </defs>
+
+  <!-- ── LEFT: incidence matrix of M = { {1,2}, {2,2} } ── -->
+  <!-- column headers: v=1, v=2 -->
+  <text x="80" y="35" text-anchor="middle" class="mf-head">v=1</text>
+  <text x="115" y="35" text-anchor="middle" class="mf-head">v=2</text>
+
+  <!-- row headers: L0, L1 -->
+  <text x="38" y="66" text-anchor="end" class="mf-head">L₀</text>
+  <text x="38" y="101" text-anchor="end" class="mf-head">L₁</text>
+
+  <!-- cells (row L0) -->
+  <rect x="62" y="48" width="36" height="30" class="mf-cell"/>
+  <text x="80" y="68" text-anchor="middle" class="mf-entry">1</text>
+  <rect x="98" y="48" width="36" height="30" class="mf-cell"/>
+  <text x="116" y="68" text-anchor="middle" class="mf-entry">1</text>
+
+  <!-- cells (row L1) -->
+  <rect x="62" y="83" width="36" height="30" class="mf-cell"/>
+  <text x="80" y="103" text-anchor="middle" class="mf-entry">0</text>
+  <rect x="98" y="83" width="36" height="30" class="mf-cell"/>
+  <text x="116" y="103" text-anchor="middle" class="mf-entry">2</text>
+
+  <text x="100" y="140" text-anchor="middle" class="mf-small-it">M = { {1,2}, {2,2} }</text>
+  <text x="100" y="156" text-anchor="middle" class="mf-small-it">rows = parts, cols = vertices</text>
+
+  <!-- ── ARROW: transpose ── -->
+  <path d="M 170 80 Q 250 30 330 80" class="mf-arrow-stroke" marker-end="url(#mf-arr-orange)"/>
+  <text x="250" y="42" text-anchor="middle" class="mf-arrow-label">transpose</text>
+  <text x="250" y="56" text-anchor="middle" class="mf-small-it">(swap rows ↔ cols)</text>
+
+  <!-- ── RIGHT: incidence matrix of dual ── -->
+  <!-- column headers: L0, L1 (now these are "vertices" of the dual) -->
+  <text x="395" y="35" text-anchor="middle" class="mf-head">L₀</text>
+  <text x="430" y="35" text-anchor="middle" class="mf-head">L₁</text>
+
+  <!-- row headers: v=1, v=2 (now parts) -->
+  <text x="353" y="66" text-anchor="end" class="mf-head">v=1</text>
+  <text x="353" y="101" text-anchor="end" class="mf-head">v=2</text>
+
+  <!-- cells (row v=1) -->
+  <rect x="377" y="48" width="36" height="30" class="mf-cell-hi"/>
+  <text x="395" y="68" text-anchor="middle" class="mf-entry">1</text>
+  <rect x="413" y="48" width="36" height="30" class="mf-cell-hi"/>
+  <text x="431" y="68" text-anchor="middle" class="mf-entry">0</text>
+
+  <!-- cells (row v=2) -->
+  <rect x="377" y="83" width="36" height="30" class="mf-cell-hi"/>
+  <text x="395" y="103" text-anchor="middle" class="mf-entry">1</text>
+  <rect x="413" y="83" width="36" height="30" class="mf-cell-hi"/>
+  <text x="431" y="103" text-anchor="middle" class="mf-entry">2</text>
+
+  <text x="415" y="140" text-anchor="middle" class="mf-small-it">dual(M) = { {0}, {0,1,1} }</text>
+  <text x="415" y="156" text-anchor="middle" class="mf-small-it">rows v=1,2 read: {0}, {0,1,1}</text>
+
+  <!-- bottom caption -->
+  <text x="250" y="186" text-anchor="middle" class="mf-small-it">taking the dual = transposing the incidence matrix</text>
+</svg>
+<div class="mf-caption">The dual operation is incidence-matrix transposition. Entry <span class="inline-math">(i, v)</span> records how many times vertex <span class="inline-math">v</span> appears in part <span class="inline-math">i</span>. Swapping rows and columns gives the incidence matrix of the dual; each row of the transposed matrix can be read off as a part of <span class="inline-math">dual(M)</span>.</div>
+</div>
+
+<p>
+Take a moment to compute a few duals on your own before reading further. There's a subtle exercise of
+indexing that's easy to get wrong on the first try. (Try the multiset partition
+<span class="inline-math">{ {1,1,2}, {3} }</span>. Answer: vertex 1 → <span class="inline-math">{0,0}</span>,
+vertex 2 → <span class="inline-math">{0}</span>, vertex 3 → <span class="inline-math">{1}</span>, so dual is
+<span class="inline-math">{ {0,0}, {0}, {1} }</span>.)
+</p>
+
+<div class="box def">
+<div class="box-title">Definition 1.7 (Isomorphism, self-dual)</div>
+<div class="box-body">
+<p>Two multiset partitions are <strong>isomorphic</strong> if there is a bijection between their vertex
+sets that turns one into the other. (We never relabel <em>parts</em>; the multiset structure already
+ignores the order of the parts.)</p>
+<p>A multiset partition is <strong>self-dual</strong> if it is isomorphic to its own dual.</p>
+</div>
+</div>
+
+<div class="minifig">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 180" role="img" aria-label="Two multiset partitions shown to be isomorphic via a relabeling bijection from vertices 1, 2, 3 to vertices a, b, c.">
+  <style>
+    .mf-box { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.3; }
+    .mf-disk { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.1; }
+    .mf-label { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 13px; fill: #2a2419; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #5a4f38; font-style: italic; }
+    .mf-arrow { stroke: #336633; stroke-width: 1.3; fill: none; stroke-dasharray: 3 2; }
+    .mf-arrow-label { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #336633; font-style: italic; font-weight: bold; }
+    .mf-equals { font-family: "Times New Roman", Times, serif; font-size: 24px; fill: #cc6600; font-weight: bold; }
+  </style>
+
+  <defs>
+    <marker id="mf-arr-green3" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#336633"/>
+    </marker>
+  </defs>
+
+  <!-- title -->
+  <text x="250" y="22" text-anchor="middle" class="mf-small-it">an isomorphism is a relabeling of vertices</text>
+
+  <!-- ─── LEFT PARTITION: { {1,2}, {2,3} } ─── -->
+  <g transform="translate(60, 80)">
+    <rect x="-34" y="-20" width="68" height="40" rx="5" class="mf-box"/>
+    <circle cx="-14" cy="0" r="11" class="mf-disk"/>
+    <text x="-14" y="4" text-anchor="middle" class="mf-label">1</text>
+    <circle cx="14" cy="0" r="11" class="mf-disk"/>
+    <text x="14" y="4" text-anchor="middle" class="mf-label">2</text>
+  </g>
+  <g transform="translate(140, 80)">
+    <rect x="-34" y="-20" width="68" height="40" rx="5" class="mf-box"/>
+    <circle cx="-14" cy="0" r="11" class="mf-disk"/>
+    <text x="-14" y="4" text-anchor="middle" class="mf-label">2</text>
+    <circle cx="14" cy="0" r="11" class="mf-disk"/>
+    <text x="14" y="4" text-anchor="middle" class="mf-label">3</text>
+  </g>
+  <text x="100" y="138" text-anchor="middle" class="mf-small-it">M = { {1,2}, {2,3} }</text>
+
+  <!-- ─── EQUALS SIGN ─── -->
+  <text x="245" y="90" text-anchor="middle" class="mf-equals">≅</text>
+  <text x="245" y="110" text-anchor="middle" class="mf-arrow-label">π: 1↦a, 2↦b, 3↦c</text>
+
+  <!-- ─── RIGHT PARTITION: { {a,b}, {b,c} } ─── -->
+  <g transform="translate(340, 80)">
+    <rect x="-34" y="-20" width="68" height="40" rx="5" class="mf-box"/>
+    <circle cx="-14" cy="0" r="11" class="mf-disk"/>
+    <text x="-14" y="4" text-anchor="middle" class="mf-label">a</text>
+    <circle cx="14" cy="0" r="11" class="mf-disk"/>
+    <text x="14" y="4" text-anchor="middle" class="mf-label">b</text>
+  </g>
+  <g transform="translate(420, 80)">
+    <rect x="-34" y="-20" width="68" height="40" rx="5" class="mf-box"/>
+    <circle cx="-14" cy="0" r="11" class="mf-disk"/>
+    <text x="-14" y="4" text-anchor="middle" class="mf-label">b</text>
+    <circle cx="14" cy="0" r="11" class="mf-disk"/>
+    <text x="14" y="4" text-anchor="middle" class="mf-label">c</text>
+  </g>
+  <text x="380" y="138" text-anchor="middle" class="mf-small-it">M′ = { {a,b}, {b,c} }</text>
+
+  <!-- ─── arrows showing the bijection π ─── -->
+  <path d="M 46 72 Q 200 20 326 72" class="mf-arrow" marker-end="url(#mf-arr-green3)"/>
+  <path d="M 74 72 Q 200 50 354 72" class="mf-arrow" marker-end="url(#mf-arr-green3)"/>
+  <path d="M 154 72 Q 240 55 434 72" class="mf-arrow" marker-end="url(#mf-arr-green3)"/>
+
+  <!-- bottom note -->
+  <text x="250" y="168" text-anchor="middle" class="mf-small-it">boxes don't move — only the vertex labels are renamed</text>
+</svg>
+<div class="mf-caption">Isomorphism means "the same picture with different labels." The bijection <span class="inline-math">π: 1 \mapsto a,\ 2 \mapsto b,\ 3 \mapsto c</span> turns one partition into the other. Self-duality is the special case where <span class="inline-math">M'</span> happens to be <span class="inline-math">dual(M)</span>.</div>
+</div>
+
+<div class="box ex">
+<div class="box-title">Example 1.8 (A self-dual partition)</div>
+<div class="box-body">
+<p>Recall <span class="inline-math">M = { {1,1}, {1,2}, {2,3,3} }</span> from Example 1.4. Let's compute its
+dual. Number the parts 0, 1, 2.</p>
+<ul>
+<li>Vertex 1 appears in part 0 (twice) and in part 1 (once). New part: <span class="inline-math">{0, 0, 1}</span>.</li>
+<li>Vertex 2 appears in part 1 (once) and in part 2 (once). New part: <span class="inline-math">{1, 2}</span>.</li>
+<li>Vertex 3 appears in part 2 (twice). New part: <span class="inline-math">{2, 2}</span>.</li>
+</ul>
+<p>So <span class="inline-math">dual(M) = { {0,0,1}, {1,2}, {2,2} }</span>. Now, is this isomorphic to
+<span class="inline-math">M</span>?  We need a bijection between the vertex labels
+<span class="inline-math">{0, 1, 2}</span> of the dual and the vertex labels
+<span class="inline-math">{1, 2, 3}</span> of <span class="inline-math">M</span> that converts one into the
+other.</p>
+<p>Try the relabeling 0 → 3, 1 → 2, 2 → 1. Then <span class="inline-math">{0,0,1}</span> becomes
+<span class="inline-math">{3,3,2}</span>, <span class="inline-math">{1,2}</span> becomes
+<span class="inline-math">{2,1}</span>, and <span class="inline-math">{2,2}</span> becomes
+<span class="inline-math">{1,1}</span>. So the dual after relabeling is
+<span class="inline-math">{ {3,3,2}, {2,1}, {1,1} } = { {1,1}, {1,2}, {2,3,3} }</span>.
+That's exactly <span class="inline-math">M</span>! So <span class="inline-math">M</span> is self-dual.</p>
+</div>
+</div>
+
+<p>
+Self-duality is a structural symmetry condition. Saying that a multiset partition is self-dual is saying
+something about the "shape" of how parts and vertices interlock — a shape that is invariant under swapping
+the roles of parts and vertices. We'll see in §2 that this has a beautiful geometric interpretation.
+</p>
+
+<div class="box def">
+<div class="box-title">Definition 1.9 (Multiset density)</div>
+<div class="box-body">
+<p>The <strong>multiset density</strong> of a multiset partition <span class="inline-math">M</span>, denoted
+<span class="inline-math">density(M)</span>, is the integer</p>
+<div class="math-display">
+density(M)  =  ( ∑<sub>parts p</sub> |distinct(p)| )  −  |parts(M)|  −  |vertices(M)|
+</div>
+<p>where <span class="inline-math">|distinct(p)|</span> is the number of <em>distinct</em> elements of part
+<span class="inline-math">p</span> (ignoring multiplicities), <span class="inline-math">|parts(M)|</span> is
+the total number of parts, and <span class="inline-math">|vertices(M)|</span> is the total number of
+distinct vertices appearing in <span class="inline-math">M</span>.</p>
+</div>
+</div>
+
+<div class="box ex">
+<div class="box-title">Example 1.10 (Computing density)</div>
+<div class="box-body">
+<p>For <span class="inline-math">M = { {1,1}, {1,2}, {2,3,3} }</span>:</p>
+<ul>
+<li><span class="inline-math">{1,1}</span> has 1 distinct element (just 1).</li>
+<li><span class="inline-math">{1,2}</span> has 2 distinct elements (1 and 2).</li>
+<li><span class="inline-math">{2,3,3}</span> has 2 distinct elements (2 and 3).</li>
+</ul>
+<p>Sum: 1 + 2 + 2 = 5. Number of parts: 3. Number of vertices: 3 (namely 1, 2, 3). So</p>
+<div class="math-display">density(M) = 5 − 3 − 3 = −1.</div>
+</div>
+</div>
+
+<p>
+Density is a strange-looking statistic. We'll discover in §2 that it has a very natural meaning: it
+measures the "tree-ness" of an associated graph. Specifically, density 0 will correspond to the graph being
+a forest, and density −1 will correspond to a single tree.
+</p>
+
+<p>
+We can finally state what our central sequence counts.
+</p>
+
+<div class="box def">
+<div class="box-title">Definition 1.11 (The sequence A322111)</div>
+<div class="box-body">
+<p>The integer sequence <a href="https://oeis.org/A322111">A322111</a> is defined by</p>
+<div class="math-display">
+A322111(n) = number of isomorphism classes of <em>self-dual</em>,
+<em>connected</em>, multiset partitions of weight <em>n</em> with multiset density −1.
+</div>
+<p>("Connected" means that the bipartite incidence graph from §2 is connected as a graph; we'll see what
+this means concretely once we've defined the graph.)</p>
+</div>
+</div>
+
+<p>
+The first eleven values of this sequence (the entire b-file at the time of writing) are:
+</p>
+
+<div class="stutter-display">
+   n   :  0  1  2  3  4  5  6  7  8  9  10
+  a(n) :  <span class="pair">1</span>  <span class="pair">1</span>  <span class="pair">1</span>  <span class="pair">2</span>  <span class="pair">2</span>  <span class="pair">5</span>  <span class="pair">5</span>  <span class="pair">13</span> <span class="pair">13</span> <span class="pair">37</span> <span class="pair">37</span>
+</div>
+
+<p>
+Stare at this table. Starting from <span class="inline-math">n = 3</span>, the values come in pairs:
+2, 2; 5, 5; 13, 13; 37, 37. This phenomenon is the central observation of these notes. The sequence
+"stutters." As far as I can determine, no one has previously remarked on this — which means it is either a
+small mathematical discovery or a coincidence I am about to be embarrassed by.
+</p>
+
+<p>
+Figure 1 shows the example multiset partition we've been working with, drawn as a bipartite incidence
+graph (which we will define carefully in §2). For now, just absorb the picture: parts on the left, vertices
+on the right, edges connecting them.
+</p>
+
+<figure class="illus">
+<div class="fig-title">Figure 1 — A self-dual multiset partition of weight 7</div>
+<div class="fig-body">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 380" role="img" aria-label="A self-dual multiset partition of weight 7 drawn as a bipartite incidence graph">
+  <style>
+    .ink { fill: #2a2419; }
+    .ink-stroke { stroke: #2a2419; }
+    .mid-stroke { stroke: #5a4f38; }
+    .paper { fill: #faf5e8; }
+    .shadow { fill: #e6dfc4; }
+    .accent { fill: #cc6600; }
+    .accent-soft { fill: #e6a060; }
+    .green { fill: #336633; stroke: #336633; }
+    .label { font-family: "Times New Roman", Times, serif; font-style: italic; fill: #2a2419; }
+    .small { font-family: "Times New Roman", Times, serif; font-size: 14px; fill: #5a4f38; }
+    .mult { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #cc6600; font-weight: bold; }
+    .heading { font-family: "Times New Roman", Times, serif; font-size: 14px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+  </style>
+
+  <!-- title row -->
+  <text x="180" y="28" text-anchor="middle" class="heading">parts (membranes)</text>
+  <text x="520" y="28" text-anchor="middle" class="heading">vertices (objects)</text>
+
+  <!-- column dividers -->
+  <line x1="180" y1="40" x2="180" y2="55" class="mid-stroke" stroke-width="1"/>
+  <line x1="520" y1="40" x2="520" y2="55" class="mid-stroke" stroke-width="1"/>
+
+  <!-- ─── Edges (drawn first so nodes overlap them) ─── -->
+  <!-- L0 (180,90) — R1 (520,90), weight 2 -->
+  <line x1="200" y1="90" x2="500" y2="90" class="ink-stroke" stroke-width="1"/>
+  <text x="350" y="80" text-anchor="middle" class="mult">2</text>
+
+  <!-- L1 (180,190) — R1 (520,90), weight 1 -->
+  <line x1="200" y1="186" x2="500" y2="94" class="ink-stroke" stroke-width="1"/>
+  <text x="335" y="135" text-anchor="middle" class="mult">1</text>
+
+  <!-- L1 (180,190) — R2 (520,190), weight 1 -->
+  <line x1="200" y1="190" x2="500" y2="190" class="ink-stroke" stroke-width="1"/>
+  <text x="350" y="183" text-anchor="middle" class="mult">1</text>
+
+  <!-- L2 (180,290) — R2 (520,190), weight 1 -->
+  <line x1="200" y1="286" x2="500" y2="194" class="ink-stroke" stroke-width="1"/>
+  <text x="365" y="245" text-anchor="middle" class="mult">1</text>
+
+  <!-- L2 (180,290) — R3 (520,290), weight 2 -->
+  <line x1="200" y1="290" x2="500" y2="290" class="ink-stroke" stroke-width="1"/>
+  <text x="350" y="313" text-anchor="middle" class="mult">2</text>
+
+  <!-- ─── Left column: parts as rectangles with their contents ─── -->
+  <g transform="translate(180, 90)">
+    <rect x="-90" y="-22" width="120" height="44" rx="3" class="paper" stroke="#2a2419" stroke-width="1.5"/>
+    <text x="-30" y="5" text-anchor="middle" class="label" font-size="17">{ 1, 1 }</text>
+    <text x="-105" y="5" text-anchor="end" class="small">L₀ :</text>
+  </g>
+
+  <g transform="translate(180, 190)">
+    <rect x="-90" y="-22" width="120" height="44" rx="3" class="paper" stroke="#2a2419" stroke-width="1.5"/>
+    <text x="-30" y="5" text-anchor="middle" class="label" font-size="17">{ 1, 2 }</text>
+    <text x="-105" y="5" text-anchor="end" class="small">L₁ :</text>
+  </g>
+
+  <g transform="translate(180, 290)">
+    <rect x="-90" y="-22" width="120" height="44" rx="3" class="paper" stroke="#2a2419" stroke-width="1.5"/>
+    <text x="-30" y="5" text-anchor="middle" class="label" font-size="17">{ 2, 3, 3 }</text>
+    <text x="-105" y="5" text-anchor="end" class="small">L₂ :</text>
+  </g>
+
+  <!-- ─── Right column: vertices as circles ─── -->
+  <g transform="translate(520, 90)">
+    <circle r="20" class="paper" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label" font-size="17">1</text>
+    <text x="35" y="5" class="small">R₁</text>
+  </g>
+
+  <g transform="translate(520, 190)">
+    <circle r="20" class="paper" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label" font-size="17">2</text>
+    <text x="35" y="5" class="small">R₂</text>
+  </g>
+
+  <g transform="translate(520, 290)">
+    <circle r="20" class="paper" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label" font-size="17">3</text>
+    <text x="35" y="5" class="small">R₃</text>
+  </g>
+
+  <!-- ─── Footer info ─── -->
+  <text x="350" y="360" text-anchor="middle" class="small">
+    M = { {1,1}, {1,2}, {2,3,3} } &#160; · &#160; weight = 7 &#160; · &#160; density = 5 − 3 − 3 = −1 &#160; · &#160; self-dual under 1 ↔ 3
+  </text>
+</svg>
+</div>
+<figcaption><strong>Figure 1.</strong> The multiset partition <span class="inline-math">{ {1,1}, {1,2}, {2,3,3} }</span>
+as a bipartite incidence graph. The three parts (rectangles) are on the left; the three distinct vertices
+(circles) are on the right. An edge connects part <em>p</em> to vertex <em>v</em> whenever
+<em>v</em> appears in <em>p</em>; the edge is labeled with the multiplicity. As verified in Example 1.8, this
+partition is self-dual under the relabeling 1 ↔ 3.</figcaption>
+</figure>
+
+<div class="box exer">
+<div class="box-title">Exercise 1 (warm-up)</div>
+<div class="box-body">
+<p>Compute the dual of each of the following multiset partitions:</p>
+<ol type="a">
+<li><span class="inline-math">{ {1,2}, {2,3} }</span></li>
+<li><span class="inline-math">{ {1}, {1}, {1,2} }</span></li>
+<li><span class="inline-math">{ {1,1,2}, {2,2,3} }</span></li>
+</ol>
+<p>Which (if any) are self-dual?</p>
+</div>
+</div>
+
+<!-- ════════ §2: BIPARTITE TREE PICTURE ════════ -->
+<h2 id="s2"><span class="secnum">§2.</span> The bipartite tree picture</h2>
+
+<p>
+The combinatorial definitions of §1 are accurate but unilluminating. To develop intuition, we recast every
+multiset partition as a graph. The recasting is so faithful that it loses no information.
+</p>
+
+<div class="box def">
+<div class="box-title">Definition 2.1 (Bipartite incidence graph)</div>
+<div class="box-body">
+<p>Given a multiset partition <span class="inline-math">M</span> with <span class="inline-math">k</span>
+parts and <span class="inline-math">m</span> distinct vertices, the <strong>bipartite incidence graph</strong>
+of <span class="inline-math">M</span> is the bipartite graph whose left nodes are the parts of
+<span class="inline-math">M</span> (one node per part), whose right nodes are the distinct vertices of
+<span class="inline-math">M</span> (one node per vertex), and which has an edge between left node
+<span class="inline-math">p</span> and right node <span class="inline-math">v</span> whenever
+<span class="inline-math">v</span> appears in <span class="inline-math">p</span>. We <em>do not</em> count
+multiplicities here: the graph is a simple graph, with at most one edge between any pair of nodes.
+The multiplicities are recorded as edge weights — one positive integer per edge.</p>
+</div>
+</div>
+
+<p>
+This is a faithful recoding: from the bipartite incidence graph plus its edge weights, you can recover
+the original multiset partition exactly. Each part-node tells you which part you're talking about; the
+edges incident to it tell you which vertices appear in that part; the edge weights tell you with what
+multiplicity.
+</p>
+
+<div class="box ex">
+<div class="box-title">Example 2.2</div>
+<div class="box-body">
+<p>The bipartite incidence graph of <span class="inline-math">M = { {1,1}, {1,2}, {2,3,3} }</span> is:</p>
+<ul>
+<li>Left nodes: <span class="inline-math">L₀, L₁, L₂</span> (the three parts)</li>
+<li>Right nodes: <span class="inline-math">R₁, R₂, R₃</span> (the three vertices)</li>
+<li>Edges: <span class="inline-math">L₀–R₁</span> (weight 2), <span class="inline-math">L₁–R₁</span> (weight 1),
+<span class="inline-math">L₁–R₂</span> (weight 1), <span class="inline-math">L₂–R₂</span> (weight 1),
+<span class="inline-math">L₂–R₃</span> (weight 2)</li>
+</ul>
+<p>This is exactly the graph drawn in Figure 1, with weights attached to the edges. It has 3 + 3 = 6 nodes
+and 5 edges.</p>
+</div>
+</div>
+
+<div class="minifig" style="max-width:420px">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 240" role="img" aria-label="A compact bipartite incidence graph with three left nodes L zero, L one, L two and three right nodes R one, R two, R three. Five weighted edges connect them: L zero to R one with weight 2, L one to R one with weight 1, L one to R two with weight 1, L two to R two with weight 1, and L two to R three with weight 2.">
+  <style>
+    .mf-ink { stroke: #2a2419; }
+    .mf-left { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.4; }
+    .mf-right { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.4; }
+    .mf-label { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 14px; fill: #2a2419; }
+    .mf-weight { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #cc6600; font-weight: bold; }
+    .mf-heading { font-family: "Times New Roman", Times, serif; font-size: 12px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #5a4f38; font-style: italic; }
+  </style>
+
+  <!-- column headings -->
+  <text x="110" y="28" text-anchor="middle" class="mf-heading">parts (L)</text>
+  <text x="310" y="28" text-anchor="middle" class="mf-heading">vertices (R)</text>
+  <line x1="60" y1="40" x2="160" y2="40" stroke="#b8c4d4" stroke-width="1"/>
+  <line x1="260" y1="40" x2="360" y2="40" stroke="#b8c4d4" stroke-width="1"/>
+
+  <!-- ─── EDGES (drawn before nodes so nodes sit on top) ─── -->
+  <!-- L0 (110,75) — R1 (310,75), weight 2 -->
+  <line x1="125" y1="75" x2="295" y2="75" class="mf-ink" stroke-width="1.4"/>
+  <text x="210" y="66" text-anchor="middle" class="mf-weight">2</text>
+
+  <!-- L1 (110,140) — R1 (310,75), weight 1 -->
+  <line x1="125" y1="136" x2="295" y2="79" class="mf-ink" stroke-width="1.4"/>
+  <text x="200" y="100" text-anchor="middle" class="mf-weight">1</text>
+
+  <!-- L1 (110,140) — R2 (310,140), weight 1 -->
+  <line x1="125" y1="140" x2="295" y2="140" class="mf-ink" stroke-width="1.4"/>
+  <text x="210" y="133" text-anchor="middle" class="mf-weight">1</text>
+
+  <!-- L2 (110,205) — R2 (310,140), weight 1 -->
+  <line x1="125" y1="201" x2="295" y2="144" class="mf-ink" stroke-width="1.4"/>
+  <text x="220" y="180" text-anchor="middle" class="mf-weight">1</text>
+
+  <!-- L2 (110,205) — R3 (310,205), weight 2 -->
+  <line x1="125" y1="205" x2="295" y2="205" class="mf-ink" stroke-width="1.4"/>
+  <text x="210" y="225" text-anchor="middle" class="mf-weight">2</text>
+
+  <!-- ─── NODES ─── -->
+  <!-- Left column -->
+  <g transform="translate(110, 75)">
+    <rect x="-16" y="-14" width="32" height="28" class="mf-left"/>
+    <text y="4" text-anchor="middle" class="mf-label">L₀</text>
+  </g>
+  <g transform="translate(110, 140)">
+    <rect x="-16" y="-14" width="32" height="28" class="mf-left"/>
+    <text y="4" text-anchor="middle" class="mf-label">L₁</text>
+  </g>
+  <g transform="translate(110, 205)">
+    <rect x="-16" y="-14" width="32" height="28" class="mf-left"/>
+    <text y="4" text-anchor="middle" class="mf-label">L₂</text>
+  </g>
+
+  <!-- Right column -->
+  <g transform="translate(310, 75)">
+    <circle r="15" class="mf-right"/>
+    <text y="4" text-anchor="middle" class="mf-label">R₁</text>
+  </g>
+  <g transform="translate(310, 140)">
+    <circle r="15" class="mf-right"/>
+    <text y="4" text-anchor="middle" class="mf-label">R₂</text>
+  </g>
+  <g transform="translate(310, 205)">
+    <circle r="15" class="mf-right"/>
+    <text y="4" text-anchor="middle" class="mf-label">R₃</text>
+  </g>
+</svg>
+<div class="mf-caption">The bipartite incidence graph of <span class="inline-math">M = { {1,1}, {1,2}, {2,3,3} }</span> in its bare graph-theoretic form: three squares on the left (the parts), three circles on the right (the distinct vertices), and five edges each carrying a positive integer weight (shown in orange). There is exactly one edge between each connected pair — the weight is a label on the edge, not a count of parallel edges. The same graph appears in Figure 1 with the multiset contents drawn inside each part.</div>
+</div>
+
+<p>
+Now we make a beautiful observation about the relationship between the density statistic and the
+combinatorial structure of this graph. Recall that density(<span class="inline-math">M</span>) is defined as
+</p>
+
+<div class="math-display">
+density(M) = ( ∑<sub>p</sub> |distinct(p)| ) − k − m
+</div>
+
+<p>
+where <span class="inline-math">k = |parts|</span> and <span class="inline-math">m = |vertices|</span>.
+But the sum <span class="inline-math">∑<sub>p</sub> |distinct(p)|</span> is exactly the number of edges
+in the bipartite incidence graph! Each distinct element of part <span class="inline-math">p</span> contributes
+exactly one edge (between <span class="inline-math">p</span>'s left node and that vertex's right node).
+So:
+</p>
+
+<div class="math-display">
+density(M) = |edges of incidence graph| − |left nodes| − |right nodes|
+</div>
+
+<p>
+Equivalently, if we let <span class="inline-math">E</span> denote the number of edges and
+<span class="inline-math">V = k + m</span> the total number of nodes, then
+</p>
+
+<div class="math-display">
+density(M) = E − V.
+</div>
+
+<p>
+This puts us in well-trodden graph-theoretic territory. The quantity
+<span class="inline-math">E − V</span> is the negative of the well-known statistic
+<span class="inline-math">V − E</span>, which for a connected graph counts the number of independent
+cycles. (Sometimes called the <em>cyclomatic complexity</em>, or the rank of the cycle space.) In
+particular:
+</p>
+
+<ul>
+<li>A <strong>tree</strong> on <span class="inline-math">V</span> nodes has exactly
+<span class="inline-math">V − 1</span> edges, so <span class="inline-math">E − V = −1</span>.</li>
+<li>More generally, a forest of <span class="inline-math">c</span> trees has
+<span class="inline-math">V − c</span> edges, so <span class="inline-math">E − V = −c</span>.</li>
+<li>A connected graph with one cycle has <span class="inline-math">V</span> edges, so
+<span class="inline-math">E − V = 0</span>.</li>
+</ul>
+
+<p>
+The condition <span class="inline-math">density = −1</span>, plus the assumption that the partition is
+<em>connected</em> (i.e., the incidence graph is connected as a graph), is therefore equivalent to saying:
+</p>
+
+<div class="box thm">
+<div class="box-title">Theorem 2.3 (Density-tree correspondence)</div>
+<div class="box-body">
+<p>A connected multiset partition has multiset density <span class="inline-math">−1</span> if and only if
+its bipartite incidence graph is a <strong>tree</strong>. (The multiplicities live as positive integer
+edge weights on the tree.)</p>
+</div>
+</div>
+
+<div class="proof">
+<span class="label">Proof.</span> Connected graphs satisfy <span class="inline-math">E ≥ V − 1</span> with
+equality if and only if they are trees. Density <span class="inline-math">= E − V = −1</span> means
+<span class="inline-math">E = V − 1</span>, exactly the tree condition. <span class="qed">∎</span>
+</div>
+
+<p>
+Theorem 2.3 transforms the problem from "exotic combinatorics about indexed multisets" into "graph theory
+with a small piece of decoration." Self-dual multiset partitions of density <span class="inline-math">−1</span>
+are <em>edge-weighted bipartite trees</em> with a self-duality condition that we'll now figure out how to
+encode.
+</p>
+
+<p>
+First, what does self-duality mean for the tree? Taking the dual of a multiset partition swaps the roles
+of parts and vertices. In graph terms, this means swapping the left side and the right side of the
+bipartition. So the dual of <span class="inline-math">M</span> corresponds to the same tree, but with the
+left and right node sets exchanged. For the original and the dual to be isomorphic as multiset partitions,
+the underlying tree must admit a graph isomorphism that swaps the two sides of the bipartition while
+preserving the edge weights. This kind of structural symmetry will become the focus of §4.
+</p>
+
+<p>
+For now, observe one immediate consequence: <strong>self-duality forces the two sides to have the same
+size</strong>. If the left side has <span class="inline-math">k</span> nodes and the right side has
+<span class="inline-math">m</span> nodes, and we want a bijection swapping them, we must have
+<span class="inline-math">k = m</span>. The tree therefore has
+<span class="inline-math">2k</span> nodes and <span class="inline-math">2k − 1</span> edges. <em>The number
+of edges is odd.</em> This parity will do enormous work later.
+</p>
+
+<figure class="illus">
+<div class="fig-title">Figure 2 — The same partition as a bipartite tree</div>
+<div class="fig-body">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 320" role="img" aria-label="The same multiset partition drawn as a bipartite tree, emphasizing its tree structure">
+  <style>
+    .ink-stroke { stroke: #2a2419; }
+    .mid-stroke { stroke: #5a4f38; }
+    .dashed { stroke-dasharray: 4 3; }
+    .left-fill { fill: #e6dfc4; }
+    .right-fill { fill: #faf5e8; }
+    .label { font-family: "Times New Roman", Times, serif; font-style: italic; fill: #2a2419; font-size: 16px; }
+    .small { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #5a4f38; }
+    .small-it { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #5a4f38; font-style: italic; }
+    .mult { font-family: "Times New Roman", Times, serif; font-size: 14px; fill: #cc6600; font-weight: bold; }
+    .heading { font-family: "Times New Roman", Times, serif; font-size: 13px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+  </style>
+
+  <!-- legend top -->
+  <g transform="translate(60, 30)">
+    <rect x="0" y="-10" width="22" height="22" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text x="32" y="6" class="small">part (membrane)</text>
+    <circle cx="200" cy="0" r="11" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text x="218" y="6" class="small">vertex (object)</text>
+    <text x="350" y="6" class="small-it">edge label = multiplicity</text>
+  </g>
+
+  <!-- ─── The tree as a horizontal path ─── -->
+  <!-- 6 nodes evenly spaced from x=80 to x=620 -->
+  <!-- Positions: 80, 188, 296, 404, 512, 620 -->
+  <!-- y = 160 -->
+
+  <!-- edges first -->
+  <!-- e0: L0(80,160) — R1(188,160), weight 2 -->
+  <line x1="100" y1="160" x2="170" y2="160" class="ink-stroke" stroke-width="1.4"/>
+  <text x="135" y="148" text-anchor="middle" class="mult">2</text>
+
+  <!-- e1: R1(188,160) — L1(296,160), mult 1 -->
+  <line x1="206" y1="160" x2="278" y2="160" class="ink-stroke" stroke-width="1.4"/>
+  <text x="242" y="148" text-anchor="middle" class="mult">1</text>
+
+  <!-- e2: L1(296,160) — R2(404,160), mult 1  -->
+  <line x1="314" y1="160" x2="386" y2="160" class="ink-stroke" stroke-width="1.4"/>
+  <text x="350" y="148" text-anchor="middle" class="mult">1</text>
+
+  <!-- e3: R2(404,160) — L2(512,160), mult 1 -->
+  <line x1="422" y1="160" x2="494" y2="160" class="ink-stroke" stroke-width="1.4"/>
+  <text x="458" y="148" text-anchor="middle" class="mult">1</text>
+
+  <!-- e4: L2(512,160) — R3(620,160), weight 2 -->
+  <line x1="530" y1="160" x2="600" y2="160" class="ink-stroke" stroke-width="1.4"/>
+  <text x="565" y="148" text-anchor="middle" class="mult">2</text>
+
+  <!-- nodes -->
+  <g transform="translate(80, 160)">
+    <rect x="-18" y="-16" width="36" height="32" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">L₀</text>
+  </g>
+
+  <g transform="translate(188, 160)">
+    <circle r="18" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">1</text>
+  </g>
+
+  <g transform="translate(296, 160)">
+    <rect x="-18" y="-16" width="36" height="32" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">L₁</text>
+  </g>
+
+  <g transform="translate(404, 160)">
+    <circle r="18" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">2</text>
+  </g>
+
+  <g transform="translate(512, 160)">
+    <rect x="-18" y="-16" width="36" height="32" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">L₂</text>
+  </g>
+
+  <g transform="translate(620, 160)">
+    <circle r="18" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">3</text>
+  </g>
+
+  <!-- arithmetic showing the count -->
+  <g transform="translate(350, 240)">
+    <text text-anchor="middle" class="small-it">k + m − 1 = 3 + 3 − 1 = 5 edges</text>
+    <text y="22" text-anchor="middle" class="small-it">connected acyclic bipartite graph &#160; ⟹ &#160; <tspan font-style="normal" font-weight="bold">tree</tspan></text>
+  </g>
+
+  <!-- bracket showing equal sides -->
+  <text x="184" y="290" text-anchor="middle" class="small">k = 3 parts</text>
+  <text x="514" y="290" text-anchor="middle" class="small">m = 3 vertices</text>
+</svg>
+</div>
+<figcaption><strong>Figure 2.</strong> The same multiset partition as in Figure 1, redrawn with the parts
+(squares) and vertices (circles) laid out as nodes of a path graph. Edge weights shown above each edge.
+The graph has six nodes and five edges, satisfying <em>k + m − 1 = 2k − 1 = 5</em>. The fact that there are
+exactly <em>k + m − 1</em> edges and the graph is connected is what makes it a tree. The multiplicities
+2, 1, 1, 1, 2 happen to be palindromic, hinting at the self-duality.</figcaption>
+</figure>
+
+<div class="box ex">
+<div class="box-title">Example 2.4 (Try this now)</div>
+<div class="box-body">
+<p>Compute the density of the multiset partition <span class="inline-math">{ {1,2}, {2,3}, {3,1} }</span>.
+Is the corresponding incidence graph a tree?</p>
+<p><strong>Solution.</strong> Each part has 2 distinct elements, summing to 6. There are 3 parts and 3
+vertices. So density = 6 − 3 − 3 = 0. This is not <span class="inline-math">−1</span>, so the graph is
+not a tree. (In fact, it's a 6-cycle: a hexagon with the parts and vertices alternating around the rim.)</p>
+<div class="minifig" style="max-width:320px">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 260" role="img" aria-label="The incidence graph of { {1,2}, {2,3}, {3,1} } drawn as a hexagonal 6-cycle with parts and vertices alternating around the rim.">
+  <style>
+    .mf-ink { stroke: #2a2419; }
+    .mf-left { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.4; }
+    .mf-right { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.4; }
+    .mf-label { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 14px; fill: #2a2419; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #5a4f38; font-style: italic; }
+  </style>
+
+  <!-- edges of the hexagon, cx=130, cy=130, r=80 -->
+  <!-- L0 (130,50) — v2 (199.3,90) — L1 (199.3,170) — v3 (130,210) — L2 (60.7,170) — v1 (60.7,90) — L0 -->
+  <g class="mf-ink" stroke-width="1.5" fill="none">
+    <line x1="130" y1="50"    x2="199.3" y2="90"/>
+    <line x1="199.3" y1="90"  x2="199.3" y2="170"/>
+    <line x1="199.3" y1="170" x2="130"   y2="210"/>
+    <line x1="130" y1="210"   x2="60.7"  y2="170"/>
+    <line x1="60.7" y1="170"  x2="60.7"  y2="90"/>
+    <line x1="60.7" y1="90"   x2="130"   y2="50"/>
+  </g>
+
+  <!-- nodes: parts = squares, vertices = circles -->
+  <g transform="translate(130, 50)">
+    <rect x="-15" y="-13" width="30" height="26" class="mf-left"/>
+    <text y="4" text-anchor="middle" class="mf-label">L₀</text>
+  </g>
+  <g transform="translate(199.3, 90)">
+    <circle r="14" class="mf-right"/>
+    <text y="4" text-anchor="middle" class="mf-label">2</text>
+  </g>
+  <g transform="translate(199.3, 170)">
+    <rect x="-15" y="-13" width="30" height="26" class="mf-left"/>
+    <text y="4" text-anchor="middle" class="mf-label">L₁</text>
+  </g>
+  <g transform="translate(130, 210)">
+    <circle r="14" class="mf-right"/>
+    <text y="4" text-anchor="middle" class="mf-label">3</text>
+  </g>
+  <g transform="translate(60.7, 170)">
+    <rect x="-15" y="-13" width="30" height="26" class="mf-left"/>
+    <text y="4" text-anchor="middle" class="mf-label">L₂</text>
+  </g>
+  <g transform="translate(60.7, 90)">
+    <circle r="14" class="mf-right"/>
+    <text y="4" text-anchor="middle" class="mf-label">1</text>
+  </g>
+
+  <!-- caption interior -->
+  <text x="130" y="135" text-anchor="middle" class="mf-small-it">6-cycle</text>
+  <text x="130" y="150" text-anchor="middle" class="mf-small-it">density = 0</text>
+</svg>
+<div class="mf-caption">The partition <span class="inline-math">{ {1,2}, {2,3}, {3,1} }</span> has 6 edges and 6 nodes, so density = 0. Its incidence graph is a hexagonal cycle — connected but not acyclic, hence not a tree.</div>
+</div>
+</div>
+</div>
+
+<div class="box exer">
+<div class="box-title">Exercise 2</div>
+<div class="box-body">
+<p>Compute the multiset density of each of the following multiset partitions, and decide whether the
+bipartite incidence graph is a tree, a forest with multiple components, or something with cycles:</p>
+<ol type="a">
+<li><span class="inline-math">{ {1, 2, 3} }</span></li>
+<li><span class="inline-math">{ {1, 2}, {2, 3}, {3, 1} }</span></li>
+<li><span class="inline-math">{ {1, 2}, {3, 4} }</span></li>
+<li><span class="inline-math">{ {1, 2, 3}, {1, 2, 3} }</span></li>
+</ol>
+</div>
+</div>
+
+<div class="box exer">
+<div class="box-title">Exercise 3</div>
+<div class="box-body">
+<p>Show that for any multiset partition <span class="inline-math">M</span>, the dual of the dual of
+<span class="inline-math">M</span> is isomorphic to <span class="inline-math">M</span> itself. (In other
+words, the dual operation is an involution on isomorphism classes.) <em>Hint:</em> use the bipartite
+incidence graph picture of this section.</p>
+</div>
+</div>
+
+<!-- ════════ §3: STUTTER ════════ -->
+<h2 id="s3"><span class="secnum">§3.</span> A stuttering mystery</h2>
+
+<p>
+Let's pause and look at our sequence again, now that we have a geometric picture for the objects it counts.
+</p>
+
+<div class="stutter-display">
+A322111(n) = number of isomorphism classes of self-dual edge-weighted bipartite trees
+             on (k, k) nodes with total edge weight n, for some k ≥ 1.
+
+      n :  0  1  2  3  4  5  6  7  8  9  10
+   a(n) :  <span class="pair">1</span>  <span class="pair">1</span>  <span class="pair">1</span>  <span class="pair">2</span>  <span class="pair">2</span>  <span class="pair">5</span>  <span class="pair">5</span>  <span class="pair">13</span> <span class="pair">13</span> <span class="pair">37</span> <span class="pair">37</span>
+</div>
+
+<p>
+The pairs starting from <span class="inline-math">n = 3</span> are unmistakable. We naturally pose the
+question:
+</p>
+
+<div class="note">
+<strong>Question.</strong> Why does <span class="inline-math">A322111(2t − 1) = A322111(2t)</span> for
+<span class="inline-math">t ≥ 2</span>? Is there a bijection?
+</div>
+
+<p>
+The fact that it's specifically odd-and-next-even pairs (and not some other pattern, like every-three-equal
+or "sum of two consecutive equals next") strongly suggests a parity-based bijection. The simplest such
+bijection would be a map that takes an object of weight <span class="inline-math">2t − 1</span> and produces
+an object of weight <span class="inline-math">2t</span> by adding a single unit of weight somewhere. The
+question is: <em>where?</em>
+</p>
+
+<p>
+We need to find a canonical, distinguished feature of every self-dual decorated bipartite tree — some
+structural element so unique that we can unambiguously say "increase its multiplicity by one." If we can
+find such a feature, the bijection writes itself.
+</p>
+
+<figure class="illus">
+<div class="fig-title">Figure 3 — A322111, first eleven terms</div>
+<div class="fig-body">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 360" role="img" aria-label="Bar chart of the first eleven terms of A322111, showing the pairing pattern after the third term">
+  <style>
+    .ink-stroke { stroke: #2a2419; }
+    .mid-stroke { stroke: #5a4f38; }
+    .axis { stroke: #5a4f38; stroke-width: 1; }
+    .grid { stroke: #d4c898; stroke-width: 0.5; stroke-dasharray: 2 2; }
+    .bar { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.2; }
+    .bar-pair { fill: #f4e6c8; stroke: #2a2419; stroke-width: 1.2; }
+    .pair-bg { fill: #cc6600; opacity: 0.08; }
+    .label { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; }
+    .label-it { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; font-style: italic; }
+    .nlabel { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #5a4f38; font-style: italic; }
+    .vlabel { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #2a2419; }
+    .pair-mark { stroke: #cc6600; stroke-width: 1.4; fill: none; }
+    .pair-eq { fill: #cc6600; font-family: "Times New Roman", Times, serif; font-size: 14px; font-weight: bold; }
+    .heading { font-family: "Times New Roman", Times, serif; font-size: 13px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+  </style>
+
+  <!-- title -->
+  <text x="350" y="22" text-anchor="middle" class="heading">A322111(n) for n = 0 .. 10</text>
+
+  <!-- chart area: x from 70 to 670, y from 50 to 280 -->
+  <!-- log scale so we can see all bars -->
+  <!-- max value is 37; use sqrt scale so 1, 2, 5, 13, 37 spread out a bit -->
+
+  <!-- axes -->
+  <line x1="70" y1="280" x2="670" y2="280" class="axis"/>
+  <line x1="70" y1="50" x2="70" y2="280" class="axis"/>
+
+  <!-- y-axis ticks (sqrt scale: y = 280 - 36*sqrt(v)) -->
+  <!-- v=1 → y=244;  v=5 → y=199;  v=10 → y=166;  v=20 → y=120;  v=37 → y=61 -->
+  <line x1="66" y1="244" x2="74" y2="244" class="axis"/>
+  <text x="62" y="248" text-anchor="end" class="label">1</text>
+  <line x1="66" y1="199" x2="74" y2="199" class="axis"/>
+  <text x="62" y="203" text-anchor="end" class="label">5</text>
+  <line x1="66" y1="166" x2="74" y2="166" class="axis"/>
+  <text x="62" y="170" text-anchor="end" class="label">10</text>
+  <line x1="66" y1="120" x2="74" y2="120" class="axis"/>
+  <text x="62" y="124" text-anchor="end" class="label">20</text>
+  <line x1="66" y1="61" x2="74" y2="61" class="axis"/>
+  <text x="62" y="65" text-anchor="end" class="label">37</text>
+  <text x="50" y="160" text-anchor="middle" class="label-it" transform="rotate(-90, 50, 160)">a(n) (sqrt scale)</text>
+
+  <!-- pair-tinted background rectangles for pairs (3,4), (5,6), (7,8), (9,10) -->
+  <!-- each bar takes ~50px width, gap ~5; bars start at x=80 with values at n=0..10 -->
+  <!-- pos(n) = 90 + n*52 -->
+  <!-- pair (n=3,4): x = 90+3*52-5 = 241 to 90+4*52+25 = 323 -->
+  <rect x="232" y="50" width="100" height="232" class="pair-bg"/>
+  <rect x="336" y="50" width="100" height="232" class="pair-bg"/>
+  <rect x="440" y="50" width="100" height="232" class="pair-bg"/>
+  <rect x="544" y="50" width="100" height="232" class="pair-bg"/>
+
+  <!-- bars: a(0)..a(10) = 1,1,1,2,2,5,5,13,13,37,37 -->
+  <!-- bar(n) center x = 96 + n*52, bar width = 32 -->
+  <!-- y top from sqrt scale, y bottom = 280 -->
+
+  <!-- a(0) = 1, y = 244 -->
+  <rect x="80" y="244" width="32" height="36" class="bar"/>
+  <text x="96" y="238" text-anchor="middle" class="vlabel">1</text>
+  <text x="96" y="296" text-anchor="middle" class="nlabel">0</text>
+
+  <!-- a(1) = 1 -->
+  <rect x="132" y="244" width="32" height="36" class="bar"/>
+  <text x="148" y="238" text-anchor="middle" class="vlabel">1</text>
+  <text x="148" y="296" text-anchor="middle" class="nlabel">1</text>
+
+  <!-- a(2) = 1 -->
+  <rect x="184" y="244" width="32" height="36" class="bar"/>
+  <text x="200" y="238" text-anchor="middle" class="vlabel">1</text>
+  <text x="200" y="296" text-anchor="middle" class="nlabel">2</text>
+
+  <!-- a(3) = 2, sqrt(2)≈1.41, y=280-36*1.41=229 -->
+  <rect x="236" y="229" width="32" height="51" class="bar-pair"/>
+  <text x="252" y="223" text-anchor="middle" class="vlabel">2</text>
+  <text x="252" y="296" text-anchor="middle" class="nlabel">3</text>
+
+  <!-- a(4) = 2 -->
+  <rect x="288" y="229" width="32" height="51" class="bar-pair"/>
+  <text x="304" y="223" text-anchor="middle" class="vlabel">2</text>
+  <text x="304" y="296" text-anchor="middle" class="nlabel">4</text>
+
+  <!-- pair brace + equals for (3,4) -->
+  <path d="M 252 213 Q 278 200 304 213" class="pair-mark"/>
+  <text x="278" y="208" text-anchor="middle" class="pair-eq">=</text>
+
+  <!-- a(5) = 5, y = 199 -->
+  <rect x="340" y="199" width="32" height="81" class="bar-pair"/>
+  <text x="356" y="193" text-anchor="middle" class="vlabel">5</text>
+  <text x="356" y="296" text-anchor="middle" class="nlabel">5</text>
+
+  <!-- a(6) = 5 -->
+  <rect x="392" y="199" width="32" height="81" class="bar-pair"/>
+  <text x="408" y="193" text-anchor="middle" class="vlabel">5</text>
+  <text x="408" y="296" text-anchor="middle" class="nlabel">6</text>
+
+  <!-- pair brace for (5,6) -->
+  <path d="M 356 183 Q 382 168 408 183" class="pair-mark"/>
+  <text x="382" y="178" text-anchor="middle" class="pair-eq">=</text>
+
+  <!-- a(7) = 13, y = 280 - 36*sqrt(13) = 280 - 130 = 150 -->
+  <rect x="444" y="150" width="32" height="130" class="bar-pair"/>
+  <text x="460" y="144" text-anchor="middle" class="vlabel">13</text>
+  <text x="460" y="296" text-anchor="middle" class="nlabel">7</text>
+
+  <!-- a(8) = 13 -->
+  <rect x="496" y="150" width="32" height="130" class="bar-pair"/>
+  <text x="512" y="144" text-anchor="middle" class="vlabel">13</text>
+  <text x="512" y="296" text-anchor="middle" class="nlabel">8</text>
+
+  <!-- pair brace for (7,8) -->
+  <path d="M 460 134 Q 486 119 512 134" class="pair-mark"/>
+  <text x="486" y="129" text-anchor="middle" class="pair-eq">=</text>
+
+  <!-- a(9) = 37, y = 61 -->
+  <rect x="548" y="61" width="32" height="219" class="bar-pair"/>
+  <text x="564" y="55" text-anchor="middle" class="vlabel">37</text>
+  <text x="564" y="296" text-anchor="middle" class="nlabel">9</text>
+
+  <!-- a(10) = 37 -->
+  <rect x="600" y="61" width="32" height="219" class="bar-pair"/>
+  <text x="616" y="55" text-anchor="middle" class="vlabel">37</text>
+  <text x="616" y="296" text-anchor="middle" class="nlabel">10</text>
+
+  <!-- pair brace for (9,10) -->
+  <path d="M 564 45 Q 590 30 616 45" class="pair-mark"/>
+  <text x="590" y="40" text-anchor="middle" class="pair-eq">=</text>
+
+  <!-- x-axis label -->
+  <text x="370" y="318" text-anchor="middle" class="label-it">n &#160; (weight)</text>
+
+  <!-- caption note -->
+  <text x="370" y="345" text-anchor="middle" class="label-it">
+    every odd-indexed value equals the next even-indexed value
+  </text>
+</svg>
+</div>
+<figcaption><strong>Figure 3.</strong> The first eleven terms of A322111 displayed as a stair-step bar
+chart (with a square-root vertical scale, since the values grow rapidly). The pairing is visible to the
+naked eye after the third term: each odd-indexed value equals the very next even-indexed value.
+Our task in §4 and §5 is to explain this pattern by finding a bijection between odd- and even-weight
+self-dual trees.</figcaption>
+</figure>
+
+<p>
+The next two sections build that bijection. §4 establishes the load-bearing graph-theoretic lemma; §5
+uses the lemma to construct the map and verify it really is a bijection.
+</p>
+
+<!-- ════════ §4: AUTOMORPHISMS AND THE LEMMA ════════ -->
+<h2 id="s4"><span class="secnum">§4.</span> Graph automorphisms and the lemma</h2>
+
+<p>
+To formalize "self-duality" of an edge-weighted bipartite tree, we need to talk about graph automorphisms.
+If you've seen these in a graph theory or algebra course, this section will be a refresher; if not, the
+definitions are short.
+</p>
+
+<div class="box def">
+<div class="box-title">Definition 4.1 (Graph automorphism)</div>
+<div class="box-body">
+<p>An <strong>automorphism</strong> of a graph <span class="inline-math">G</span> is a bijection
+<span class="inline-math">σ : V(G) → V(G)</span> from the vertex set of
+<span class="inline-math">G</span> to itself, such that two vertices <span class="inline-math">u</span> and
+<span class="inline-math">v</span> are joined by an edge in <span class="inline-math">G</span> if and only if
+<span class="inline-math">σ(u)</span> and <span class="inline-math">σ(v)</span> are joined by an edge.</p>
+<p>If the graph has edge weights, we further require that the weight of the edge between
+<span class="inline-math">u</span> and <span class="inline-math">v</span> equals the weight of the edge
+between <span class="inline-math">σ(u)</span> and <span class="inline-math">σ(v)</span>.</p>
+<p>The set of all automorphisms of <span class="inline-math">G</span> forms a group under composition,
+called the <strong>automorphism group</strong> <span class="inline-math">Aut(G)</span>.</p>
+</div>
+</div>
+
+<div class="note">
+<strong>Intuition.</strong> An automorphism is a "symmetry" of the graph: a way of relabeling the vertices
+that leaves the graph looking exactly the same. A square has 8 automorphisms (the 4 rotations and 4
+reflections of its symmetry group <span class="inline-math">D₄</span>). A path on 5 vertices has 2
+automorphisms (the identity and the "flip"). The complete graph
+<span class="inline-math">K_n</span> has all <span class="inline-math">n!</span> automorphisms.
+</div>
+
+<p>
+Now we add the bipartite structure into the picture. A bipartite graph has its vertices partitioned into
+two sets — the <strong>color classes</strong> — such that every edge goes between the two classes (no
+edge connects two vertices of the same class). For trees, the bipartition is always uniquely determined:
+2-color the vertices alternately, starting from any vertex.
+</p>
+
+<div class="box def">
+<div class="box-title">Definition 4.2 (Color-swapping automorphism)</div>
+<div class="box-body">
+<p>Let <span class="inline-math">T</span> be a bipartite graph with color classes <span class="inline-math">L</span>
+(left) and <span class="inline-math">R</span> (right). An automorphism <span class="inline-math">σ</span>
+of <span class="inline-math">T</span> is <strong>color-swapping</strong> if <span class="inline-math">σ(L) = R</span>
+and <span class="inline-math">σ(R) = L</span> — that is, if every left vertex is sent to a right vertex
+and vice versa.</p>
+</div>
+</div>
+
+<p>
+The self-duality condition for our edge-weighted bipartite tree is exactly the existence of a color-swapping
+automorphism that preserves edge weights. (Verifying this is a small unwinding of definitions; do it as an
+exercise if you want to be sure.)
+</p>
+
+<p>
+Before stating the lemma we need, let's make two small observations about color-swapping automorphisms.
+</p>
+
+<div class="box ex">
+<div class="box-title">Observation 4.3 (No fixed vertices)</div>
+<div class="box-body">
+<p>If <span class="inline-math">σ</span> is a color-swapping automorphism, then <span class="inline-math">σ</span>
+has <em>no fixed vertices</em>. Reason: a fixed vertex
+<span class="inline-math">v</span> would satisfy <span class="inline-math">σ(v) = v</span>, but
+<span class="inline-math">v</span> is in one color class while <span class="inline-math">σ(v)</span> must be in
+the opposite class, and the two color classes are disjoint. So no such fixed vertex exists.</p>
+</div>
+</div>
+
+<div class="box ex">
+<div class="box-title">Observation 4.4 (σ acts on edges)</div>
+<div class="box-body">
+<p>Any graph automorphism <span class="inline-math">σ</span> automatically permutes the edges:
+<span class="inline-math">σ</span> sends the edge <span class="inline-math">{u, v}</span> to
+<span class="inline-math">{σ(u), σ(v)}</span>. This gives a permutation
+<span class="inline-math">σ_E</span> of the edge set <span class="inline-math">E(T)</span>, and
+<span class="inline-math">σ_E</span> partitions <span class="inline-math">E(T)</span> into orbits. We will
+particularly care about edges that are <em>fixed</em> by <span class="inline-math">σ_E</span> — that is,
+edges <span class="inline-math">e</span> with <span class="inline-math">σ(e) = e</span> as a set, even though
+<span class="inline-math">σ</span> may swap the two endpoints. We call these <strong>fixed edges</strong>.</p>
+</div>
+</div>
+
+<p>
+A fixed edge is an edge whose two endpoints are swapped by <span class="inline-math">σ</span>. Every
+non-fixed edge belongs to a 2-orbit: a pair of edges that <span class="inline-math">σ</span> swaps with
+each other.
+</p>
+
+<div class="minifig">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 220" role="img" aria-label="Two panels showing the two kinds of σ-orbits on edges: on the left, a fixed edge whose two endpoints are swapped by σ; on the right, a pair of edges swapped with each other by σ.">
+  <style>
+    .mf-ink { stroke: #2a2419; }
+    .mf-left { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.4; }
+    .mf-right { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.4; }
+    .mf-label { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 13px; fill: #2a2419; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; font-style: italic; }
+    .mf-heading { font-family: "Times New Roman", Times, serif; font-size: 12px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+    .mf-accent-stroke { stroke: #cc6600; stroke-width: 3; fill: none; }
+    .mf-accent-text { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #cc6600; font-weight: bold; font-style: italic; }
+    .mf-sigma { stroke: #336633; stroke-width: 1.4; fill: none; stroke-dasharray: 4 3; }
+    .mf-sigma-text { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #336633; font-style: italic; }
+  </style>
+
+  <defs>
+    <marker id="mf-arr-green4" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#336633"/>
+    </marker>
+  </defs>
+
+  <!-- divider -->
+  <line x1="270" y1="40" x2="270" y2="200" stroke="#b8c4d4" stroke-width="1" stroke-dasharray="3 3"/>
+
+  <!-- ═══ LEFT PANEL: fixed edge ═══ -->
+  <text x="135" y="30" text-anchor="middle" class="mf-heading">orbit of size 1 · fixed edge</text>
+
+  <!-- the edge -->
+  <line x1="80" y1="115" x2="190" y2="115" class="mf-accent-stroke"/>
+
+  <!-- σ double-headed arrow above -->
+  <path d="M 88 98 Q 135 72 182 98" class="mf-sigma"
+        marker-start="url(#mf-arr-green4)" marker-end="url(#mf-arr-green4)"/>
+  <text x="135" y="72" text-anchor="middle" class="mf-sigma-text">σ</text>
+
+  <!-- endpoints -->
+  <g transform="translate(80, 115)">
+    <rect x="-14" y="-13" width="28" height="26" class="mf-left"/>
+    <text y="4" text-anchor="middle" class="mf-label">u</text>
+  </g>
+  <g transform="translate(190, 115)">
+    <circle r="13" class="mf-right"/>
+    <text y="4" text-anchor="middle" class="mf-label">v</text>
+  </g>
+
+  <!-- caption below -->
+  <text x="135" y="163" text-anchor="middle" class="mf-small-it">σ(e) = e as a set;</text>
+  <text x="135" y="180" text-anchor="middle" class="mf-small-it">σ swaps the endpoints u ↔ v</text>
+
+  <!-- ═══ RIGHT PANEL: 2-orbit ═══ -->
+  <text x="405" y="30" text-anchor="middle" class="mf-heading">orbit of size 2 · swapped pair</text>
+
+  <!-- two parallel edges -->
+  <line x1="340" y1="80" x2="470" y2="80" class="mf-ink" stroke-width="1.4"/>
+  <text x="405" y="70" text-anchor="middle" class="mf-accent-text">e₁</text>
+  <line x1="340" y1="150" x2="470" y2="150" class="mf-ink" stroke-width="1.4"/>
+  <text x="405" y="140" text-anchor="middle" class="mf-accent-text">e₂</text>
+
+  <!-- σ arrows showing swap -->
+  <path d="M 300 85 Q 280 115 300 145" class="mf-sigma" marker-end="url(#mf-arr-green4)"/>
+  <path d="M 510 145 Q 530 115 510 85" class="mf-sigma" marker-end="url(#mf-arr-green4)"/>
+  <text x="270" y="120" text-anchor="middle" class="mf-sigma-text">σ</text>
+  <text x="538" y="120" text-anchor="middle" class="mf-sigma-text">σ</text>
+
+  <!-- endpoints of e₁ -->
+  <g transform="translate(340, 80)">
+    <rect x="-13" y="-12" width="26" height="24" class="mf-left"/>
+  </g>
+  <g transform="translate(470, 80)">
+    <circle r="12" class="mf-right"/>
+  </g>
+
+  <!-- endpoints of e₂ -->
+  <g transform="translate(340, 150)">
+    <rect x="-13" y="-12" width="26" height="24" class="mf-left"/>
+  </g>
+  <g transform="translate(470, 150)">
+    <circle r="12" class="mf-right"/>
+  </g>
+
+  <!-- caption below -->
+  <text x="405" y="180" text-anchor="middle" class="mf-small-it">σ(e₁) = e₂ and σ(e₂) = e₁</text>
+</svg>
+<div class="mf-caption">How <span class="inline-math">σ</span> can act on an edge. <strong>Left:</strong> a fixed edge is one whose two endpoints get swapped by <span class="inline-math">σ</span>, so <span class="inline-math">σ</span> maps the edge to itself (as an unordered set). <strong>Right:</strong> a non-fixed edge is sent to a different edge; the two edges form a 2-element orbit. These are the only two possibilities; the parity argument <span class="inline-math">f + 2c = 2k - 1</span> then forces <span class="inline-math">f</span> to be odd.</div>
+</div>
+
+<p>
+Why? Because <span class="inline-math">σ²</span> preserves colors (it's two color-swaps in a row), so for
+any edge <span class="inline-math">e</span>, the edge <span class="inline-math">σ²(e)</span> is in the same
+color-orbit as <span class="inline-math">e</span>. We need a slightly more careful argument to show that
+<span class="inline-math">σ²(e)</span> always equals <span class="inline-math">e</span>; this turns out to be
+true for trees, though it's not entirely obvious. (It's a consequence of the lemma we're about to state.)
+For now, take it as part of the structural picture: orbits have size 1 or 2 only.
+</p>
+
+<p>
+With <span class="inline-math">f</span> denoting the number of fixed edges and
+<span class="inline-math">c</span> the number of 2-orbits, we have a count:
+</p>
+
+<div class="math-display">
+f  +  2c  =  total edges  =  2k − 1.
+</div>
+
+<p>
+The right-hand side is odd, so <span class="inline-math">f</span> must be <em>odd</em>, and in particular
+<span class="inline-math">f ≥ 1</span>. There is always at least one fixed edge. The astonishing fact —
+and the load-bearing technical result of this tutorial — is that there is always <em>exactly</em> one.
+</p>
+
+<div class="box lem">
+<div class="box-title">Lemma 4.5 (Unique Fixed Edge)</div>
+<div class="box-body">
+<p>Let <span class="inline-math">T</span> be a finite connected bipartite tree, and let
+<span class="inline-math">σ</span> be a color-swapping automorphism of <span class="inline-math">T</span>.
+Then <span class="inline-math">σ</span> has <strong>exactly one</strong> fixed edge.</p>
+</div>
+</div>
+
+<p>
+The "at least one" half is the parity argument we just gave. The lemma's content is the upper bound:
+<span class="inline-math">f</span> cannot be 3, 5, 7, etc. To prove uniqueness we need a different
+technique.
+</p>
+
+<figure class="illus">
+<div class="fig-title">Figure 4 — A self-dual bipartite tree with the unique fixed edge</div>
+<div class="fig-body">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 440" role="img" aria-label="A bipartite tree on eight nodes with a color-swapping automorphism. The unique fixed edge is highlighted at the center; every other edge belongs to a swapped pair indicated by curved arrows.">
+  <style>
+    .ink-stroke { stroke: #2a2419; }
+    .mid-stroke { stroke: #5a4f38; }
+    .arrow-stroke { stroke: #336633; stroke-width: 1.4; fill: none; stroke-dasharray: 4 3; }
+    .left-fill { fill: #e6dfc4; }
+    .right-fill { fill: #faf5e8; }
+    .accent-stroke { stroke: #cc6600; }
+    .accent-fill { fill: #cc6600; }
+    .label { font-family: "Times New Roman", Times, serif; font-style: italic; fill: #2a2419; font-size: 13px; }
+    .small { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; }
+    .small-it { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; font-style: italic; }
+    .heading { font-family: "Times New Roman", Times, serif; font-size: 13px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+    .accent-text { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #cc6600; font-weight: bold; }
+    .green-text { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #336633; font-style: italic; }
+  </style>
+
+  <defs>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#336633"/>
+    </marker>
+  </defs>
+
+  <!-- title -->
+  <text x="350" y="22" text-anchor="middle" class="heading">a color-swapping automorphism σ on a bipartite tree</text>
+
+  <!-- Center reference: (350, 220) -->
+
+  <!-- ─── σ-pairing arrows (drawn first, behind everything) ─── -->
+  <!-- σ pairs σ(u₁) at (200, 130) with u₁ at (500, 310) by 180° rotation about (350,220) -->
+  <path d="M 200 130 Q 350 60 500 130" class="arrow-stroke" marker-end="url(#arrow-green)"/>
+  <text x="350" y="50" text-anchor="middle" class="green-text">σ</text>
+
+  <path d="M 200 310 Q 350 380 500 310" class="arrow-stroke" marker-end="url(#arrow-green)"/>
+
+  <!-- ─── Edges of the tree ─── -->
+  <!-- All non-fixed edges first, then the fixed edge on top -->
+
+  <!-- u₀ (350, 175) to σ(u₁) (200, 130) -->
+  <line x1="350" y1="175" x2="200" y2="130" class="ink-stroke" stroke-width="1.4"/>
+  <!-- σ(u₀) (350, 265) to u₁ (500, 310) -->
+  <line x1="350" y1="265" x2="500" y2="310" class="ink-stroke" stroke-width="1.4"/>
+
+  <!-- u₀ to σ(u₂) (350, 90) -->
+  <line x1="350" y1="175" x2="350" y2="90" class="ink-stroke" stroke-width="1.4"/>
+  <!-- σ(u₀) to u₂ (350, 350) -->
+  <line x1="350" y1="265" x2="350" y2="350" class="ink-stroke" stroke-width="1.4"/>
+
+  <!-- u₀ to σ(u₃) (500, 130) -->
+  <line x1="350" y1="175" x2="500" y2="130" class="ink-stroke" stroke-width="1.4"/>
+  <!-- σ(u₀) to u₃ (200, 310) -->
+  <line x1="350" y1="265" x2="200" y2="310" class="ink-stroke" stroke-width="1.4"/>
+
+  <!-- ─── The fixed edge u₀ — σ(u₀): drawn last, in accent color, thicker ─── -->
+  <line x1="350" y1="175" x2="350" y2="265" class="accent-stroke" stroke-width="3.5"/>
+  <text x="368" y="225" class="accent-text">e₀ (fixed)</text>
+
+  <!-- ─── Nodes ─── -->
+  <!-- u₀: top-side rectangle -->
+  <g transform="translate(350, 175)">
+    <rect x="-14" y="-14" width="28" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="4" text-anchor="middle" class="label">u₀</text>
+  </g>
+  <!-- σ(u₀): bottom-side circle -->
+  <g transform="translate(350, 265)">
+    <circle r="14" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="4" text-anchor="middle" class="label">σu₀</text>
+  </g>
+
+  <!-- σ(u₁): right-side circle (top-left position) -->
+  <g transform="translate(200, 130)">
+    <circle r="14" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="4" text-anchor="middle" class="label">σu₁</text>
+  </g>
+  <!-- u₁: left-side rectangle (mirror = bottom-right) -->
+  <g transform="translate(500, 310)">
+    <rect x="-14" y="-14" width="28" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="4" text-anchor="middle" class="label">u₁</text>
+  </g>
+
+  <!-- σ(u₂): top-center circle -->
+  <g transform="translate(350, 90)">
+    <circle r="14" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="4" text-anchor="middle" class="label">σu₂</text>
+  </g>
+  <!-- u₂: bottom-center rectangle -->
+  <g transform="translate(350, 350)">
+    <rect x="-14" y="-14" width="28" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="4" text-anchor="middle" class="label">u₂</text>
+  </g>
+
+  <!-- σ(u₃): top-right circle -->
+  <g transform="translate(500, 130)">
+    <circle r="14" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="4" text-anchor="middle" class="label">σu₃</text>
+  </g>
+  <!-- u₃: bottom-left rectangle -->
+  <g transform="translate(200, 310)">
+    <rect x="-14" y="-14" width="28" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="4" text-anchor="middle" class="label">u₃</text>
+  </g>
+
+  <!-- ─── legend / tally on right ─── -->
+  <g transform="translate(560, 170)">
+    <text class="small-it">7 edges</text>
+    <text y="18" class="small-it">= 1 fixed</text>
+    <text y="36" class="small-it">+ 2 × 3 swapped</text>
+    <line x1="-5" y1="46" x2="120" y2="46" class="mid-stroke" stroke-width="0.7"/>
+    <text y="62" class="small-it"><tspan font-weight="bold">f = 1, c = 3</tspan></text>
+  </g>
+
+  <!-- ─── caption arithmetic ─── -->
+  <text x="350" y="408" text-anchor="middle" class="small-it">edge count: 2k − 1 = 7 (odd)  ⟹  f + 2c = 7  ⟹  f is odd  ⟹  f ≥ 1</text>
+  <text x="350" y="425" text-anchor="middle" class="small-it">the lemma asserts: f = 1 (exactly)</text>
+</svg>
+</div>
+<figcaption><strong>Figure 4.</strong> A self-dual bipartite tree on
+<span class="inline-math">(4, 4)</span> nodes. The color-swapping automorphism
+<span class="inline-math">σ</span> is a 180° rotation of the figure about its center; the dashed green
+arrows indicate which vertex pairs <span class="inline-math">σ</span> swaps. The unique
+<span class="inline-math">σ</span>-fixed edge sits at the center, highlighted; its endpoints
+<span class="inline-math">u₀</span> and <span class="inline-math">σ(u₀)</span> are exchanged by
+<span class="inline-math">σ</span>, but the edge as a set is mapped to itself. Every other edge belongs to
+a 2-orbit (a "mirror pair"). The tally: 7 = 1 + 2 × 3.</figcaption>
+</figure>
+
+<div class="box thm">
+<div class="box-title">Proof of the Unique Fixed Edge Lemma</div>
+<div class="box-body">
+<p>We've already shown <span class="inline-math">f ≥ 1</span>. For the upper bound, suppose for contradiction
+that <span class="inline-math">σ</span> has <em>two</em> distinct fixed edges
+<span class="inline-math">e₁ = {L₁, R₁}</span> and <span class="inline-math">e₂ = {L₂, R₂}</span>, where
+<span class="inline-math">σ</span> swaps each <span class="inline-math">Lᵢ</span> with the corresponding
+<span class="inline-math">Rᵢ</span>. We will derive a contradiction from the tree structure.</p>
+
+<p><strong>Step 1: Delete the first fixed edge.</strong> Consider the graph
+<span class="inline-math">T' = T \ {e₁}</span> obtained by removing the edge
+<span class="inline-math">e₁</span> (but keeping all the vertices). Since <span class="inline-math">T</span>
+is a tree, every edge of <span class="inline-math">T</span> is a <strong>bridge</strong> — an edge whose
+removal disconnects the graph. So <span class="inline-math">T'</span> has exactly two connected components.
+Call them <span class="inline-math">A</span> (containing <span class="inline-math">L₁</span>) and
+<span class="inline-math">B</span> (containing <span class="inline-math">R₁</span>).</p>
+
+<p><strong>Step 2: σ swaps these two components.</strong> The automorphism
+<span class="inline-math">σ</span> is a graph automorphism of <span class="inline-math">T</span>; it maps
+edges to edges, and in particular it maps the edge <span class="inline-math">e₁</span> to itself.
+Therefore <span class="inline-math">σ</span> restricts to an automorphism of
+<span class="inline-math">T' = T \ {e₁}</span>. Now <span class="inline-math">σ</span> sends
+<span class="inline-math">L₁</span> to <span class="inline-math">R₁</span>, and these two vertices live in
+<em>different</em> components of <span class="inline-math">T'</span>. Since
+<span class="inline-math">σ</span> is a bijection that sends connected sets to connected sets, it must
+send <span class="inline-math">A</span> entirely to <span class="inline-math">B</span> and vice versa.</p>
+
+<p><strong>Step 3: The second fixed edge gives a contradiction.</strong> Consider the second fixed edge
+<span class="inline-math">e₂ = {L₂, R₂}</span>. This is an edge of <span class="inline-math">T</span>, and
+in particular it is an edge of <span class="inline-math">T'</span> (it is not the same as
+<span class="inline-math">e₁</span>, since the two fixed edges are distinct). So both endpoints
+<span class="inline-math">L₂</span> and <span class="inline-math">R₂</span> live in the
+<em>same</em> connected component of <span class="inline-math">T'</span>.</p>
+
+<p>But <span class="inline-math">σ</span> swaps them: <span class="inline-math">σ(L₂) = R₂</span> and
+<span class="inline-math">σ(R₂) = L₂</span>. From Step 2, <span class="inline-math">σ</span> swaps the two
+components of <span class="inline-math">T'</span>. So if <span class="inline-math">L₂</span> is in
+component <span class="inline-math">A</span>, then <span class="inline-math">R₂ = σ(L₂)</span> must be in
+component <span class="inline-math">B</span>. But we just said <span class="inline-math">L₂</span> and
+<span class="inline-math">R₂</span> are in the <em>same</em> component. Contradiction.</p>
+
+<div class="minifig" style="max-width:520px">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 300" role="img" aria-label="Schematic of the contradiction: after deleting the first fixed edge, the tree splits into components A and B which sigma swaps. The second fixed edge e-two has both endpoints in A, but sigma should send one of them into B, which is impossible.">
+  <style>
+    .mf-ink { stroke: #2a2419; }
+    .mf-blob-a { fill: #e6dfc4; fill-opacity: 0.55; stroke: #5a4f38; stroke-width: 1.4; }
+    .mf-blob-b { fill: #faf5e8; fill-opacity: 0.9; stroke: #5a4f38; stroke-width: 1.4; }
+    .mf-left { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.3; }
+    .mf-right { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.3; }
+    .mf-label { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 13px; fill: #2a2419; }
+    .mf-big-label { font-family: "Times New Roman", Times, serif; font-size: 22px; font-style: italic; fill: #5a4f38; font-weight: bold; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; font-style: italic; }
+    .mf-accent-text { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #cc6600; font-weight: bold; font-style: italic; }
+    .mf-green-text { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #336633; font-style: italic; }
+    .mf-dashed { stroke: #5a4f38; stroke-width: 1.3; stroke-dasharray: 5 4; fill: none; }
+    .mf-solid-accent { stroke: #cc6600; stroke-width: 3; fill: none; }
+    .mf-sigma-arrow { stroke: #336633; stroke-width: 1.6; stroke-dasharray: 4 3; fill: none; }
+    .mf-ghost { fill: #faf5e8; stroke: #cc6600; stroke-width: 1.3; stroke-dasharray: 3 2; }
+  </style>
+
+  <defs>
+    <marker id="mf-arr-green2" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#336633"/>
+    </marker>
+  </defs>
+
+  <!-- title -->
+  <text x="270" y="24" text-anchor="middle" class="mf-small-it">delete e₁ &#x2192; two components &#x2192; σ tries to move R₂ to B, but R₂ is already in A</text>
+
+  <!-- two component blobs -->
+  <ellipse cx="155" cy="170" rx="135" ry="90" class="mf-blob-a"/>
+  <ellipse cx="405" cy="170" rx="110" ry="85" class="mf-blob-b"/>
+
+  <!-- blob labels -->
+  <text x="66" y="100" class="mf-big-label">A</text>
+  <text x="470" y="100" class="mf-big-label">B</text>
+
+  <!-- ── the deleted edge e₁ between L₁ (in A) and R₁ (in B) ── -->
+  <!-- L₁ on the right of A around (262, 170); R₁ on the left of B around (298, 170) -->
+  <line x1="262" y1="170" x2="298" y2="170" class="mf-dashed"/>
+  <text x="280" y="160" text-anchor="middle" class="mf-small-it">e₁ (deleted)</text>
+
+  <g transform="translate(262, 170)">
+    <rect x="-13" y="-12" width="26" height="24" class="mf-left"/>
+    <text y="4" text-anchor="middle" class="mf-label">L₁</text>
+  </g>
+  <g transform="translate(298, 170)">
+    <circle r="13" class="mf-right"/>
+    <text y="4" text-anchor="middle" class="mf-label">R₁</text>
+  </g>
+
+  <!-- ── the second fixed edge e₂, with BOTH endpoints inside A ── -->
+  <!-- L₂ at (100, 150), R₂ at (170, 210) -->
+  <line x1="100" y1="150" x2="170" y2="210" class="mf-solid-accent"/>
+  <text x="108" y="188" class="mf-accent-text">e₂</text>
+
+  <g transform="translate(100, 150)">
+    <rect x="-13" y="-12" width="26" height="24" class="mf-left"/>
+    <text y="4" text-anchor="middle" class="mf-label">L₂</text>
+  </g>
+  <g transform="translate(170, 210)">
+    <circle r="13" class="mf-right"/>
+    <text y="4" text-anchor="middle" class="mf-label">R₂</text>
+  </g>
+
+  <!-- ── σ arrow showing where R₂ is supposed to land: inside B ── -->
+  <path d="M 180 210 Q 290 260 420 200" class="mf-sigma-arrow" marker-end="url(#mf-arr-green2)"/>
+  <text x="300" y="255" text-anchor="middle" class="mf-green-text">σ sends R₂ → B …</text>
+
+  <!-- ghost R₂ inside B -->
+  <g transform="translate(420, 200)">
+    <circle r="13" class="mf-ghost"/>
+    <text y="4" text-anchor="middle" class="mf-label" fill="#cc6600">R₂?</text>
+  </g>
+  <text x="420" y="230" text-anchor="middle" class="mf-accent-text">but R₂ is in A! ✗</text>
+</svg>
+<div class="mf-caption">The contradiction in pictures. Deleting <span class="inline-math">e₁</span> splits <span class="inline-math">T</span> into two components <span class="inline-math">A</span> (containing <span class="inline-math">L₁</span>) and <span class="inline-math">B</span> (containing <span class="inline-math">R₁</span>), and <span class="inline-math">σ</span> swaps them. A second fixed edge <span class="inline-math">e₂</span> would have both endpoints in one component (say <span class="inline-math">A</span>), but then <span class="inline-math">σ(R₂)</span> would need to be simultaneously in <span class="inline-math">B</span> (because <span class="inline-math">σ</span> swaps the components) and equal to <span class="inline-math">L₂</span> (which is in <span class="inline-math">A</span>). No vertex can be in two components at once.</div>
+</div>
+
+<p>Therefore <span class="inline-math">σ</span> cannot have two distinct fixed edges, so
+<span class="inline-math">f ≤ 1</span>. Combined with <span class="inline-math">f ≥ 1</span>, we conclude
+<span class="inline-math">f = 1</span>. <span class="qed">∎</span></p>
+</div>
+</div>
+
+<div class="note">
+<strong>Why this proof is satisfying.</strong> The argument uses three different facts about trees: that
+every edge is a bridge, that deleting a bridge gives two components, and that automorphisms preserve
+connectivity. None of these is hard, and combining them gives a clean contradiction. The proof is short,
+but the conclusion is strong: it gives us a <em>canonical</em> structural feature of every self-dual
+bipartite tree, which is exactly what §5 needs to build the bijection.
+</div>
+
+<div class="box exer">
+<div class="box-title">Exercise 4</div>
+<div class="box-body">
+<p>Find <em>all</em> self-dual multiset partitions of weight 5 with multiset density
+<span class="inline-math">−1</span>. (The answer should be 5 of them, since
+<span class="inline-math">A322111(5) = 5</span>.) For each one, draw its bipartite tree and find the
+unique color-swapping automorphism <span class="inline-math">σ</span>; identify the fixed edge.</p>
+</div>
+</div>
+
+<div class="box exer">
+<div class="box-title">Exercise 5 (★)</div>
+<div class="box-body">
+<p>Prove the following more general fact: let <span class="inline-math">G</span> be any finite connected
+bipartite graph (not necessarily a tree), and let <span class="inline-math">σ</span> be a color-swapping
+automorphism of <span class="inline-math">G</span>. Show that the number of fixed edges of
+<span class="inline-math">σ</span> has the same parity as the total number of edges of
+<span class="inline-math">G</span>. (For trees, this number is odd, hence at least 1; for graphs with
+cycles it can be 0, 2, 4, etc.)</p>
+</div>
+</div>
+
+<!-- ════════ §5: BIJECTION ════════ -->
+<h2 id="s5"><span class="secnum">§5.</span> Building the bijection</h2>
+
+<p>
+With the lemma in hand, the bijection writes itself. Let
+<span class="inline-math">T</span> be a self-dual edge-weighted bipartite tree, and let
+<span class="inline-math">e₀</span> be the unique <span class="inline-math">σ</span>-fixed edge guaranteed by
+Lemma 4.5. Let <span class="inline-math">m₀ ≥ 1</span> denote its edge weight. The remaining
+<span class="inline-math">2k − 2</span> edges are partitioned by <span class="inline-math">σ</span> into
+<span class="inline-math">k − 1</span> pairs. Within each pair, the two edges must carry the same weight
+(since <span class="inline-math">σ</span> preserves edge weights). Call these shared weights
+<span class="inline-math">m₁, m₂, …, m_{k-1}</span>.
+</p>
+
+<p>
+The total weight of <span class="inline-math">T</span> is then:
+</p>
+
+<div class="math-display">
+weight(T)  =  m₀  +  2(m₁ + m₂ + ⋯ + m_{k−1}).
+</div>
+
+<div class="minifig" style="max-width:560px">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 230" role="img" aria-label="Decomposition of a self-dual tree's total weight: a unique fixed edge of weight m-zero at the center, flanked by mirrored pairs of edges whose weights are shared.">
+  <style>
+    .mf-ink { stroke: #2a2419; }
+    .mf-left { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.3; }
+    .mf-right { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.3; }
+    .mf-accent-stroke { stroke: #cc6600; stroke-width: 3.5; fill: none; }
+    .mf-label { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 13px; fill: #2a2419; }
+    .mf-weight { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #2a2419; font-weight: bold; }
+    .mf-weight-accent { font-family: "Times New Roman", Times, serif; font-size: 14px; fill: #cc6600; font-weight: bold; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; font-style: italic; }
+    .mf-mirror { stroke: #5a4f38; stroke-width: 1; stroke-dasharray: 3 3; }
+    .mf-bracket { stroke: #336633; stroke-width: 1.3; fill: none; }
+    .mf-bracket-text { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #336633; font-style: italic; }
+  </style>
+
+  <!-- title -->
+  <text x="290" y="22" text-anchor="middle" class="mf-small-it">a self-dual tree: one fixed edge in the middle, the rest in mirrored pairs</text>
+
+  <!-- mirror line (vertical through center at x=290) -->
+  <line x1="290" y1="45" x2="290" y2="165" class="mf-mirror"/>
+  <text x="290" y="180" text-anchor="middle" class="mf-small-it">mirror axis</text>
+
+  <!-- nodes positioned symmetrically on a horizontal path:
+       left branch: L₃ - R₃ - L₂ - R₂ - L₁ - R₁ - center(u, σu) - (mirror) - R₁' - L₁' - R₂' - L₂' - R₃' - L₃'
+       simpler: show 7 nodes left, center fixed edge, 7 nodes right
+       even simpler: 3 on each side + center -->
+
+  <!-- y = 100 -->
+  <!-- left side positions: x = 40, 85, 130, 175, 220, 260 -->
+  <!-- center fixed edge between 270 and 310 -->
+  <!-- right side positions: x = 320, 360, 405, 450, 495, 540 -->
+
+  <!-- ── tree edges (non-fixed), LEFT side ── -->
+  <line x1="55" y1="100" x2="95" y2="100" class="mf-ink" stroke-width="1.4"/>
+  <text x="75" y="88" text-anchor="middle" class="mf-weight">m₃</text>
+  <line x1="115" y1="100" x2="155" y2="100" class="mf-ink" stroke-width="1.4"/>
+  <text x="135" y="88" text-anchor="middle" class="mf-weight">m₂</text>
+  <line x1="175" y1="100" x2="215" y2="100" class="mf-ink" stroke-width="1.4"/>
+  <text x="195" y="88" text-anchor="middle" class="mf-weight">m₁</text>
+  <line x1="235" y1="100" x2="275" y2="100" class="mf-ink" stroke-width="1.4"/>
+  <text x="255" y="88" text-anchor="middle" class="mf-weight">m₁</text>
+
+  <!-- ── CENTER FIXED EDGE ── -->
+  <line x1="280" y1="100" x2="300" y2="100" class="mf-accent-stroke"/>
+  <text x="290" y="132" text-anchor="middle" class="mf-weight-accent">m₀</text>
+
+  <!-- ── non-fixed RIGHT side ── -->
+  <line x1="305" y1="100" x2="345" y2="100" class="mf-ink" stroke-width="1.4"/>
+  <text x="325" y="88" text-anchor="middle" class="mf-weight">m₁</text>
+  <line x1="365" y1="100" x2="405" y2="100" class="mf-ink" stroke-width="1.4"/>
+  <text x="385" y="88" text-anchor="middle" class="mf-weight">m₁</text>
+  <line x1="425" y1="100" x2="465" y2="100" class="mf-ink" stroke-width="1.4"/>
+  <text x="445" y="88" text-anchor="middle" class="mf-weight">m₂</text>
+  <line x1="485" y1="100" x2="525" y2="100" class="mf-ink" stroke-width="1.4"/>
+  <text x="505" y="88" text-anchor="middle" class="mf-weight">m₃</text>
+
+  <!-- ── nodes ── -->
+  <g transform="translate(45, 100)"><rect x="-10" y="-10" width="20" height="20" class="mf-left"/></g>
+  <g transform="translate(105, 100)"><circle r="10" class="mf-right"/></g>
+  <g transform="translate(165, 100)"><rect x="-10" y="-10" width="20" height="20" class="mf-left"/></g>
+  <g transform="translate(225, 100)"><circle r="10" class="mf-right"/></g>
+  <g transform="translate(280, 100)"><rect x="-10" y="-10" width="20" height="20" class="mf-left"/></g>
+  <g transform="translate(300, 100)"><circle r="10" class="mf-right"/></g>
+  <g transform="translate(355, 100)"><rect x="-10" y="-10" width="20" height="20" class="mf-left"/></g>
+  <g transform="translate(415, 100)"><circle r="10" class="mf-right"/></g>
+  <g transform="translate(475, 100)"><rect x="-10" y="-10" width="20" height="20" class="mf-left"/></g>
+  <g transform="translate(535, 100)"><circle r="10" class="mf-right"/></g>
+
+  <!-- bracket annotations: the two "m₁ m₂ m₃" strings are mirror images -->
+  <!-- left bracket -->
+  <path d="M 30 145 L 30 155 L 280 155 L 280 145" class="mf-bracket"/>
+  <text x="155" y="173" text-anchor="middle" class="mf-bracket-text">left half: weight m₁ + m₂ + m₃</text>
+
+  <!-- right bracket -->
+  <path d="M 300 145 L 300 155 L 550 155 L 550 145" class="mf-bracket"/>
+  <text x="425" y="173" text-anchor="middle" class="mf-bracket-text">right half: same weights (mirror)</text>
+
+  <!-- equation at bottom -->
+  <text x="290" y="212" text-anchor="middle" class="mf-small-it">weight(T) = m₀ + 2(m₁ + m₂ + m₃) &#160;⟹&#160; parity of weight(T) = parity of m₀</text>
+</svg>
+<div class="mf-caption">Why weight parity is controlled by the fixed edge alone. The orange center is the unique fixed edge, of weight <span class="inline-math">m₀</span>. Every other edge belongs to a 2-orbit, and σ preserves weights, so the two edges in each orbit share a common weight <span class="inline-math">m_i</span>. Summing over all 2-orbits contributes an even number <span class="inline-math">2(m_1+m_2+⋯+m_{k-1})</span> to the total. So <span class="inline-math">weight(T) ≡ m_0 \pmod 2</span> — increasing <span class="inline-math">m_0</span> by 1 is the only way to flip the parity.</div>
+</div>
+
+<p>
+This decomposition has an immediate parity consequence. Each <span class="inline-math">mᵢ</span> for
+<span class="inline-math">i ≥ 1</span> is doubled, contributing an <em>even</em> amount to the total. So
+the parity of <span class="inline-math">weight(T)</span> is the same as the parity of
+<span class="inline-math">m₀</span>.
+</p>
+
+<ul>
+<li>If <span class="inline-math">weight(T)</span> is <strong>odd</strong>, then
+<span class="inline-math">m₀</span> is odd; in particular, <span class="inline-math">m₀ ≥ 1</span>.</li>
+<li>If <span class="inline-math">weight(T)</span> is <strong>even</strong>, then
+<span class="inline-math">m₀</span> is even; in particular, <span class="inline-math">m₀ ≥ 2</span>.</li>
+</ul>
+
+<p>
+This is where the bijection comes from. The map that increments <span class="inline-math">m₀</span> by 1
+sends odd-weight trees to even-weight trees, and the map that decrements <span class="inline-math">m₀</span>
+by 1 goes the other way. The constraint <span class="inline-math">m₀ ≥ 2</span> on even-weight trees is
+exactly what makes the decrement well-defined.
+</p>
+
+<div class="box def">
+<div class="box-title">Definition 5.1 (The bijection Φ)</div>
+<div class="box-body">
+<p>Let <span class="inline-math">Φ</span> be the map on (isomorphism classes of) self-dual edge-weighted
+bipartite trees that increases the weight of the unique <span class="inline-math">σ</span>-fixed edge by 1.</p>
+</div>
+</div>
+
+<div class="box thm">
+<div class="box-title">Theorem 5.2 (Pairing Theorem)</div>
+<div class="box-body">
+<p>For all <span class="inline-math">t ≥ 1</span>, <span class="inline-math">A322111(2t − 1) = A322111(2t)</span>.</p>
+</div>
+</div>
+
+<div class="proof">
+<span class="label">Proof.</span>
+The map <span class="inline-math">Φ</span> sends an isomorphism class of self-dual decorated trees of
+weight <span class="inline-math">2t − 1</span> to one of weight <span class="inline-math">2t</span>. We must
+verify that <span class="inline-math">Φ</span> is well-defined and is a bijection between these two sets.
+<br><br>
+<strong>Well-defined.</strong> Suppose <span class="inline-math">T</span> and
+<span class="inline-math">T'</span> are isomorphic decorated trees, witnessed by a relabeling
+<span class="inline-math">π</span>. Then <span class="inline-math">π</span> conjugates the color-swapping
+automorphism <span class="inline-math">σ</span> of <span class="inline-math">T</span> into a color-swapping
+automorphism <span class="inline-math">σ' = πσπ⁻¹</span> of <span class="inline-math">T'</span>. By
+Lemma 4.5, both <span class="inline-math">σ</span> and <span class="inline-math">σ'</span> have unique
+fixed edges, and <span class="inline-math">π</span> must take the unique fixed edge of
+<span class="inline-math">T</span> to the unique fixed edge of <span class="inline-math">T'</span>
+(because <span class="inline-math">π</span> takes <span class="inline-math">σ</span>-fixed structures to
+<span class="inline-math">σ'</span>-fixed structures). So <span class="inline-math">Φ</span> commutes
+with <span class="inline-math">π</span>, and <span class="inline-math">Φ(T) ≅ Φ(T')</span>.
+<br><br>
+<strong>Injective.</strong> Suppose <span class="inline-math">Φ(T₁) ≅ Φ(T₂)</span>. The witnessing
+relabeling sends fixed edge to fixed edge (same argument). Subtracting 1 from the weight of the fixed edge
+on both sides, we recover <span class="inline-math">T₁ ≅ T₂</span>.
+<br><br>
+<strong>Surjective.</strong> Let <span class="inline-math">T'</span> be a self-dual tree of weight
+<span class="inline-math">2t</span>. Its fixed-edge weight <span class="inline-math">m₀'</span> is even, so
+<span class="inline-math">m₀' ≥ 2</span>. Decrease <span class="inline-math">m₀'</span> by 1 to obtain a
+tree <span class="inline-math">T</span> with <span class="inline-math">m₀ = m₀' − 1 ≥ 1</span>, and
+<span class="inline-math">weight(T) = 2t − 1</span>. Then <span class="inline-math">Φ(T) = T'</span>, so
+<span class="inline-math">Φ</span> is surjective. <span class="qed">∎</span>
+</div>
+
+<p>
+Notice how essential the uniqueness in Lemma 4.5 is. If
+<span class="inline-math">σ</span> had multiple fixed edges, the inverse map would need to specify
+<em>which</em> one to decrement, and that choice could fail to commute with relabeling, breaking
+well-definedness. With exactly one, the choice makes itself.
+</p>
+
+<figure class="illus">
+<div class="fig-title">Figure 5 — The bijection Φ in action</div>
+<div class="fig-body">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 360" role="img" aria-label="The bijection Phi sends a self-dual decorated tree of odd weight to one of even weight by incrementing the multiplicity of the unique fixed edge.">
+  <style>
+    .ink-stroke { stroke: #2a2419; }
+    .mid-stroke { stroke: #5a4f38; }
+    .accent-stroke { stroke: #cc6600; }
+    .left-fill { fill: #e6dfc4; }
+    .right-fill { fill: #faf5e8; }
+    .label { font-family: "Times New Roman", Times, serif; font-style: italic; fill: #2a2419; font-size: 14px; }
+    .small { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; }
+    .small-it { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; font-style: italic; }
+    .mult { font-family: "Times New Roman", Times, serif; font-size: 14px; fill: #2a2419; font-weight: bold; }
+    .mult-accent { font-family: "Times New Roman", Times, serif; font-size: 16px; fill: #cc6600; font-weight: bold; }
+    .heading { font-family: "Times New Roman", Times, serif; font-size: 13px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+    .partition-text { font-family: "Times New Roman", Times, serif; font-size: 14px; font-style: italic; fill: #2a2419; }
+    .arrow-stroke { stroke: #cc6600; stroke-width: 2; fill: none; }
+  </style>
+
+  <defs>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#cc6600"/>
+    </marker>
+  </defs>
+
+  <!-- ─── LEFT SIDE: weight-3 example ─── -->
+  <text x="160" y="28" text-anchor="middle" class="heading">odd weight (n = 3)</text>
+
+  <!-- Tree: L0 (60,130) — R0 (160,130) — L1 (260,130) — R1 (360 too far... use shorter spacing) -->
+  <!-- Use x = 60, 130, 200, 270 -->
+
+  <!-- edges -->
+  <line x1="80" y1="130" x2="115" y2="130" class="ink-stroke" stroke-width="1.4"/>
+  <text x="97" y="120" text-anchor="middle" class="mult">1</text>
+
+  <!-- fixed edge -->
+  <line x1="145" y1="130" x2="185" y2="130" class="accent-stroke" stroke-width="3"/>
+  <text x="165" y="118" text-anchor="middle" class="mult-accent">1</text>
+
+  <line x1="215" y1="130" x2="250" y2="130" class="ink-stroke" stroke-width="1.4"/>
+  <text x="232" y="120" text-anchor="middle" class="mult">1</text>
+
+  <!-- nodes -->
+  <g transform="translate(60, 130)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">L₀</text>
+  </g>
+  <g transform="translate(130, 130)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">1</text>
+  </g>
+  <g transform="translate(200, 130)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">L₁</text>
+  </g>
+  <g transform="translate(270, 130)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">2</text>
+  </g>
+
+  <!-- partition text under the left tree -->
+  <text x="165" y="195" text-anchor="middle" class="partition-text">M = { {1}, {1, 2} }</text>
+  <text x="165" y="218" text-anchor="middle" class="small-it">weight 1 + 2 = 3 &#160; · &#160; m₀ = 1</text>
+
+  <!-- ─── ARROW between sides ─── -->
+  <g transform="translate(350, 130)">
+    <line x1="-15" y1="0" x2="40" y2="0" class="arrow-stroke" marker-end="url(#arrow-orange)"/>
+    <text x="13" y="-12" text-anchor="middle" class="mult-accent">Φ</text>
+    <text x="13" y="22" text-anchor="middle" class="small-it">m₀ ↦ m₀ + 1</text>
+  </g>
+
+  <!-- ─── RIGHT SIDE: weight-4 image ─── -->
+  <text x="540" y="28" text-anchor="middle" class="heading">even weight (n = 4)</text>
+
+  <!-- Tree: same skeleton, x = 440, 510, 580, 650 -->
+  <line x1="460" y1="130" x2="495" y2="130" class="ink-stroke" stroke-width="1.4"/>
+  <text x="477" y="120" text-anchor="middle" class="mult">1</text>
+
+  <!-- fixed edge, now weight 2 -->
+  <line x1="525" y1="130" x2="565" y2="130" class="accent-stroke" stroke-width="3"/>
+  <text x="545" y="115" text-anchor="middle" class="mult-accent">2</text>
+
+  <line x1="595" y1="130" x2="630" y2="130" class="ink-stroke" stroke-width="1.4"/>
+  <text x="612" y="120" text-anchor="middle" class="mult">1</text>
+
+  <g transform="translate(440, 130)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">L₀</text>
+  </g>
+  <g transform="translate(510, 130)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">1</text>
+  </g>
+  <g transform="translate(580, 130)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">L₁</text>
+  </g>
+  <g transform="translate(650, 130)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.5"/>
+    <text y="5" text-anchor="middle" class="label">2</text>
+  </g>
+
+  <text x="545" y="195" text-anchor="middle" class="partition-text">Φ(M) = { {1}, {1, 1, 2} }</text>
+  <text x="545" y="218" text-anchor="middle" class="small-it">weight 1 + 3 = 4 &#160; · &#160; m₀ = 2</text>
+
+  <!-- ─── footer commentary ─── -->
+  <text x="350" y="275" text-anchor="middle" class="small-it">
+    The unique fixed edge (highlighted) is the only place where the increment is unambiguous.
+  </text>
+  <text x="350" y="296" text-anchor="middle" class="small-it">
+    Inverting Φ at even weight requires m₀ ≥ 2, which is automatic by parity.
+  </text>
+  <text x="350" y="324" text-anchor="middle" class="small-it">
+    a(2t − 1) = a(2t) for all t ≥ 1.
+  </text>
+</svg>
+</div>
+<figcaption><strong>Figure 5.</strong> The bijection <span class="inline-math">Φ</span> applied to the
+smallest non-trivial example. <em>Left:</em> a self-dual decorated tree of weight 3, encoding the partition
+<span class="inline-math">{ {1}, {1, 2} }</span>, with fixed-edge multiplicity
+<span class="inline-math">m₀ = 1</span>. <em>Right:</em> the image under
+<span class="inline-math">Φ</span>, encoding <span class="inline-math">{ {1}, {1, 1, 2} }</span> at weight 4,
+with <span class="inline-math">m₀ = 2</span>. The fixed edge (highlighted in both) is the only place where
+the weight changes.</figcaption>
+</figure>
+
+<div class="box exer">
+<div class="box-title">Exercise 6</div>
+<div class="box-body">
+<p>Verify the Pairing Theorem by hand for <span class="inline-math">t = 2</span>: list all 2 self-dual
+decorated bipartite trees of weight 3 and all 2 self-dual decorated bipartite trees of weight 4, and
+exhibit the bijection <span class="inline-math">Φ</span> explicitly.</p>
+</div>
+</div>
+
+<!-- ════════ §6: GENERATING FUNCTIONS ════════ -->
+<h2 id="s6"><span class="secnum">§6.</span> Generating functions and an old friend</h2>
+
+<p>
+The Pairing Theorem cuts our work in half: we now only need to compute the odd-indexed terms of A322111
+and the even-indexed terms come along for free. But it would be more satisfying to have a closed-form
+expression. To produce one, we'll use generating functions.
+</p>
+
+<div class="note">
+<strong>Reminder.</strong> A <em>generating function</em> for a sequence
+<span class="inline-math">(a₀, a₁, a₂, …)</span> is the formal power series
+<span class="inline-math">A(x) = a₀ + a₁ x + a₂ x² + ⋯</span>. We treat
+<span class="inline-math">x</span> as a formal symbol and don't worry about convergence; the goal is to use
+algebraic operations on power series (addition, multiplication, substitution, exponentiation) to relate
+sequences to each other. If you've taken a generating-functions chapter in a combinatorics course, this
+will be familiar.
+</div>
+
+<p>
+We start by observing that the data of a self-dual edge-weighted bipartite tree of weight
+<span class="inline-math">n</span> consists of two pieces:
+</p>
+
+<ol>
+<li>The weight <span class="inline-math">m₀</span> of the unique fixed edge (which has the same parity as
+<span class="inline-math">n</span>);</li>
+<li>The structure on <em>one side</em> of the fixed edge — call it the "L-side." This is a rooted
+edge-weighted tree, hanging off the L-endpoint of the fixed edge. The "other side" is forced by
+<span class="inline-math">σ</span>: it's the mirror image of the L-side, so we don't need to count it
+separately.</li>
+</ol>
+
+<p>
+If we let <span class="inline-math">e</span> denote the total edge weight on one side (the L-side), then
+the weight equation reads <span class="inline-math">m₀ + 2e = n</span>.
+</p>
+
+<p>
+Define
+</p>
+
+<div class="math-display">
+R(x)  =  ∑<sub>j ≥ 0</sub> r_j x^j
+</div>
+
+<p>
+where <span class="inline-math">r_j</span> is the number of (isomorphism classes of) rooted edge-weighted
+trees with total edge weight <span class="inline-math">j</span>. The sum starts at
+<span class="inline-math">j = 0</span>, with <span class="inline-math">r₀ = 1</span> corresponding to the
+empty tree (just a root, no edges).
+</p>
+
+<div class="minifig">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 220" role="img" aria-label="The three rooted edge-weighted trees of total edge weight 2: a single edge of weight 2, two edges of weight 1 sharing a root, and a path of two edges each of weight 1.">
+  <style>
+    .mf-ink { stroke: #2a2419; }
+    .mf-root { fill: #2a2419; stroke: #2a2419; stroke-width: 1.3; }
+    .mf-node { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.3; }
+    .mf-edge { stroke: #2a2419; stroke-width: 1.5; fill: none; }
+    .mf-weight { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #cc6600; font-weight: bold; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; font-style: italic; }
+    .mf-tiny { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #5a4f38; font-style: italic; }
+    .mf-caplabel { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #2a2419; font-style: italic; }
+  </style>
+
+  <!-- title -->
+  <text x="260" y="22" text-anchor="middle" class="mf-small-it">r₂ = 3 &#160;·&#160; the three rooted edge-weighted trees of total edge weight 2</text>
+
+  <!-- legend -->
+  <g transform="translate(20, 195)">
+    <circle cx="0" cy="0" r="6" class="mf-root"/>
+    <text x="12" y="4" class="mf-tiny">root</text>
+    <circle cx="60" cy="0" r="6" class="mf-node"/>
+    <text x="72" y="4" class="mf-tiny">other node</text>
+  </g>
+
+  <!-- ─── Tree (a): single edge of weight 2 ─── -->
+  <g transform="translate(90, 50)">
+    <line x1="0" y1="0" x2="0" y2="80" class="mf-edge"/>
+    <text x="10" y="45" class="mf-weight">2</text>
+    <circle cx="0" cy="0" r="9" class="mf-root"/>
+    <circle cx="0" cy="80" r="9" class="mf-node"/>
+    <text x="0" y="160" text-anchor="middle" class="mf-caplabel">(a)</text>
+  </g>
+
+  <!-- ─── Tree (b): two children, each via weight-1 edge ─── -->
+  <g transform="translate(250, 50)">
+    <line x1="0" y1="0" x2="-35" y2="80" class="mf-edge"/>
+    <line x1="0" y1="0" x2="35" y2="80" class="mf-edge"/>
+    <text x="-30" y="42" class="mf-weight">1</text>
+    <text x="22" y="42" class="mf-weight">1</text>
+    <circle cx="0" cy="0" r="9" class="mf-root"/>
+    <circle cx="-35" cy="80" r="9" class="mf-node"/>
+    <circle cx="35" cy="80" r="9" class="mf-node"/>
+    <text x="0" y="160" text-anchor="middle" class="mf-caplabel">(b)</text>
+  </g>
+
+  <!-- ─── Tree (c): path of length 2, weights 1, 1 ─── -->
+  <g transform="translate(420, 45)">
+    <line x1="0" y1="0" x2="0" y2="45" class="mf-edge"/>
+    <line x1="0" y1="45" x2="0" y2="95" class="mf-edge"/>
+    <text x="10" y="26" class="mf-weight">1</text>
+    <text x="10" y="75" class="mf-weight">1</text>
+    <circle cx="0" cy="0" r="9" class="mf-root"/>
+    <circle cx="0" cy="45" r="9" class="mf-node"/>
+    <circle cx="0" cy="95" r="9" class="mf-node"/>
+    <text x="0" y="165" text-anchor="middle" class="mf-caplabel">(c)</text>
+  </g>
+</svg>
+<div class="mf-caption">What <span class="inline-math">R(x)</span> counts. A rooted edge-weighted tree is a rooted tree (filled node is the root) in which each edge carries a positive integer weight (shown in orange). The <em>total</em> edge weight is the sum of the weights. Here are all three such trees of total weight 2: a single edge of weight 2 (a), two weight-1 edges sharing a root (b), and a length-2 path with both edges of weight 1 (c). The outer multiset construction in <span class="inline-math">R(x) = \exp(\sum S(x^k)/k)</span> captures the fact that in (b), the two children hang off the root as an <em>unordered</em> pair.</div>
+</div>
+
+<p>
+By a standard generating-function manipulation from the theory of <em>combinatorial species</em>, the
+generating function <span class="inline-math">R(x)</span> satisfies a recursive functional equation.
+A rooted tree consists of a root together with a multiset of "branches," where each branch is an edge
+with positive integer weight attached to a child rooted tree. The generating function for a single
+branch is
+</p>
+
+<div class="math-display">
+S(x)  =  x · R(x) / (1 − x)
+</div>
+
+<p>
+because <span class="inline-math">x/(1-x) = x + x² + x³ + ⋯</span> encodes "a positive integer, weighted by
+itself" (i.e., the choices of edge weight, each contributing its value to the generating-function exponent),
+and <span class="inline-math">R(x)</span> attaches a child rooted tree below the edge.
+The multiset construction (Pólya / exponential formula) then gives:
+</p>
+
+<div class="math-display">
+R(x)  =  exp ( ∑<sub>k ≥ 1</sub> S(x^k) / k ).
+</div>
+
+<div class="note">
+<strong>What's the exp doing here?</strong> Multisets of objects of generating function
+<span class="inline-math">S(x)</span> have generating function
+<span class="inline-math">exp(∑<sub>k≥1</sub> S(x^k)/k)</span>. This is the unlabeled (Pólya) version of the
+exponential formula, sometimes written as <span class="inline-math">MSET(S)</span>. The terms with
+<span class="inline-math">k > 1</span> come from accounting for the symmetries of repeated branches (you
+don't count the same multiset twice when several copies of the same branch hang off the root). For a more
+complete derivation, see Tutorial 10 ("Pólya enumeration").
+</div>
+
+<p>
+This recursion lets us compute the coefficients <span class="inline-math">r_j</span> one at a time, using
+only previously-computed values. Concretely:
+</p>
+
+<div class="box ex">
+<div class="box-title">Example 6.1 (Computing the first few r_j)</div>
+<div class="box-body">
+<p><span class="inline-math">r₀ = 1</span> (the empty tree).</p>
+<p>To compute <span class="inline-math">r₁</span>: a rooted tree of total edge weight 1 must have exactly
+one edge of weight 1, attached to a child which is the empty tree. So
+<span class="inline-math">r₁ = 1</span>.</p>
+<p>To compute <span class="inline-math">r₂</span>: a rooted tree of total edge weight 2 has either (a) one
+edge of weight 2 attached to the empty tree, or (b) two edges of weight 1, each attached to the empty
+tree, hanging off the root as a multiset. Plus (c) one edge of weight 1 attached to a child which has
+edge weight 1 (a path of length 2). That gives <span class="inline-math">r₂ = 3</span>.</p>
+<p>The full recursion produces:</p>
+<div class="math-display">
+R(x) = 1 + x + 3x² + 8x³ + 24x⁴ + 71x⁵ + 224x⁶ + 710x⁷ + 2318x⁸ + 7659x⁹ + 25703x¹⁰ + ⋯
+</div>
+</div>
+</div>
+
+<p>
+Now comes a moment of mild humility. A search of the OEIS for the sequence
+<span class="inline-math">1, 1, 3, 8, 24, 71, 224, 710, 2318, 7659, 25703</span> returns exactly one
+result, and it is <a href="https://oeis.org/A052855">A052855</a>: <em>"Number of forests of rooted trees of
+nonempty sets with n points,"</em> contributed in January 2000 by the INRIA Encyclopedia of Combinatorial
+Structures. A French computer-algebra system computed our helper sequence twenty-six years before we needed
+it, and it has been sitting in the OEIS ever since, waiting for someone to notice that it was secretly
+the structural backbone of a self-dual multiset partition enumeration.
+</p>
+
+<div class="note">
+<strong>The bijection between R(x) and A052855.</strong> A rooted tree where each non-root node carries a
+"size" (a positive integer) corresponds bijectively to a rooted tree where each <em>edge</em> carries a
+positive integer weight: just attach the size of each child to the edge connecting it to its parent.
+A052855 counts <em>forests</em> of rooted trees of nonempty sets, which corresponds to viewing the root of
+our tree as a "phantom root" and treating its children as the roots of separate trees in a forest. The
+numerics agree to all 21 terms I computed. The OEIS rewards those who search before they compute and
+gently humbles those who compute before they search.
+</div>
+
+<p>
+With <span class="inline-math">R(x) = A052855</span> identified, the closed form for A322111 falls out.
+For odd weight <span class="inline-math">n = 2t − 1</span>, the admissible values of
+<span class="inline-math">m₀</span> are <span class="inline-math">{1, 3, 5, …, 2t − 1}</span>, and the
+corresponding values of <span class="inline-math">e = (n − m₀)/2</span> range over
+<span class="inline-math">{0, 1, 2, …, t − 1}</span>. Each value of <span class="inline-math">e</span>
+contributes <span class="inline-math">r_e = A052855(e)</span> trees. So:
+</p>
+
+<div class="box thm">
+<div class="box-title">Theorem 6.2 (Closed form)</div>
+<div class="box-body">
+<p>For all <span class="inline-math">t ≥ 1</span>,</p>
+<div class="math-display">
+A322111(2t − 1) = A322111(2t) = ∑<sub>j = 0</sub><sup>t − 1</sup> A052855(j).
+</div>
+<p>That is to say: <strong>A322111 is the sequence of partial sums of A052855, with each value duplicated.</strong>
+Two corners of the OEIS, neither suspecting the other's existence, are now connected by a thread.</p>
+</div>
+</div>
+
+<div class="minifig" style="max-width:620px">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280" role="img" aria-label="A staircase diagram showing how A322111 values are partial sums of A052855 values. Each row adds one more block.">
+  <style>
+    .mf-ink { stroke: #2a2419; }
+    .mf-block-a { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.1; }
+    .mf-block-b { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.1; }
+    .mf-block-new { fill: #f4d4a0; stroke: #cc6600; stroke-width: 1.4; }
+    .mf-cell-text { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #2a2419; font-weight: bold; }
+    .mf-left-label { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #2a2419; font-style: italic; text-anchor: end; }
+    .mf-right-label { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #cc6600; font-weight: bold; }
+    .mf-heading { font-family: "Times New Roman", Times, serif; font-size: 12px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #5a4f38; font-style: italic; }
+  </style>
+
+  <!-- title -->
+  <text x="320" y="22" text-anchor="middle" class="mf-heading">A322111 as a staircase of partial sums of A052855</text>
+
+  <!-- unit width = 11, cell height = 28, rows spaced 36 apart -->
+  <!-- starting x = 140, row 1 y = 48 -->
+
+  <!-- ─── Row 1: t=1, A052855 = [1], total = 1 ─── -->
+  <text x="130" y="66" class="mf-left-label">a(1) = a(2) =</text>
+  <rect x="140" y="48" width="11" height="28" class="mf-block-new"/>
+  <text x="145.5" y="67" text-anchor="middle" class="mf-cell-text">1</text>
+  <text x="160" y="67" class="mf-right-label">= 1</text>
+
+  <!-- ─── Row 2: t=2, A052855 = [1, 1], total = 2 ─── -->
+  <text x="130" y="102" class="mf-left-label">a(3) = a(4) =</text>
+  <rect x="140" y="84" width="11" height="28" class="mf-block-a"/>
+  <text x="145.5" y="103" text-anchor="middle" class="mf-cell-text">1</text>
+  <rect x="151" y="84" width="11" height="28" class="mf-block-new"/>
+  <text x="156.5" y="103" text-anchor="middle" class="mf-cell-text">1</text>
+  <text x="170" y="103" class="mf-right-label">= 2</text>
+
+  <!-- ─── Row 3: t=3, A052855 = [1, 1, 3], total = 5 ─── -->
+  <text x="130" y="138" class="mf-left-label">a(5) = a(6) =</text>
+  <rect x="140" y="120" width="11" height="28" class="mf-block-a"/>
+  <text x="145.5" y="139" text-anchor="middle" class="mf-cell-text">1</text>
+  <rect x="151" y="120" width="11" height="28" class="mf-block-b"/>
+  <text x="156.5" y="139" text-anchor="middle" class="mf-cell-text">1</text>
+  <rect x="162" y="120" width="33" height="28" class="mf-block-new"/>
+  <text x="178.5" y="139" text-anchor="middle" class="mf-cell-text">3</text>
+  <text x="203" y="139" class="mf-right-label">= 5</text>
+
+  <!-- ─── Row 4: t=4, A052855 = [1, 1, 3, 8], total = 13 ─── -->
+  <text x="130" y="174" class="mf-left-label">a(7) = a(8) =</text>
+  <rect x="140" y="156" width="11" height="28" class="mf-block-a"/>
+  <text x="145.5" y="175" text-anchor="middle" class="mf-cell-text">1</text>
+  <rect x="151" y="156" width="11" height="28" class="mf-block-b"/>
+  <text x="156.5" y="175" text-anchor="middle" class="mf-cell-text">1</text>
+  <rect x="162" y="156" width="33" height="28" class="mf-block-a"/>
+  <text x="178.5" y="175" text-anchor="middle" class="mf-cell-text">3</text>
+  <rect x="195" y="156" width="88" height="28" class="mf-block-new"/>
+  <text x="239" y="175" text-anchor="middle" class="mf-cell-text">8</text>
+  <text x="291" y="175" class="mf-right-label">= 13</text>
+
+  <!-- ─── Row 5: t=5, A052855 = [1, 1, 3, 8, 24], total = 37 ─── -->
+  <text x="130" y="210" class="mf-left-label">a(9) = a(10) =</text>
+  <rect x="140" y="192" width="11" height="28" class="mf-block-a"/>
+  <text x="145.5" y="211" text-anchor="middle" class="mf-cell-text">1</text>
+  <rect x="151" y="192" width="11" height="28" class="mf-block-b"/>
+  <text x="156.5" y="211" text-anchor="middle" class="mf-cell-text">1</text>
+  <rect x="162" y="192" width="33" height="28" class="mf-block-a"/>
+  <text x="178.5" y="211" text-anchor="middle" class="mf-cell-text">3</text>
+  <rect x="195" y="192" width="88" height="28" class="mf-block-b"/>
+  <text x="239" y="211" text-anchor="middle" class="mf-cell-text">8</text>
+  <rect x="283" y="192" width="264" height="28" class="mf-block-new"/>
+  <text x="415" y="211" text-anchor="middle" class="mf-cell-text">24</text>
+  <text x="555" y="211" class="mf-right-label">= 37</text>
+
+  <!-- bottom annotation -->
+  <text x="320" y="254" text-anchor="middle" class="mf-small-it">each row adds the next value of A052855 (highlighted in orange)</text>
+  <text x="320" y="270" text-anchor="middle" class="mf-small-it">block widths are proportional to A052855(j) = 1, 1, 3, 8, 24, …</text>
+</svg>
+<div class="mf-caption">A pictorial proof of Theorem 6.2. Row <span class="inline-math">t</span> consists of blocks of widths <span class="inline-math">A052855(0), A052855(1), …, A052855(t-1)</span>; the total width equals <span class="inline-math">A322111(2t-1) = A322111(2t)</span>. Passing from row <span class="inline-math">t</span> to row <span class="inline-math">t+1</span> appends one new block (shown in orange).</div>
+</div>
+
+<figure class="illus">
+<div class="fig-title">Figure 6 — The bijective decomposition</div>
+<div class="fig-body">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 480" role="img" aria-label="Decomposing a self-dual decorated bipartite tree into a fixed edge and a forest of rooted trees of nonempty sets, the latter counted by A052855.">
+  <style>
+    .ink-stroke { stroke: #2a2419; }
+    .mid-stroke { stroke: #5a4f38; }
+    .accent-stroke { stroke: #cc6600; }
+    .accent-fill { fill: #cc6600; }
+    .left-fill { fill: #e6dfc4; }
+    .right-fill { fill: #faf5e8; }
+    .scissors-stroke { stroke: #cc6600; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+    .label { font-family: "Times New Roman", Times, serif; font-style: italic; fill: #2a2419; font-size: 13px; }
+    .small { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; }
+    .small-it { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; font-style: italic; }
+    .mult { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #2a2419; font-weight: bold; }
+    .mult-accent { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #cc6600; font-weight: bold; }
+    .heading { font-family: "Times New Roman", Times, serif; font-size: 12px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+    .accent-text { font-family: "Times New Roman", Times, serif; font-size: 13px; fill: #cc6600; font-style: italic; }
+  </style>
+
+  <!-- =========== STEP 1: original tree =========== -->
+  <text x="350" y="22" text-anchor="middle" class="heading">step 1 · the self-dual decorated tree</text>
+
+  <!-- 6-node path L0 R1 L1 R2 L2 R3 at y=70 -->
+  <!-- Positions: 100, 200, 300, 400, 500, 600 -->
+  <!-- Edges 2,1,1,1,2; middle is fixed -->
+  <line x1="120" y1="70" x2="180" y2="70" class="ink-stroke" stroke-width="1.4"/>
+  <text x="150" y="58" text-anchor="middle" class="mult">2</text>
+
+  <line x1="220" y1="70" x2="280" y2="70" class="ink-stroke" stroke-width="1.4"/>
+  <text x="250" y="58" text-anchor="middle" class="mult">1</text>
+
+  <line x1="320" y1="70" x2="380" y2="70" class="accent-stroke" stroke-width="3"/>
+  <text x="350" y="58" text-anchor="middle" class="mult-accent">1</text>
+
+  <line x1="420" y1="70" x2="480" y2="70" class="ink-stroke" stroke-width="1.4"/>
+  <text x="450" y="58" text-anchor="middle" class="mult">1</text>
+
+  <line x1="520" y1="70" x2="580" y2="70" class="ink-stroke" stroke-width="1.4"/>
+  <text x="550" y="58" text-anchor="middle" class="mult">2</text>
+
+  <g transform="translate(100, 70)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">L₀</text>
+  </g>
+  <g transform="translate(200, 70)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">R₁</text>
+  </g>
+  <g transform="translate(300, 70)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">L₁</text>
+  </g>
+  <g transform="translate(400, 70)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">R₂</text>
+  </g>
+  <g transform="translate(500, 70)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">L₂</text>
+  </g>
+  <g transform="translate(600, 70)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">R₃</text>
+  </g>
+
+  <text x="350" y="113" text-anchor="middle" class="small-it">weight 7 · m₀ = 1 (the fixed edge, in orange)</text>
+
+  <!-- =========== STEP 2: cut the fixed edge =========== -->
+  <text x="350" y="148" text-anchor="middle" class="heading">step 2 · cut the unique fixed edge</text>
+
+  <!-- Show two components: scissors mark on the cut, components labeled L-side and R-side -->
+
+  <!-- L-side (left half) -->
+  <line x1="120" y1="200" x2="180" y2="200" class="ink-stroke" stroke-width="1.4"/>
+  <text x="150" y="188" text-anchor="middle" class="mult">2</text>
+
+  <line x1="220" y1="200" x2="280" y2="200" class="ink-stroke" stroke-width="1.4"/>
+  <text x="250" y="188" text-anchor="middle" class="mult">1</text>
+
+  <g transform="translate(100, 200)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">L₀</text>
+  </g>
+  <g transform="translate(200, 200)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">R₁</text>
+  </g>
+  <g transform="translate(300, 200)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">L₁</text>
+  </g>
+
+  <!-- scissors / cut indicator -->
+  <line x1="320" y1="180" x2="380" y2="220" class="scissors-stroke"/>
+  <line x1="320" y1="220" x2="380" y2="180" class="scissors-stroke"/>
+  <text x="350" y="240" text-anchor="middle" class="accent-text">cut</text>
+
+  <!-- R-side -->
+  <g transform="translate(400, 200)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">R₂</text>
+  </g>
+  <g transform="translate(500, 200)">
+    <rect x="-16" y="-14" width="32" height="28" class="left-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">L₂</text>
+  </g>
+  <g transform="translate(600, 200)">
+    <circle r="15" class="right-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text y="5" text-anchor="middle" class="label">R₃</text>
+  </g>
+
+  <line x1="420" y1="200" x2="480" y2="200" class="ink-stroke" stroke-width="1.4"/>
+  <text x="450" y="188" text-anchor="middle" class="mult">1</text>
+
+  <line x1="520" y1="200" x2="580" y2="200" class="ink-stroke" stroke-width="1.4"/>
+  <text x="550" y="188" text-anchor="middle" class="mult">2</text>
+
+  <text x="180" y="255" text-anchor="middle" class="small-it">L-side (rooted at L₁)</text>
+  <text x="520" y="255" text-anchor="middle" class="small-it">R-side (forced by σ)</text>
+
+  <!-- =========== STEP 3: reinterpret L-side as forest of A052855 =========== -->
+  <text x="350" y="290" text-anchor="middle" class="heading">step 3 · L-side as a forest of rooted trees of nonempty sets &#160;(A052855)</text>
+
+  <!-- The L-side rooted at L1: L1 → R1 (mult 1) → L0 (mult 2) -->
+  <!-- Drop L1 (phantom root), so the forest has one tree: root R1 with size 1, child L0 with size 2 -->
+  <!-- Draw with vertical orientation -->
+
+  <g transform="translate(350, 320)">
+    <!-- phantom L1 root -->
+    <rect x="-16" y="0" width="32" height="28" fill="none" stroke="#5a4f38" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="0" y="19" text-anchor="middle" class="label" fill="#5a4f38">L₁</text>
+    <text x="35" y="20" class="small-it" fill="#5a4f38">phantom (discarded)</text>
+
+    <!-- edge to R1 (this is the deleted fixed edge — gone) -->
+    <line x1="0" y1="32" x2="0" y2="60" stroke="#5a4f38" stroke-width="1" stroke-dasharray="3 2"/>
+
+    <!-- R1: real root of the forest tree, size 1 -->
+    <circle cx="0" cy="80" r="20" class="right-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text x="0" y="86" text-anchor="middle" class="label">size 1</text>
+    <text x="-30" y="84" text-anchor="end" class="small-it">R₁ →</text>
+
+    <!-- edge from R1 to L0 -->
+    <line x1="0" y1="100" x2="0" y2="125" class="ink-stroke" stroke-width="1.4"/>
+
+    <!-- L0: child, size 2 -->
+    <rect x="-22" y="125" width="44" height="32" class="left-fill" stroke="#2a2419" stroke-width="1.4"/>
+    <text x="0" y="146" text-anchor="middle" class="label">size 2</text>
+    <text x="-30" y="146" text-anchor="end" class="small-it">L₀ →</text>
+  </g>
+
+  <text x="350" y="488" text-anchor="middle" class="small-it">
+    forest point-count = 1 + 2 = 3 = (n − m₀)/2 = (7 − 1)/2 ✓
+  </text>
+</svg>
+</div>
+<figcaption><strong>Figure 6.</strong> Decomposing a self-dual decorated tree into the data
+<span class="inline-math">(m₀, F)</span>: the multiplicity of the fixed edge plus a forest of rooted trees
+of nonempty sets, the latter counted by <a href="https://oeis.org/A052855">A052855</a>.
+<em>Step 1:</em> the original tree, with the fixed edge in orange. <em>Step 2:</em> cut the fixed edge,
+producing two components related by <span class="inline-math">σ</span>. <em>Step 3:</em> reinterpret the
+L-side as an A052855 forest by treating <span class="inline-math">L₁</span> as a phantom root and giving
+each remaining node a "size" equal to the multiplicity of its incoming edge.</figcaption>
+</figure>
+
+<div class="box exer">
+<div class="box-title">Exercise 7 (★)</div>
+<div class="box-body">
+<p>Compute <span class="inline-math">r₃</span> from the recursion in §6, and verify your answer matches
+<span class="inline-math">r₃ = 8</span>. (You'll need to enumerate rooted edge-weighted trees of total
+edge weight 3 by hand; there are 8 of them.) <em>Suggestion:</em> classify by the number of children of
+the root.</p>
+</div>
+</div>
+
+<div class="box exer">
+<div class="box-title">Exercise 8 (★★)</div>
+<div class="box-body">
+<p>Prove that the generating function <span class="inline-math">R(x)</span> defined by the recursion
+<span class="inline-math">R(x) = exp(∑_{k≥1} S(x^k)/k)</span> with <span class="inline-math">S(x) = xR(x)/(1-x)</span>
+really does count rooted edge-weighted trees by total edge weight. (This is a Pólya-enumeration argument;
+see Tutorial 10 for the framework.)</p>
+</div>
+</div>
+
+<!-- ════════ §7: NUMBERS ════════ -->
+<h2 id="s7"><span class="secnum">§7.</span> The numbers</h2>
+
+<p>
+The closed form makes computation essentially free. Here are the values of A322111 from
+<span class="inline-math">n = 0</span> through <span class="inline-math">n = 40</span>, with the previously
+known terms (a(0) through a(10)) in plain rows and the thirty newly computed terms shaded.
+</p>
+
+<table class="data">
+<caption>A322111(n) for n = 0..40. Pairs <em>(a(2t−1), a(2t))</em> shown side by side.</caption>
+<thead>
+<tr><th>t</th><th>n = 2t−1</th><th>a(2t−1)</th><th>n = 2t</th><th>a(2t)</th></tr>
+</thead>
+<tbody>
+<tr><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">0</td><td>1</td></tr>
+<tr><td class="n">1</td><td class="n">1</td><td>1</td><td class="n">2</td><td>1</td></tr>
+<tr><td class="n">2</td><td class="n">3</td><td>2</td><td class="n">4</td><td>2</td></tr>
+<tr><td class="n">3</td><td class="n">5</td><td>5</td><td class="n">6</td><td>5</td></tr>
+<tr><td class="n">4</td><td class="n">7</td><td>13</td><td class="n">8</td><td>13</td></tr>
+<tr><td class="n">5</td><td class="n">9</td><td>37</td><td class="n">10</td><td>37</td></tr>
+<tr class="new"><td class="n">6</td><td class="n">11</td><td>108</td><td class="n">12</td><td>108</td></tr>
+<tr class="new"><td class="n">7</td><td class="n">13</td><td>332</td><td class="n">14</td><td>332</td></tr>
+<tr class="new"><td class="n">8</td><td class="n">15</td><td>1042</td><td class="n">16</td><td>1042</td></tr>
+<tr class="new"><td class="n">9</td><td class="n">17</td><td>3360</td><td class="n">18</td><td>3360</td></tr>
+<tr class="new"><td class="n">10</td><td class="n">19</td><td>11019</td><td class="n">20</td><td>11019</td></tr>
+<tr class="new"><td class="n">11</td><td class="n">21</td><td>36722</td><td class="n">22</td><td>36722</td></tr>
+<tr class="new"><td class="n">12</td><td class="n">23</td><td>123875</td><td class="n">24</td><td>123875</td></tr>
+<tr class="new"><td class="n">13</td><td class="n">25</td><td>422449</td><td class="n">26</td><td>422449</td></tr>
+<tr class="new"><td class="n">14</td><td class="n">27</td><td>1453553</td><td class="n">28</td><td>1453553</td></tr>
+<tr class="new"><td class="n">15</td><td class="n">29</td><td>5040816</td><td class="n">30</td><td>5040816</td></tr>
+<tr class="new"><td class="n">16</td><td class="n">31</td><td>17599468</td><td class="n">32</td><td>17599468</td></tr>
+<tr class="new"><td class="n">17</td><td class="n">33</td><td>61814275</td><td class="n">34</td><td>61814275</td></tr>
+<tr class="new"><td class="n">18</td><td class="n">35</td><td>218252584</td><td class="n">36</td><td>218252584</td></tr>
+<tr class="new"><td class="n">19</td><td class="n">37</td><td>774226549</td><td class="n">38</td><td>774226549</td></tr>
+<tr class="new"><td class="n">20</td><td class="n">39</td><td>2758043727</td><td class="n">40</td><td>2758043727</td></tr>
+</tbody>
+</table>
+
+<p>
+Five of the new terms (a(11) through a(15)) were independently cross-validated by a brute-force enumerator
+using the NetworkX graph isomorphism algorithm, which builds the bipartite multigraph directly and checks
+self-duality via side-swapping graph isomorphism — sharing no logic with the generating function approach.
+The values agreed to the digit. This is the kind of cross-check that lets one sleep at night.
+</p>
+
+<div class="box exer">
+<div class="box-title">Exercise 9</div>
+<div class="box-body">
+<p>Use the closed form of Theorem 6.2 and the values of A052855 to verify
+<span class="inline-math">A322111(11) = 108</span>. You'll need:
+<span class="inline-math">A052855 = 1, 1, 3, 8, 24, 71, 224, …</span></p>
+</div>
+</div>
+
+<!-- ════════ §8: LEAN ════════ -->
+<h2 id="s8"><span class="secnum">§8.</span> A computer-checked proof of the lemma</h2>
+
+<p>
+This last section is a brief tour of how the Unique Fixed Edge Lemma (Lemma 4.5) was checked by a
+computer. If you've never seen formal verification before, this will be your first taste; it's optional
+reading.
+</p>
+
+<div class="note">
+<strong>What is a proof assistant?</strong> A <em>proof assistant</em> (sometimes called an "interactive
+theorem prover") is a programming language in which you write mathematical statements and proofs, and the
+computer checks whether your proof is correct. The system has a small, trusted "kernel" that knows the
+rules of inference, and your proof must reduce — step by step, in formal detail — to those rules. If
+your proof has a gap or a wrong inference, the system rejects it.
+</div>
+
+<p>
+The proof assistant we'll look at is <a href="https://lean-lang.org">Lean 4</a>, paired with a community
+mathematics library called <a href="https://leanprover-community.github.io/mathlib4_docs/">Mathlib</a>.
+Mathlib contains tens of thousands of formalized definitions and theorems, including a substantial graph
+theory library. The full proof of the Unique Fixed Edge Lemma is 380 lines of Lean code and contains zero
+unfinished steps. Let's translate the key pieces.
+</p>
+
+<h3>Setting up the definitions</h3>
+
+<p>
+The first thing we need is the formal definition of "color-swapping automorphism." In Lean:
+</p>
+
+<pre class="lean"><span class="cm">/-- σ is color-swapping w.r.t. a Bool-coloring c if it flips every vertex's color. -/</span>
+<span class="kw">def</span> <span class="name">IsColorSwapping</span> (c : G.Coloring Bool) (σ : G ≃g G) : <span class="ty">Prop</span> :=
+  ∀ v : V, c (σ v) = !c v</pre>
+
+<p>
+A few things to note:
+</p>
+
+<ul>
+<li><code class="inline">G ≃g G</code> reads as "graph isomorphism from G to itself" — i.e., a graph
+automorphism. Lean uses the notation <code class="inline">≃g</code> for graph isomorphisms; the
+<code class="inline">g</code> distinguishes them from set bijections (<code class="inline">≃</code>) or
+group isomorphisms (<code class="inline">≃*</code>).</li>
+<li><code class="inline">G.Coloring Bool</code> is a function that 2-colors the vertices of
+<span class="inline-math">G</span> using <code class="inline">Bool</code> (true / false) as the two colors.
+For a tree, this coloring is uniquely determined up to swapping the colors.</li>
+<li>The condition is that for every vertex <code class="inline">v</code>, the color of
+<code class="inline">σ v</code> equals the boolean negation of the color of <code class="inline">v</code>.
+The exclamation mark <code class="inline">!</code> is Lean's notation for boolean negation.</li>
+</ul>
+
+<p>
+And the definition of a fixed edge:
+</p>
+
+<pre class="lean"><span class="cm">/-- An edge is fixed by σ if σ maps it to itself (swapping its endpoints). -/</span>
+<span class="kw">def</span> <span class="name">IsFixedEdge</span> (σ : G ≃g G) (e : Sym2 V) : <span class="ty">Prop</span> :=
+  Sym2.map σ e = e</pre>
+
+<p>
+Edges of a graph on vertex type <span class="inline-math">V</span> are unordered pairs, which Lean
+represents as elements of the type <code class="inline">Sym2 V</code>. The function
+<code class="inline">Sym2.map σ</code> applies <span class="inline-math">σ</span> to both endpoints of an
+edge. The condition for a fixed edge is that the result equals the original.
+</p>
+
+<h3>A small warm-up lemma: σ has no fixed vertices</h3>
+
+<p>
+This is Observation 4.3 from §4. In Lean:
+</p>
+
+<pre class="lean"><span class="kw">theorem</span> <span class="name">IsColorSwapping.no_fixed_vertex</span> (hσ : IsColorSwapping c σ) (v : V) :
+    σ v ≠ v := <span class="kw">by</span>
+  <span class="kw">intro</span> h
+  <span class="kw">have</span> := hσ v       <span class="cm">-- pulls out the fact c (σ v) = !c v</span>
+  <span class="kw">rw</span> [h] <span class="kw">at</span> this   <span class="cm">-- substitutes σ v ↦ v, giving c v = !c v</span>
+  <span class="kw">simp</span> <span class="kw">at</span> this     <span class="cm">-- simp recognizes the contradiction</span></pre>
+
+<p>
+Let's translate this line by line:
+</p>
+
+<ul>
+<li><code class="inline">intro h</code> says "assume the negation we want to refute" — i.e., suppose
+<code class="inline">σ v = v</code>.</li>
+<li><code class="inline">have := hσ v</code> instantiates the hypothesis
+<code class="inline">hσ</code> at <code class="inline">v</code>, giving us the fact
+<code class="inline">c (σ v) = !c v</code>.</li>
+<li><code class="inline">rw [h] at this</code> rewrites using the assumption <code class="inline">h</code>
+(<code class="inline">σ v = v</code>) inside the hypothesis <code class="inline">this</code>, transforming
+it to <code class="inline">c v = !c v</code>.</li>
+<li><code class="inline">simp at this</code> recognizes that <code class="inline">c v = !c v</code> is
+absurd (since boolean negation has no fixed point), and closes the goal automatically.</li>
+</ul>
+
+<p>
+The Lean proof has the same three logical steps as the prose: introduce the assumption, derive the color
+equation, observe the contradiction. The notation is unfamiliar but the structure mirrors what you'd write
+on paper.
+</p>
+
+<h3>The main lemma: existence of a fixed edge</h3>
+
+<p>
+The mathematical content here is the parity argument from §4: the tree has
+<span class="inline-math">2k − 1</span> edges (an odd number), the action of
+<span class="inline-math">σ</span> on edges decomposes into orbits, and odd-cardinality permutation actions
+must fix at least one element. The Lean proof uses a Mathlib lemma called
+<code class="inline">Equiv.Perm.exists_fixed_point_of_prime</code> that captures exactly this kind of
+parity argument for prime-power-order group actions.
+</p>
+
+<pre class="lean"><span class="kw">theorem</span> <span class="name">IsTree.exists_fixed_edge</span> (hT : G.IsTree)
+    (hσ : IsColorSwapping c σ) :
+    ∃ e ∈ G.edgeSet, IsFixedEdge σ e := <span class="kw">by</span>
+  classical
+  <span class="kw">let</span> σ_edge : Equiv.Perm G.edgeSet := σ.mapEdgeSet
+  <span class="cm">-- Decompose orderOf σ = 2^a * m with m odd</span>
+  <span class="kw">obtain</span> ⟨a, m, hm_odd, hk_eq⟩ := Nat.exists_eq_two_pow_mul_odd hk_ne
+  <span class="cm">-- |G.edgeSet| is odd (Task 1), so 2 ∤ |G.edgeSet|</span>
+  <span class="kw">have</span> h_not_dvd : ¬ 2 ∣ Fintype.card G.edgeSet := …
+  <span class="cm">-- Apply Equiv.Perm.exists_fixed_point_of_prime to σ_edge^m</span>
+  <span class="kw">obtain</span> ⟨⟨e, he⟩, hfe⟩ := Equiv.Perm.exists_fixed_point_of_prime h_not_dvd hpow
+  <span class="cm">-- Now we have an edge fixed by σ^m. We need it fixed by σ itself —</span>
+  <span class="cm">-- a "bridge argument" closes this gap.</span>
+  …</pre>
+
+<p>
+The piece that surprised me — and that the formalization process exposed — is that the natural
+simplifying assumption <em>σ² = identity</em> turns out to be <strong>false</strong> in general!
+Color-swapping automorphisms can have order 4 or 8 or 16 — not just 2. The counterexample is the symmetric
+"double caterpillar" tree: a central edge with two isomorphic branches on each side, where
+<span class="inline-math">σ</span> swaps the central edge's endpoints AND simultaneously swaps the two
+branches on each side, giving order 4.
+</p>
+
+<div class="minifig" style="max-width:460px">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 320" role="img" aria-label="A double caterpillar bipartite tree on six vertices admitting a color-swapping automorphism of order 4. σ swaps the two endpoints of the central edge and cyclically permutes the four leaves in a 4-cycle.">
+  <style>
+    .mf-ink { stroke: #2a2419; }
+    .mf-left { fill: #e6dfc4; stroke: #2a2419; stroke-width: 1.4; }
+    .mf-right { fill: #faf5e8; stroke: #2a2419; stroke-width: 1.4; }
+    .mf-accent-stroke { stroke: #cc6600; stroke-width: 3; fill: none; }
+    .mf-label { font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 13px; fill: #2a2419; }
+    .mf-small-it { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #5a4f38; font-style: italic; }
+    .mf-sigma { stroke: #336633; stroke-width: 1.4; fill: none; stroke-dasharray: 4 3; }
+    .mf-sigma-text { font-family: "Times New Roman", Times, serif; font-size: 12px; fill: #336633; font-style: italic; font-weight: bold; }
+    .mf-heading { font-family: "Times New Roman", Times, serif; font-size: 12px; font-variant: small-caps; letter-spacing: 1px; fill: #5a4f38; }
+    .mf-num { font-family: "Times New Roman", Times, serif; font-size: 11px; fill: #336633; font-weight: bold; }
+  </style>
+
+  <defs>
+    <marker id="mf-arr-green5" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#336633"/>
+    </marker>
+  </defs>
+
+  <!-- title -->
+  <text x="230" y="22" text-anchor="middle" class="mf-heading">σ of order 4: a double caterpillar</text>
+
+  <!-- ─── tree skeleton ─── -->
+  <!-- central edge u (left, square) at (180, 170) and v (right, circle) at (280, 170) -->
+  <!-- u's leaves: r₁ at (90, 90), r₂ at (90, 250) [circles, right-color] -->
+  <!-- v's leaves: l₁ at (370, 90), l₂ at (370, 250) [squares, left-color] -->
+
+  <!-- non-fixed tree edges -->
+  <line x1="100" y1="95" x2="168" y2="160" class="mf-ink" stroke-width="1.4"/>
+  <line x1="100" y1="245" x2="168" y2="180" class="mf-ink" stroke-width="1.4"/>
+  <line x1="292" y1="160" x2="360" y2="95" class="mf-ink" stroke-width="1.4"/>
+  <line x1="292" y1="180" x2="360" y2="245" class="mf-ink" stroke-width="1.4"/>
+
+  <!-- fixed central edge (orange) -->
+  <line x1="196" y1="170" x2="264" y2="170" class="mf-accent-stroke"/>
+  <text x="230" y="192" text-anchor="middle" class="mf-small-it" fill="#cc6600" font-weight="bold">unique fixed edge</text>
+
+  <!-- ─── σ cycle arrows: 4-cycle r₁ → l₁ → r₂ → l₂ → r₁ ─── -->
+  <!-- arrow 1: r₁ → l₁, curving above -->
+  <path d="M 105 75 Q 230 28 355 75" class="mf-sigma" marker-end="url(#mf-arr-green5)"/>
+  <text x="230" y="32" text-anchor="middle" class="mf-num">①</text>
+
+  <!-- arrow 2: l₁ → r₂, curving across-down -->
+  <path d="M 370 108 Q 420 170 105 260" class="mf-sigma" marker-end="url(#mf-arr-green5)"/>
+  <text x="430" y="190" class="mf-num">②</text>
+
+  <!-- arrow 3: r₂ → l₂, curving below -->
+  <path d="M 105 265 Q 230 312 355 265" class="mf-sigma" marker-end="url(#mf-arr-green5)"/>
+  <text x="230" y="308" text-anchor="middle" class="mf-num">③</text>
+
+  <!-- arrow 4: l₂ → r₁, curving across-up -->
+  <path d="M 370 232 Q 420 170 105 80" class="mf-sigma" marker-end="url(#mf-arr-green5)"/>
+  <text x="30" y="190" class="mf-num">④</text>
+
+  <!-- small σ swap arrow for central edge -->
+  <path d="M 202 148 Q 230 132 258 148" class="mf-sigma" marker-end="url(#mf-arr-green5)" marker-start="url(#mf-arr-green5)"/>
+  <text x="230" y="142" text-anchor="middle" class="mf-sigma-text">σ</text>
+
+  <!-- nodes -->
+  <g transform="translate(90, 90)"><circle r="13" class="mf-right"/><text y="4" text-anchor="middle" class="mf-label">r₁</text></g>
+  <g transform="translate(90, 250)"><circle r="13" class="mf-right"/><text y="4" text-anchor="middle" class="mf-label">r₂</text></g>
+  <g transform="translate(180, 170)"><rect x="-13" y="-12" width="26" height="24" class="mf-left"/><text y="4" text-anchor="middle" class="mf-label">u</text></g>
+  <g transform="translate(280, 170)"><circle r="13" class="mf-right"/><text y="4" text-anchor="middle" class="mf-label">v</text></g>
+  <g transform="translate(370, 90)"><rect x="-13" y="-12" width="26" height="24" class="mf-left"/><text y="4" text-anchor="middle" class="mf-label">l₁</text></g>
+  <g transform="translate(370, 250)"><rect x="-13" y="-12" width="26" height="24" class="mf-left"/><text y="4" text-anchor="middle" class="mf-label">l₂</text></g>
+</svg>
+<div class="mf-caption">The double caterpillar on six vertices. The central edge <span class="inline-math">u\text{–}v</span> is fixed (<span class="inline-math">σ</span> swaps its two endpoints). On the four leaves, <span class="inline-math">σ</span> acts as a 4-cycle <span class="inline-math">r_1 → l_1 → r_2 → l_2 → r_1</span> (green arrows, numbered). Since <span class="inline-math">σ^2</span> swaps <span class="inline-math">r_1 ↔ r_2</span> and <span class="inline-math">l_1 ↔ l_2</span> — which is not the identity — but <span class="inline-math">σ^4 = \text{id}</span>, the order of <span class="inline-math">σ</span> is exactly 4. The Unique Fixed Edge Lemma still holds: there is exactly one fixed edge, the central one.</div>
+</div>
+
+<p>
+This forces a more sophisticated argument: decompose the order of <span class="inline-math">σ</span> as
+<span class="inline-math">2<sup>a</sup> · m</span> with <span class="inline-math">m</span> odd, work with
+<span class="inline-math">σ^m</span> (whose order is a power of 2), and use a counting lemma about
+prime-power permutation actions to find an edge fixed by <span class="inline-math">σ^m</span>. The
+remaining gap — from "<span class="inline-math">σ^m</span>-fixed" to "<span class="inline-math">σ</span>-fixed"
+— is closed by the same kind of bridge argument we used in §4.
+</p>
+
+<h3>The uniqueness half</h3>
+
+<p>
+The uniqueness half of the lemma is our §4 proof, formalized. The Lean version follows the same
+three-step structure: pick two distinct fixed edges, delete the first one, observe that
+<span class="inline-math">σ</span> swaps the two resulting components, and derive a contradiction from the
+existence of the second fixed edge.
+</p>
+
+<pre class="lean"><span class="kw">theorem</span> <span class="name">IsTree.fixed_edge_unique</span> (hT : G.IsTree)
+    (hσ : IsColorSwapping c σ)
+    {e₁ e₂ : Sym2 V} (he₁ : e₁ ∈ G.edgeSet) (he₂ : e₂ ∈ G.edgeSet)
+    (hf₁ : IsFixedEdge σ e₁) (hf₂ : IsFixedEdge σ e₂) :
+    e₁ = e₂ := <span class="kw">by</span>
+  <span class="kw">obtain</span> ⟨a, a', rfl⟩ := Sym2.ind (<span class="kw">fun</span> u v => ⟨u, v, rfl⟩) e₁
+  <span class="kw">obtain</span> ⟨b, b', rfl⟩ := Sym2.ind (<span class="kw">fun</span> u v => ⟨u, v, rfl⟩) e₂
+  …
+  <span class="cm">-- Bridge argument: delete e₁, show that σ swaps the two resulting</span>
+  <span class="cm">-- components, derive that b, b' must lie in the same component</span>
+  <span class="cm">-- (because they're connected by edge e₂) and in different components</span>
+  <span class="cm">-- (because σ swaps them), giving the contradiction.</span>
+  …</pre>
+
+<p>
+The full uniqueness proof in Lean is about 110 lines, most of it the technical machinery of stating
+"delete an edge and reason about the resulting components" formally. The mathematical content fits in the
+five sentences of §4's proof. There's a real gap between informal proof complexity and formal proof
+complexity, and one of the things you learn from formalization is which lemmas are easy on paper but hard
+in Lean (anything involving paths, cycles, or "obvious" connectivity statements) and which lemmas are hard
+on paper but easy in Lean (anything that reduces to algebra or simp).
+</p>
+
+<h3>The main theorem</h3>
+
+<p>
+With both halves in place, the main theorem is two lines:
+</p>
+
+<pre class="lean"><span class="kw">theorem</span> <span class="name">IsTree.unique_fixed_edge</span> (hT : G.IsTree)
+    (hσ : IsColorSwapping c σ) :
+    ∃! e, e ∈ G.edgeSet ∧ IsFixedEdge σ e := <span class="kw">by</span>
+  <span class="kw">obtain</span> ⟨e, he, hfe⟩ := hT.exists_fixed_edge hσ
+  <span class="kw">exact</span> ⟨e, ⟨he, hfe⟩, <span class="kw">fun</span> e' ⟨he', hfe'⟩ => hT.fixed_edge_unique hσ he' he hfe' hfe⟩</pre>
+
+<p>
+The notation <code class="inline">∃!</code> means "there exists a unique" — exactly the existence-and-uniqueness
+statement we want. The proof says: get a fixed edge from the existence theorem; close the uniqueness obligation
+by appealing to the uniqueness theorem.
+</p>
+
+<h3>What this gives us</h3>
+
+<p>
+Running <code class="inline">#print axioms IsTree.unique_fixed_edge</code> in Lean reports that the theorem
+depends on three axioms: <code class="inline">propext</code> (propositional extensionality),
+<code class="inline">Classical.choice</code> (the axiom of choice), and <code class="inline">Quot.sound</code>
+(the quotient construction). These are the standard axioms underlying classical mathematics in Lean —
+nothing exotic, no additional assumptions, no unfinished steps. The Lean kernel has checked that the proof
+is correct, in the most pedantic sense possible.
+</p>
+
+<p>
+What does this buy us? The main thing is <em>citability</em>: the proof exists as a digital artifact that
+anyone can verify in seconds by running the Lean compiler. For a small lemma like this, formal verification
+is overkill; for a large or contentious result, it's invaluable. As an undergraduate, you don't need to
+learn Lean to do mathematics, but it's worth knowing that the option exists. Several major
+recent results — the four-color theorem, the Kepler conjecture, Liquid Tensor Experiment — have been
+formally verified, and the technology is becoming more accessible every year.
+</p>
+
+<div class="box exer">
+<div class="box-title">Exercise 10 (★)</div>
+<div class="box-body">
+<p>The double caterpillar illustrated above is a bipartite tree on 6 vertices (3 on each side) that admits
+a color-swapping automorphism <span class="inline-math">σ</span> of order <em>4</em>, showing that the
+assumption "<span class="inline-math">σ² = id</span>" is genuinely false in general. Construct a similar
+example on 8 vertices (4 on each side) with a color-swapping <span class="inline-math">σ</span> of order 4,
+different from the one shown. <em>Hint:</em> attach an extra mirrored pair of leaves to one of the existing
+leaves, and extend <span class="inline-math">σ</span> consistently.</p>
+</div>
+</div>
+
+<!-- ════════ §9: FURTHER READING ════════ -->
+<h2 id="s9"><span class="secnum">§9.</span> Further reading</h2>
+
+<p>
+This tutorial scratches the surface of several large subjects. If you'd like to go deeper, here are some
+starting points.
+</p>
+
+<ul>
+<li><strong>The OEIS itself</strong> at <a href="https://oeis.org">oeis.org</a>. Browse around. Several
+hundred sequences in the "Wiseman density" neighborhood — see the cross-references on
+<a href="https://oeis.org/A322111">A322111</a> — admit similar tree-decomposition arguments. Many of them
+are wide open.</li>
+
+<li><strong>Generating functions and species.</strong> The standard reference is
+Flajolet &amp; Sedgewick, <em>Analytic Combinatorics</em> (Cambridge, 2009), available free online. For a
+more elementary treatment, see Wilf's <em>generatingfunctionology</em>, also free online. Tutorial 10 of
+this series gives a friendly intro to Pólya enumeration.</li>
+
+<li><strong>Membrane computing.</strong> The bipartite tree structure with multiset weights has a beautiful
+interpretation as a "P system" (named after Gheorghe Păun) — a model of computation inspired by the
+biological cell. Păun's tutorial in the <em>Proceedings of the Brainstorming Workshop on Uncertainty in
+Membrane Computing</em> (Palma de Mallorca, 2004) is the canonical reference. Self-dual P systems (those
+invariant under swapping membranes and objects) are an essentially unstudied subclass; the present tutorial
+is, as far as I know, the first to count them.</li>
+
+<li><strong>Lean 4 and formal verification.</strong> Start with the textbook
+<em>Mathematics in Lean</em> (free online), which walks you from "what is a proof" through real analysis
+in Lean. The community is friendly and active on the
+<a href="https://leanprover.zulipchat.com/">Lean Zulip chat</a>. If you prefer videos, Kevin Buzzard's
+"Xena Project" lectures are a great entry point for math undergraduates.</li>
+
+<li><strong>Graph automorphisms and Burnside.</strong> A first course in algebra or combinatorics is
+likely to cover the orbit-counting theorem (Burnside / Cauchy-Frobenius). The structural arguments in §4
+are in the same spirit. For a deeper dive, see Cameron's <em>Permutation Groups</em> (LMS Student Texts,
+1999).</li>
+</ul>
+
+<hr class="bevel">
+
+<div class="section-divider">⁂ &nbsp; ⁂ &nbsp; ⁂</div>
+
+<p style="font-size:12px; color:var(--text-dim); text-align:center; font-style:italic;">
+End of Tutorial #14. Next in the series: Tutorial #15, "Lattice paths and the cycle lemma."
+</p>
+
+</main>
+
+</div><!-- /.layout -->
+
+<!-- ════════ FOOTER ════════ -->
+<footer class="page-footer">
+  <p><strong>Notes in Enumerative Combinatorics</strong> · A Tutorial Series for Mathematics Undergraduates</p>
+  <p>This page was hand-coded in HTML 4.0. Validated with the W3C HTML validator. Best viewed at 800×600 or higher.</p>
+  <p class="links">
+    <a href="https://oeis.org/A322111">A322111</a> &nbsp;|&nbsp;
+    <a href="https://oeis.org/A052855">A052855</a> &nbsp;|&nbsp;
+    <a href="https://lean-lang.org">Lean 4</a> &nbsp;|&nbsp;
+    <a href="https://leanprover-community.github.io/mathlib4_docs/">Mathlib</a>
+  </p>
+</footer>
+
+</body>
+</html>

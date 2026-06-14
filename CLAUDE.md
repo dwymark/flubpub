@@ -158,6 +158,46 @@ Per-site notes (vendored projects, tile-metadata plans, refresh recipes) live
 in sibling docs at the repo root: see [`DWM.md`](./DWM.md) for the
 danielwymark.com install.
 
+## Authorship disclosure standards (dwm)
+
+danielwymark.com marks the provenance of every AI-influenced human-facing page.
+The principle matches the owner's standing rule: if text is not marked as AI
+work, a human wrote it by hand. Two established mechanisms, both self-contained
+in the page's markdown (inline `<style>` + markup, no shared asset):
+
+**On-page banner — the "Who wrote this?" disclosure.** A CSS-only collapsible
+`<aside>` placed *above* the H1 on any page Claude wrote or co-wrote. Structure:
+a hidden checkbox (`#dwm-disc-cb`) with a `:checked ~` sibling toggle between a
+full state (`.dwm-disc-full`: an uppercase "Who wrote this?" eyebrow, one or two
+sentences of attribution, and a "Noted" dismiss label) and a compact state
+(`.dwm-disc-compact`: the single line "AI-written · noted"). The banner ships
+**default-open** (checkbox unchecked); the reader collapses it. The wrapper is
+`#dwm-disc`; the banner reads its colors from the page theme's custom properties
+(`--card-bg`, `--accent`, `--rule`, `--fg`, `--prose-font`, `--mono-font`) so it
+inherits whatever theme the page carries. The attribution prose is honest about
+kind and proportional to involvement (see the `/disclosure` skill): name who set
+direction/curation vs. who wrote the words.
+
+**Listing bylines — two credits per index entry.** An index page's per-entry
+credit splits in two, both carried in each listed page's `description:`
+frontmatter and styled by spans the index inherits:
+- `.ai-work` — a block byline directly under the entry title naming who made the
+  *linked work* (e.g. "Daniel Wymark, with Claude (Anthropic)"). Goes at the
+  **start** of the `description` value.
+- `.ai-desc` — a smaller, lower-right note marking who wrote that entry's
+  *one-line blurb* (e.g. "Description: written by Claude"). Goes at the **end**.
+
+Both spans carry a `title=` tooltip with the full-sentence version (`cursor:help`).
+The index page hosting the list defines `.ai-work`/`.ai-desc` in its inline
+`<style>` (see `content/dwm/home.md` and `content/dwm/vibe-coded-nonsense.md`).
+The host index also carries its own "Who wrote this?" banner explaining the
+two-credit scheme, and notes that each linked artifact carries its own fuller
+note on its own page.
+
+When creating or restyling a dwm index or an AI-authored content page, reproduce
+both mechanisms; the canonical reference markup lives in
+`content/dwm/vibe-coded-nonsense.md`.
+
 ## Architecture
 
 **Data flow:** CLI → POST /api/pages → server writes page file to `site/src/pages/` → server runs `npx @11ty/eleventy` in `site/` → static HTML appears in `site/_site/` → nginx serves `_site/` directly and proxies only `/health` to uvicorn. **nginx does NOT proxy `/api/`** — the API is an unauthenticated mutation surface, uvicorn binds `127.0.0.1` only, and the CLI reaches it over SSH (running `flubpub` on the box against `http://localhost:PORT`) or locally via `--local`. Nothing public needs `/api/`.

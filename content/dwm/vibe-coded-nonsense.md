@@ -16,9 +16,9 @@ index:
     - combinatorics-workbench
     - micropolis-systems-atlas
 slug: vibe-coded-nonsense
-description: A cabinet of interactive toys and experiments, built fast and by feel.
-  <span class="ai-tag" title="This blurb was written by Claude (Anthropic), not by
-  Daniel.">🤖 Claude</span>
+description: <span class="ai-byline" title="This blurb was written by Claude (Anthropic),
+  not by Daniel.">Written by Claude</span> A cabinet of interactive toys and experiments,
+  built fast and by feel.
 ---
 <style>
 #dwm-disc{position:relative;width:100%;z-index:60;margin-bottom:1.5rem;}
@@ -34,7 +34,7 @@ description: A cabinet of interactive toys and experiments, built fast and by fe
 .dwm-disc-compact::after{content:" \21BA";opacity:.7;}
 #dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-full{display:none;}
 #dwm-disc-cb:checked~.dwm-disc-banner .dwm-disc-compact{display:block;}
-.flubpub-pages .ai-tag,.ai-tag{display:inline-flex;align-items:center;gap:.3em;font-family:var(--mono-font,var(--mono,ui-monospace,Menlo,Consolas,monospace));font-size:.72em;line-height:1;letter-spacing:.02em;font-weight:600;padding:.18em .5em .22em;margin-left:.35em;border:1px solid color-mix(in srgb,currentColor 32%,transparent);border-radius:999px;background:color-mix(in srgb,currentColor 8%,transparent);color:inherit;opacity:.85;vertical-align:baseline;white-space:nowrap;cursor:help;}
+.flubpub-pages .ai-byline,.ai-byline{display:block;margin-top:.3rem;font-family:var(--prose-font,Georgia,'Times New Roman',serif);font-size:.78em;font-style:italic;letter-spacing:.01em;color:inherit;opacity:.62;cursor:help;}
 </style>
 <div id="dwm-disc">
 <input type="checkbox" id="dwm-disc-cb" aria-hidden="true">
@@ -42,7 +42,7 @@ description: A cabinet of interactive toys and experiments, built fast and by fe
 <div class="dwm-disc-full">
 <p class="dwm-disc-h">Who wrote this?</p>
 <p class="dwm-disc-b">This is a page-type index that Claude (Anthropic) wrote and assembled end to end: the heading, the framing above the list, and every one-line blurb below. Daniel Wymark decided which experiments belong in the collection and set its direction, but did not write the words on this page.</p>
-<p class="dwm-disc-b">Each linked artifact carries its own authorship note. The 🤖 Claude badge beside a blurb marks that blurb, specifically, as Claude's — separate from whoever made the thing it describes.</p>
+<p class="dwm-disc-b">The italic "Written by Claude" byline under each title marks that item's one-line blurb as Claude's — not necessarily the artifact it links to, which carries its own authorship note on its own page.</p>
 <label for="dwm-disc-cb" class="dwm-disc-btn" tabindex="0">Noted</label>
 </div>
 <label for="dwm-disc-cb" class="dwm-disc-compact" tabindex="0">AI-written · noted</label>

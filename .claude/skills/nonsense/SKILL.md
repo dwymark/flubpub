@@ -61,14 +61,15 @@ Not for: non-vibe pages, the home page, research, or theme/index plumbing.
    code that touches the network or stores anything; these toys are client-only,
    so "runs in your browser, no network, no storage" is the usual line.
 
-3. **Write a listing blurb + badge.** One sentence describing the toy, followed
-   by the inline Claude badge. The badge is raw HTML carried in the page's
-   `--description` (flubpub injects descriptions into the index list unescaped):
+3. **Write a listing blurb + byline.** One sentence describing the toy, followed
+   by an inline author byline marking the blurb as Claude's. It is raw HTML
+   carried in the page's `--description` (flubpub injects descriptions into the
+   index list unescaped); it renders as its own italic line beneath the blurb:
    ```
-   <span class="ai-tag" title="This blurb was written by Claude (Anthropic), not by Daniel.">🤖 Claude</span>
+   <span class="ai-byline" title="This blurb was written by Claude (Anthropic), not by Daniel.">Written by Claude</span>
    ```
-   The `.ai-tag` CSS lives in the `<style>` block at the top of
-   `content/dwm/vibe-coded-nonsense.md`; the badge inherits it there.
+   The `.ai-byline` CSS lives in the `<style>` block at the top of
+   `content/dwm/vibe-coded-nonsense.md`; the byline inherits it there.
 
 4. **Push to dwm.** Tag `vibe-coded` and pass the badged description:
    ```bash
@@ -88,7 +89,7 @@ Not for: non-vibe pages, the home page, research, or theme/index plumbing.
 6. **Verify live.**
    ```bash
    curl -s -o /dev/null -w "%{http_code}\n" https://danielwymark.com/<slug>/
-   curl -s https://danielwymark.com/vibe-coded-nonsense/ | grep -c 'class="ai-tag"'   # entry count
+   curl -s https://danielwymark.com/vibe-coded-nonsense/ | grep -c 'class="ai-byline"'   # entry count
    curl -s https://danielwymark.com/<slug>/ | grep -c dwm-disc                        # disclosure present
    ```
 

@@ -49,13 +49,38 @@ uv run flubpub --site dwm push content/dwm/blockipelago/index.html \
 `@font-face` rules pointing at `fonts/*.ttf` get picked up automatically.
 External Google Fonts URLs are skipped (non-local schemes).
 
-## Custom index spec
+## Index pages
 
-Lives in `content/dwm/home.md` as YAML frontmatter under the `index:` key,
-not as a separate file. The server strips it before rendering.
+dwm runs a main index alongside several topic-oriented indexes. All share the
+one index model — an `index:` block in a page's YAML frontmatter, which the
+server strips before rendering — and differ in slug and in how they install.
 
-Re-install the index after edits:
+- **Main index** — the site front page, at the reserved root slug. Lives in
+  `content/dwm/home.md`. Install it with `set-index`, which routes to the root
+  endpoint and writes the front page:
 
-```bash
-uv run flubpub --site dwm set-index content/dwm/home.md
-```
+  ```bash
+  uv run flubpub --site dwm set-index content/dwm/home.md
+  ```
+
+- **Topic indexes** — ordinary pages that also carry an `index:` block, each at
+  its own slug. `content/dwm/vibe-coded-nonsense.md` lists toys by tag;
+  `content/dwm/strange-interlocutor.md` lists a curated series in two described
+  `sections`. Publish these with plain `push`, **not** `set-index` — `set-index`
+  would overwrite the front page:
+
+  ```bash
+  uv run flubpub --site dwm push content/dwm/strange-interlocutor.md
+  ```
+
+A topic index resolves its members from the live `pages.json`, so push the
+member pages before the index that lists them.
+
+## Unlisted drafts
+
+The main index excludes pages by tag. `home.md`'s index filter carries
+`tags_none: [draft, vibe-coded]`, so any page tagged `draft` stays off the
+front page while remaining reachable at its own URL. Tagging a page `draft` is
+the whole unlisting move on dwm; every Strange Interlocutor page uses it. The
+`vibe-coded` tag does the same for toys, which surface on the nonsense index
+instead.

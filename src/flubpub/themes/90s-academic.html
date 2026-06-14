@@ -168,23 +168,6 @@
     ul.flubpub-pages a:hover { border-bottom-color: currentColor; }
     ul.flubpub-pages .summary { color: var(--ink-light, #6a5f4d); font-size: 0.92em; }
 
-    .colophon {
-      max-width: var(--measure);
-      margin: 0 auto 2rem;
-      padding: 0 clamp(1rem, 4vw, 2.75rem);
-      font-size: 0.82rem;
-      color: var(--ink-light, #6a5f4d);
-      text-align: center;
-      letter-spacing: 0.04em;
-    }
-    .colophon hr {
-      max-width: 12ch;
-      border-top: 1px solid var(--rule);
-      margin: 1rem auto 0.6rem;
-    }
-    .colophon hr::after { display: none; }
-    .colophon a { color: inherit; }
-
     /* ---- Default mobile-wallpaper strategy: wp-peek (narrow gutter) ---- */
     @media (max-width: 720px) {
       main {
@@ -205,9 +188,5 @@
   <main>
     {{ content }}
   </main>
-  <footer class="colophon">
-    <hr>
-    <p>Last revised {{ date }} · typeset on the World Wide Web.</p>
-  </footer>
 </body>
 </html>

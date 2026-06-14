@@ -23,7 +23,7 @@ is just adding a file.
 - **Papered** themes share `_papered/_base.html` and differ only by a wallpaper
   and a palette. The base supplies the layout: a centered reading card floating
   over a fixed, tiled wallpaper, plus typography, list, and table styles. (It
-  also suppresses the breadcrumb and colophon on the reserved root slug.)
+  also suppresses the breadcrumb on the reserved root slug.)
 
 A papered theme is a thin child of the base. It overrides one or two blocks:
 

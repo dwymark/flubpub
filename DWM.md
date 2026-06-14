@@ -19,8 +19,10 @@ Upstream: `github.com/dwymark/blockipelago_webgl`, sibling repo at
 
 Vendored at `content/dwm/blockipelago/`. The runtime is four files plus a
 `fonts/` dir; the upstream repo's dev cruft (CLAUDE.md, scripts/, notes/,
-.git/) is excluded from the snapshot. A `SOURCE` file records the upstream
-sha at vendoring time.
+.git/) is excluded from the snapshot. A `SOURCE` sidecar records provenance in
+the standard keyed format (`source_repo` / `source_path` / `source_commit`; see
+the Vendoring provenance section in `CLAUDE.md`) — an HTML bundle has no
+frontmatter to hold those keys, so the sidecar carries them.
 
 Refresh recipe:
 
@@ -29,7 +31,11 @@ rsync -av --delete \
   --include='index.html' --include='app.js' --include='data.js' \
   --include='fonts/' --include='fonts/**' --exclude='*' \
   ../blockipelago_webgl/ content/dwm/blockipelago/
-( cd ../blockipelago_webgl && git rev-parse HEAD ) > content/dwm/blockipelago/SOURCE
+{
+  echo "source_repo: github.com/dwymark/blockipelago_webgl"
+  echo "source_path: runtime bundle (index.html, app.js, data.js, fonts/)"
+  echo "source_commit: $( cd ../blockipelago_webgl && git rev-parse HEAD )"
+} > content/dwm/blockipelago/SOURCE
 ```
 
 Publish:

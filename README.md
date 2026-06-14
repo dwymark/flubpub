@@ -44,6 +44,15 @@ systemd timer handles renewal. Without an email, the site is HTTP-only.
 
 See [`CLAUDE.md`](CLAUDE.md) for the full command surface and architecture.
 
+## Themes and color schemes
+
+A page can be themed (`theme: <name>` in its frontmatter) and colored
+(`color_scheme: <name>`, falling back to the theme's default). A theme controls
+layout and typography; a color scheme supplies the palette, and the two mix
+freely. The "papered" theme family pairs a tiled SVG wallpaper with a palette
+for a paper-and-ink reading page. How themes are defined and how to add one:
+[`src/flubpub/themes/README.md`](src/flubpub/themes/README.md).
+
 ## Index rendering modes
 
 flubpub ships with two ways of rendering the site's front page: 11ty's default
@@ -134,7 +143,7 @@ Where each tunable lives:
 | Knob | Location | Effect |
 | --- | --- | --- |
 | Which pages appear | `data/pages.json` (managed by CLI) | Source of truth in both modes |
-| Sort / filter / group | the entry's `index:` spec (`IndexSpec`), applied by `build_index_payload` | Per-index, configurable (sort, filter, limit, group_by) |
+| Sort / filter / group / section | the entry's `index:` spec (`IndexSpec`), applied by `build_index_payload` | Per-index: sort, filter, limit, `group_by` buckets, or explicit `sections` (ordered, described groups of slugs — a curated landing page) |
 | Masthead / footer text | Jinja vars (`site_title`, `brand`, `tagline`, `footer_left`, `footer_right`) | Pass a YAML file via `set-index --vars path.yml`; see `templates/gallery/vars.bijectivity.yml` for an example |
 | Template structure (markup itself) | `templates/gallery/index.html` | Edit + re-run `set-index` |
 | Per-tile accent, SVG, kicker, tags | `tile: {…}` on a page's entry in `pages.json` | Optional; defaults fill in when absent |

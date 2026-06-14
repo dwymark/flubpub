@@ -198,6 +198,17 @@ When creating or restyling a dwm index or an AI-authored content page, reproduce
 both mechanisms; the canonical reference markup lives in
 `content/dwm/vibe-coded-nonsense.md`.
 
+## Vendoring provenance
+
+A page copied in from another repo — a source document or a runtime bundle —
+records where it came from with three keys: `source_repo`, `source_path`, and
+`source_commit` (the upstream sha at vendoring time). A vendored markdown page
+carries them in its YAML frontmatter; flubpub ignores unknown frontmatter keys,
+so they live in the content/ copy without reaching the rendered page. A
+multi-file HTML bundle has no frontmatter, so it carries the same three keys in
+a `SOURCE` sidecar in the bundle dir. Per-project specifics (upstream URL,
+refresh recipe) live in `DWM.md`.
+
 ## Architecture
 
 **Data flow:** CLI → POST /api/pages → server writes page file to `site/src/pages/` → server runs `npx @11ty/eleventy` in `site/` → static HTML appears in `site/_site/` → nginx serves `_site/` directly and proxies only `/health` to uvicorn. **nginx does NOT proxy `/api/`** — the API is an unauthenticated mutation surface, uvicorn binds `127.0.0.1` only, and the CLI reaches it over SSH (running `flubpub` on the box against `http://localhost:PORT`) or locally via `--local`. Nothing public needs `/api/`.
@@ -211,9 +222,10 @@ both mechanisms; the canonical reference markup lives in
 - **Remote upload shape:** `push`, `revise`, and `set-index` over `--remote` use `_upload_bundle_to_remote`, which scp's the entry file and its sibling assets/sub-pages into a fresh `/tmp/flubpub-upload-dir-<hex>/` on the remote, preserving each asset's path *relative to the entry file's directory* (subdir refs like `url("fonts/X.ttf")` keep their `fonts/` prefix; assets outside the entry's tree fall back to basename). The remote-side `flubpub` then re-scans the file in that dir, resolves relative refs (CSS/JS/images, .md links), uploads assets via the local HTTP API, and rewrites refs. Cleanup via `rm -rf /tmp/flubpub-upload-*`. (Don't collapse the bundle root into `/tmp/flubpub-upload-<basename>`; that breaks relative resolution on the remote and silently ships un-rewritten refs.) `click.confirm` prompts in `push`, `revise`, and `set-index` are gated on `sys.stdin.isatty()` so the inner remote invocation doesn't abort under non-interactive ssh.
 - `server.py` — FastAPI app; full CRUD (POST/GET/PUT/DELETE), Jinja2 theme rendering, color scheme injection, asset upload, triggers 11ty rebuilds, mounts `_site/` as static files. Reads `FLUBPUB_DATA_DIR` and `FLUBPUB_SITE_DIR` from env (set per-instance by systemd). `upload_asset` reduces the client-controlled slug (`[a-z0-9-]+`) and filename (`Path(...).name`) to single safe path segments — no traversal escapes the assets tree even though the API is localhost-only.
 - **One index model.** A "page-type index" is any `pages.json` entry with `content_type: index`. `resolve_index(content, content_type, body_index, *, force_index=False)` is the single place the "is this an index, in what form?" promotion rules live — called by `create_page`, `update_page`, and the `/api/index` adaptor; both write paths funnel through `_create_or_replace_page` (one persistence model). **The site front page is just the page-type index at the reserved slug `ROOT_INDEX_SLUG` ("index").** `set_custom_index` (`POST /api/index`) is thin sugar: classify with `force_index=True`, create/replace that entry. `inject_index_pages` is one loop; the root's *only* specialness is mechanical — its URL is `/`, so its injected output is written to `_site/index.html` (overwriting 11ty's `src/index.njk` build) and the routed `_site/index/` duplicate is removed. The pre-unification root store (`data/custom_index.html` + `custom_index_spec.json`, `_render_root_markdown`, the `inject_custom_index` alias) is **deleted**; `_sweep_legacy_root_index` drops those stale files on the next `set-index`/`unset-index` of an upgraded install. `unset-index` deletes the root entry so 11ty's default `index.njk` wins again. (`style_css` on a markdown root index is gone — themed roots go through the theme catalogue; un-themed roots render via 11ty `base.njk`.)
-- `models.py` — Pydantic models: PageCreate, PageUpdate, PageMeta, PageResponse, PageDetail
-- `colors.py` — Named color schemes (clean, neon, midnight, terminal, starfield, parchment) as CSS custom property dicts. Default scheme mapping per theme.
-- `themes/` — Jinja2 HTML templates using CSS custom properties for colors (6 themes: default, geocities, academic, hacker, angelfire, web-ring). Any color scheme can be paired with any theme.
+- `index_payload.py` — Pure functions that turn an index page's `IndexSpec` plus the full page list into what the index renders: filter, then sort, then shape. Shaping is a flat list, `group_by` buckets, or explicit `sections` — each section an ordered, described group of slugs that renders as a labelled block with a one-line description (how a curated landing page splits its entries, e.g. a "Pieces" vs "Artifacts" series page). Also parses an `index:` spec out of markdown frontmatter or a leading `<!--FLUBPUB ...-->` comment.
+- `models.py` — Pydantic request/response models for the CRUD endpoints, plus the index-spec family: `IndexSpec` and its `IndexFilter` / `IndexSort` / `IndexSection` parts, which describe how an index page selects, orders, and groups the pages it lists.
+- `colors.py` — The color-scheme catalogue. Each scheme is a dict of CSS custom properties (`--bg`, `--fg`, `--accent`, …) injected into a themed page's `<head>` at render. `DEFAULT_SCHEMES` maps each theme to the scheme it falls back to when a page names none. Schemes are decoupled from themes — any scheme can pair with any theme — except that the papered theme family expects the extra pattern/card properties its schemes carry (see `themes/README.md`).
+- `themes/` — One Jinja2 template per theme, each wrapping a page's content into full HTML against CSS custom properties so a paired color scheme supplies the actual colors. Standalone themes are self-contained; the **papered family** shares `_papered/_base.html` and differs only by an SVG wallpaper and palette. What a theme is, how it is defined, and how to add one: `themes/README.md`.
 
 **Static site** (`site/`): 11ty project. `eleventy.config.js` defines a `pages` collection from `src/pages/*.md` and `*.html` sorted newest-first. `src/index.njk` renders the chronological list. Assets in `src/assets/` are passed through.
 
@@ -221,7 +233,7 @@ both mechanisms; the canonical reference markup lives in
 
 **Deploy** (`deploy/`):
 - `flubpub@.service` — templated systemd unit. `%i` substitutes the site key into `WorkingDirectory=/opt/flubpub-%i`, `EnvironmentFile=/opt/flubpub-%i/instance.env`. Each instance reads `FLUBPUB_PORT`, `FLUBPUB_DATA_DIR`, `FLUBPUB_SITE_DIR` from its own `instance.env`. One unit file on disk; many instances enabled (`flubpub@dwm`, `flubpub@bj`, …).
-- `nginx-site.conf.template` — three substitution points (`__SERVER_NAME__`, `__INSTALL_ROOT__`, `__PORT__`) rendered per-site by sed during deploy. Result lands at `/etc/nginx/sites-available/flubpub-<key>` with a sites-enabled symlink.
+- `nginx-site.conf.template` — rendered per-site by sed during deploy, substituting `__SERVER_NAME__`, `__INSTALL_ROOT__`, and `__PORT__`. Result lands at `/etc/nginx/sites-available/flubpub-<key>` with a sites-enabled symlink.
 - `deploy.sh` — requires `SITE`, `REMOTE_HOST`, `SERVER_NAME`, `PORT`. Builds wheel locally, rsyncs, writes `instance.env` on the remote, installs the templated unit, renders the nginx site, reloads both daemons. Idempotent. Honors `REMOTE_DIR` override (set by `flubpub deploy`), `REMOTE_USER` (defaults `root`), `ETC` (defaults `/etc`; only used by tests), and `EMAIL` (if set, runs `certbot --nginx -d $SERVER_NAME -m $EMAIL --redirect` after the HTTP config is reloaded; certbot installs its own renewal timer).
 - **TLS:** Opt-in via `EMAIL`. The nginx template ships HTTP-only; `certbot --nginx` rewrites it on first run to add the 443 block and 80→443 redirect. On re-deploy, deploy.sh re-renders the HTTP-only config, then certbot re-applies its edits — net result is the same HTTPS config, with churn only during the deploy window. `flubpub deploy` resolves `EMAIL` from per-site `email`, top-level `acme_email`, or the `EMAIL` env var.
 
@@ -230,7 +242,7 @@ both mechanisms; the canonical reference markup lives in
 ## Production
 
 - Deployed to `danielwymark.com` (DigitalOcean VPS, Ubuntu)
-- Two installs: `/opt/flubpub-dwm/` (port 8001, served at `danielwymark.com`) and `/opt/flubpub-bj/` (port 8002, served at `bijectivity.net`)
+- Installs run one per domain: `/opt/flubpub-dwm/` (port 8001, served at `danielwymark.com`) and `/opt/flubpub-bj/` (port 8002, served at `bijectivity.net`)
 - Both on HTTPS via Let's Encrypt; certs at `/etc/letsencrypt/live/{danielwymark.com,bijectivity.net}/`. Renewal handled by the `certbot.timer` systemd unit (preinstalled with the certbot package).
 - Services: `systemctl status flubpub@dwm flubpub@bj`
 - Logs: `journalctl -u flubpub@dwm` / `journalctl -u flubpub@bj`

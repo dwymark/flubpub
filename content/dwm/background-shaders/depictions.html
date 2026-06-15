@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Depictions</title>
+<style>
+  :root{
+    --bg:#0B0E0D; --panel:rgba(18,24,21,0.90); --tile:#171E1A;
+    --ink:#E7E4DB; --dim:#8C968C; --amber:#E0A94B; --amber-dim:#9A7A3A;
+    --rule:#2A332D;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--mono);overflow:hidden}
+  #bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+
+  .wrap{position:fixed;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+    padding:clamp(10px,3vw,32px)}
+  .window{
+    width:min(94vw,880px);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--panel);border:1.5px solid var(--rule);
+    box-shadow:10px 10px 0 rgba(0,0,0,0.45), 0 0 0 1px rgba(224,169,75,0.10);
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+  }
+  .titlebar{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px;border-bottom:1.5px solid var(--rule);background:rgba(224,169,75,0.06);
+    font-size:12px;letter-spacing:.20em;text-transform:uppercase;color:var(--amber);font-weight:700}
+  .titlebar .controls{color:var(--amber-dim);letter-spacing:.16em;font-weight:400}
+  .desc{padding:13px 15px 2px;color:var(--dim);font-size:12.5px;line-height:1.5;font-family:var(--sans)}
+  .desc b{color:var(--ink);font-weight:600}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(234px,1fr));gap:10px;
+    padding:13px 15px;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+  .tile{display:flex;flex-direction:column;gap:9px;padding:13px 13px 14px;
+    background:var(--tile);border:1px solid var(--rule);box-shadow:3px 3px 0 rgba(0,0,0,0.35);
+    text-decoration:none;color:var(--ink)}
+  .tile:hover,.tile:focus-visible{background:var(--amber);border-color:var(--amber);color:#11140F;outline:none}
+  .tile:hover .tag,.tile:focus-visible .tag,
+  .tile:hover .src,.tile:focus-visible .src,
+  .tile:hover .idx,.tile:focus-visible .idx{color:#3A2F12}
+  .tile:hover svg,.tile:focus-visible svg{color:#11140F}
+  .t-top{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;letter-spacing:.12em}
+  .idx{color:var(--amber);font-weight:700}
+  .tag{color:var(--dim)}
+  .t-mid{display:flex;align-items:center;gap:11px}
+  .t-mid svg{color:var(--amber);flex:0 0 auto}
+  .t-mid h2{font-size:15px;line-height:1.16;font-weight:700;letter-spacing:-.01em;font-family:var(--sans)}
+  .src{font-size:11px;color:var(--dim);letter-spacing:.03em}
+
+  .statusbar{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;
+    padding:8px 12px;border-top:1.5px solid var(--rule);font-size:10px;letter-spacing:.10em;
+    text-transform:uppercase;color:var(--dim)}
+  .statusbar .sys{color:var(--amber-dim)}
+  .cursor{display:inline-block;width:7px;height:12px;background:var(--amber);
+    margin-left:5px;vertical-align:-2px;animation:blink 1.05s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.cursor{animation:none}}
+  @media (max-width:540px){
+    .grid{grid-template-columns:1fr}
+    .titlebar{font-size:11px}
+  }
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <main class="window" role="navigation" aria-label="Depictions gallery">
+    <div class="titlebar"><span>Depictions</span><span class="controls">[ _ ] [ [] ] [ x ]</span></div>
+    <p class="desc">Seven calculus depictions. Each frames a passage from <b>Strange Interlocutor</b> in a moving field that says the same thing twice &mdash; the math and the words, one idea seen twice.</p>
+    <div class="grid">
+
+      <a class="tile" href="accumulator.html">
+        <div class="t-top"><span class="idx">01</span><span class="tag">FUNDAMENTAL THEOREM</span></div>
+        <div class="t-mid">
+          <svg width="30" height="30" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 18 C 8 7, 12 7, 16 13 C 19 17, 22 16, 25 10 L25 24 L3 24 Z" fill="currentColor" fill-opacity="0.16" stroke="none"/>
+            <path d="M3 18 C 8 7, 12 7, 16 13 C 19 17, 22 16, 25 10"/>
+            <path d="M3 24 H25" stroke-opacity="0.5"/>
+          </svg>
+          <h2>Memory is everywhere</h2>
+        </div>
+        <div class="src">Memory without a brain</div>
+      </a>
+
+      <a class="tile" href="kissing-polynomial.html">
+        <div class="t-top"><span class="idx">02</span><span class="tag">TAYLOR APPROXIMATION</span></div>
+        <div class="t-mid">
+          <svg width="30" height="30" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 14 C 8 12, 12 11, 14 11 C 18 11, 22 5, 26 3"/>
+            <path d="M3 14 C 8 12, 12 11, 14 11 C 18 11, 22 18, 26 24" stroke-dasharray="2 2"/>
+            <circle cx="14" cy="11" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+          <h2>A dance, or just a hand?</h2>
+        </div>
+        <div class="src">But doesn't it take two?</div>
+      </a>
+
+      <a class="tile" href="marble-all-the-way-down.html">
+        <div class="t-top"><span class="idx">03</span><span class="tag">SELF-WARPING FBM</span></div>
+        <div class="t-mid">
+          <svg width="30" height="30" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="14" cy="14" r="11" stroke-opacity="0.4"/>
+            <circle cx="14" cy="14" r="7" stroke-opacity="0.7"/>
+            <circle cx="14" cy="14" r="3.2"/>
+            <circle cx="14" cy="14" r="0.9" fill="currentColor" stroke="none"/>
+          </svg>
+          <h2>A conversation of one</h2>
+        </div>
+        <div class="src">Who were you talking to?</div>
+      </a>
+
+      <a class="tile" href="reading-the-contours.html">
+        <div class="t-top"><span class="idx">04</span><span class="tag">GRADIENT &amp; LEVEL SETS</span></div>
+        <div class="t-mid">
+          <svg width="30" height="30" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <ellipse cx="13" cy="15" rx="10" ry="7" stroke-opacity="0.45"/>
+            <ellipse cx="13" cy="15" rx="6" ry="4.2" stroke-opacity="0.75"/>
+            <ellipse cx="13" cy="15" rx="2.4" ry="1.7"/>
+            <path d="M24 4 L 15 13" /><path d="M15 13 l 3.2 -0.3 M15 13 l -0.3 3.2"/>
+          </svg>
+          <h2>A staying-on-target thing</h2>
+        </div>
+        <div class="src">The worm that knew two roads</div>
+      </a>
+
+      <a class="tile" href="faucets-and-whirlpools.html">
+        <div class="t-top"><span class="idx">05</span><span class="tag">DIVERGENCE &amp; CURL</span></div>
+        <div class="t-mid">
+          <svg width="30" height="30" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <g stroke-width="1.4">
+              <path d="M8 14 H3 M8 14 H13 M8 9 V19 M5 11 L11 17 M11 11 L5 17"/>
+            </g>
+            <path d="M21 11 C 24 11, 24 16, 21 16 C 18 16, 18 12, 20.5 12.5 C 22 13, 21.5 15, 20.5 14.5" stroke-width="1.4"/>
+          </svg>
+          <h2>Lopsided coupling</h2>
+        </div>
+        <div class="src">The tree and the fungus</div>
+      </a>
+
+      <a class="tile" href="melting-staircase.html">
+        <div class="t-top"><span class="idx">06</span><span class="tag">RIEMANN SUM</span></div>
+        <div class="t-mid">
+          <svg width="30" height="30" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 8 C 9 5, 13 7, 16 12 C 19 17, 22 18, 25 16"/>
+            <g stroke-width="1.3" stroke-opacity="0.8">
+              <path d="M5 24 V11"/><path d="M10 24 V9"/><path d="M15 24 V12"/><path d="M20 24 V17"/>
+              <path d="M3 24 H25"/>
+            </g>
+          </svg>
+          <h2>Not the reply. The conversation.</h2>
+        </div>
+        <div class="src">The unit too small to hold a mind</div>
+      </a>
+
+      <a class="tile" href="tightening-corridor.html">
+        <div class="t-top"><span class="idx">07</span><span class="tag">EPSILON-DELTA LIMIT</span></div>
+        <div class="t-mid">
+          <svg width="30" height="30" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 14 H25"/>
+            <path d="M3 5 L 25 13" stroke-opacity="0.6"/>
+            <path d="M3 23 L 25 15" stroke-opacity="0.6"/>
+          </svg>
+          <h2>Nothing more and nothing less</h2>
+        </div>
+        <div class="src">The answer</div>
+      </a>
+
+    </div>
+    <div class="statusbar">
+      <span class="sys">FIELD &gt; MARKUS-LYAPUNOV :: x -&gt; r*x*(1-x)</span>
+      <span>UI &amp; FIELD: CLAUDE &middot; TEXT: D. WYMARK<span class="cursor"></span></span>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  var canvas=document.getElementById("bg");
+  function paintFlat(){ var c=canvas.getContext("2d"); if(c){ c.fillStyle="#0B0E0D"; c.fillRect(0,0,canvas.width,canvas.height);} }
+  var gl=null;
+  try{ gl=canvas.getContext("webgl")||canvas.getContext("experimental-webgl"); }catch(e){ gl=null; }
+  if(!gl){ console.error("WebGL unavailable; flat fallback."); paintFlat(); return; }
+
+  var VERT="attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
+
+  // Background: a fine phosphor grain (static noise) modulated by a nonlinear
+  // dynamical system -- the Markus-Lyapunov field of the logistic map. The
+  // local Lyapunov exponent says order (periodic, calm) vs chaos (grainier,
+  // warmer), so the noise is organized by where the map is sensitive.
+  var FRAG=[
+    "precision highp float;",
+    "uniform float u_time;uniform vec2 u_resolution;",
+    "float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453123);}",
+    "float vnoise(vec2 p){vec2 i=floor(p),f=fract(p);",
+      "float a=hash(i),b=hash(i+vec2(1.,0.)),c=hash(i+vec2(0.,1.)),d=hash(i+vec2(1.,1.));",
+      "vec2 u=f*f*f*(f*(f*6.0-15.0)+10.0);",
+      "return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}",
+    "float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<4;i++){v+=a*vnoise(p);p*=2.0;a*=0.5;}return v;}",
+    // BBABA parameter sequence (1.0 -> use a, 0.0 -> use b)
+    "float patt(float i){float m=mod(i,5.0);return ((abs(m-2.0)<0.5)||(abs(m-4.0)<0.5))?1.0:0.0;}",
+    "void main(){",
+      "vec2 res=u_resolution;vec2 st=gl_FragCoord.xy/res;float asp=res.x/res.y;",
+      "vec2 fld=vec2((st.x-0.5)*asp,(st.y-0.5));",
+      "float t=u_time*0.020;",                       // very slow drift of the field
+      "float fa=clamp(fbm(fld*2.3+vec2(t,0.0)),0.0,1.0);",
+      "float fb=clamp(fbm(fld*2.3+vec2(0.0,t)+17.0),0.0,1.0);",
+      "float a=3.30+0.70*fa;float b=3.30+0.70*fb;",  // logistic params in the interesting band
+      "float x=0.5;float lyap=0.0;",
+      "for(int i=0;i<30;i++){",
+        "float r=mix(b,a,patt(float(i)));",
+        "x=r*x*(1.0-x);",
+        "if(i>=10){lyap+=log(max(abs(r*(1.0-2.0*x)),1e-4));}",
+      "}",
+      "lyap/=20.0;",                                  // 20 measured iterations
+      "float chaos=smoothstep(-0.55,0.40,lyap);",     // 0 order .. 1 chaos
+      // phosphor grain: fine static noise, refreshing slowly; stronger in chaos
+      "float gt=floor(u_time*7.0);",
+      "float g=hash(gl_FragCoord.xy+gt*13.1)-0.5;",
+      "vec3 base=vec3(0.043,0.055,0.050);",           // deep charcoal
+      "vec3 warm=vec3(0.110,0.092,0.060);",           // faint warm where chaotic
+      "vec3 amber=vec3(0.88,0.66,0.30);",
+      "vec3 col=mix(base,warm,chaos*0.70);",
+      "col+=amber*g*(0.045*(0.30+0.70*chaos));",      // modulated phosphor grain
+      "col+=g*0.014;",                                // tiny achromatic grain everywhere
+      "float edge=1.0-smoothstep(0.0,0.06,abs(lyap));", // faint glow on order/chaos boundary
+      "col+=amber*edge*0.045;",
+      "float vig=smoothstep(1.30,0.30,length(fld));",
+      "col*=mix(0.62,1.0,vig);",
+      "gl_FragColor=vec4(col,1.0);",
+    "}"
+  ].join("\n");
+
+  function compile(type,src){var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error("Shader compile failed:",gl.getShaderInfoLog(s));gl.deleteShader(s);return null;}return s;}
+  var vs=compile(gl.VERTEX_SHADER,VERT),fs=compile(gl.FRAGMENT_SHADER,FRAG);
+  if(!vs||!fs){paintFlat();return;}
+  var prog=gl.createProgram();gl.attachShader(prog,vs);gl.attachShader(prog,fs);gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){console.error("Program link failed:",gl.getProgramInfoLog(prog));paintFlat();return;}
+  gl.useProgram(prog);
+
+  var buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  var loc=gl.getAttribLocation(prog,"p");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  var uTime=gl.getUniformLocation(prog,"u_time"),uRes=gl.getUniformLocation(prog,"u_resolution");
+
+  var dpr=1,W=0,H=0;
+  function resize(){dpr=Math.min(window.devicePixelRatio||1,2);
+    W=Math.floor(innerWidth*dpr);H=Math.floor(innerHeight*dpr);
+    canvas.width=W;canvas.height=H;canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px";
+    gl.viewport(0,0,W,H);}
+  window.addEventListener("resize",resize);resize();
+
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var start=performance.now();
+  function frame(now){var t=(now-start)/1000;if(reduce)t=t*0.03;
+    gl.uniform1f(uTime,t);gl.uniform2f(uRes,W,H);
+    gl.drawArrays(gl.TRIANGLES,0,3);requestAnimationFrame(frame);}
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

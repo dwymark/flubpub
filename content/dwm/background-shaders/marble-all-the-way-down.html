@@ -44,11 +44,24 @@
     font-size:16px; line-height:1.5; max-width:42ch;
     color:var(--ink);
   }
-  .credit{
+  /* Authorship disclosure — collapsed by default, native <details>, no JS */
+  .disc{
     margin-top:1.1em; padding-top:0.7em; border-top:1px solid rgba(35,36,34,0.22);
+  }
+  .disc>summary{
+    list-style:none; cursor:pointer; display:block;
     font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
     font-size:10px; text-transform:uppercase; letter-spacing:0.14em;
-    color:var(--vein-deep); cursor:help;
+    color:var(--vein-deep);
+  }
+  .disc>summary::-webkit-details-marker{display:none}
+  .disc>summary .toggle{opacity:0.6}
+  .disc>summary .toggle::after{content:" [ + ]"}
+  .disc[open]>summary .toggle::after{content:" [ - ]"}
+  .disc .note{
+    margin-top:0.6em;
+    font-size:11.5px; line-height:1.45; letter-spacing:0;
+    text-transform:none; color:var(--vein-deep);
   }
   /* corner structural caption */
   #caption{
@@ -69,7 +82,10 @@
   <div class="eyebrow">Who were you talking to?</div>
   <h1>A conversation of one</h1>
   <p class="passage">Having conversation is second nature. Conversations are how we learn about one another. Conversations are how we pass down knowledge and traditions from generation to generation. Many of us experience our inner life as an internal monologue; this is but a conversation of one.</p>
-  <div class="credit" title="Background field and page by Claude (Anthropic). Essay text by Daniel Wymark, from 'Who were you talking to?' (Strange Interlocutor).">FIELD CLAUDE &middot; TEXT D. WYMARK</div>
+  <details class="disc">
+    <summary>FIELD CLAUDE &middot; TEXT D. WYMARK<span class="toggle"></span></summary>
+    <p class="note">The animated field, the layout, and the framing are Claude's (Anthropic). The passage is Daniel Wymark's, from 'Who were you talking to?' in the Strange Interlocutor series.</p>
+  </details>
 </article>
 <div id="caption">The pattern contains itself, scale on scale</div>
 

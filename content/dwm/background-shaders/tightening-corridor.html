@@ -36,11 +36,23 @@
   #island p{
     font-size:16px;line-height:1.5;max-width:42ch;color:var(--ink);
   }
-  .credit{
-    margin-top:1.4em;
+  /* Authorship disclosure — quiet, CSS-only, collapsed by default */
+  .disc{ margin-top:1.4em; }
+  .disc>summary{
+    list-style:none; cursor:pointer; outline:none;
     font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
     font-size:10px;letter-spacing:0.12em;text-transform:uppercase;
-    color:rgba(33,34,31,0.55);cursor:help;
+    color:rgba(33,34,31,0.55);
+  }
+  .disc>summary::-webkit-details-marker{ display:none; }
+  .disc>summary::after{ content:" [ + ]"; color:rgba(33,34,31,0.40); }
+  .disc[open]>summary::after{ content:" [ - ]"; }
+  .disc>summary:hover{ color:rgba(33,34,31,0.78); }
+  .disc>summary:hover::after{ color:rgba(33,34,31,0.55); }
+  .disc-body{
+    margin-top:0.75em;
+    font-size:11.5px;line-height:1.45;letter-spacing:0;text-transform:none;
+    color:rgba(33,34,31,0.66);
   }
 
   /* Tiny structural caption in a corner */
@@ -63,7 +75,10 @@
   <div class="eyebrow">The Answer</div>
   <h1>Nothing more and nothing less</h1>
   <p>The solution is a change of perspective. Rather than asking who we spoke with, ask what we just did. What am I doing when I chat with an LLM? The answer is at once entirely new and nothing new at all. The answer is conversation itself, nothing more and nothing less.</p>
-  <div class="credit" title="Background field and page by Claude (Anthropic). Essay text by Daniel Wymark, from 'Who were you talking to?' (Strange Interlocutor).">Field Claude &middot; Text D. Wymark</div>
+  <details class="disc">
+    <summary>Field Claude &middot; Text D. Wymark</summary>
+    <p class="disc-body">The animated field, the layout, and the framing are Claude's (Anthropic). The passage is Daniel Wymark's, from &lsquo;Who were you talking to?&rsquo; in the Strange Interlocutor series.</p>
+  </details>
 </article>
 
 <div id="caption">The band closes on a single value</div>

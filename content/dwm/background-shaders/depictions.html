@@ -58,9 +58,28 @@
     margin-left:5px;vertical-align:-2px;animation:blink 1.05s steps(1) infinite}
   @keyframes blink{50%{opacity:0}}
   @media (prefers-reduced-motion:reduce){.cursor{animation:none}}
+
+  /* Authorship disclosure: collapsed by default, terminal-styled panel. */
+  .statusbar .disc{position:relative}
+  .disc summary{list-style:none;cursor:pointer;color:var(--dim);outline:none;
+    font-size:10px;letter-spacing:.10em;text-transform:uppercase}
+  .disc summary::-webkit-details-marker{display:none}
+  .disc summary:hover,.disc summary:focus-visible{color:var(--ink)}
+  .disc summary:focus-visible{text-decoration:underline}
+  .disc .aff{color:var(--amber-dim)}
+  .disc[open] summary .aff::after{content:" [ - ]"}
+  .disc:not([open]) summary .aff::after{content:" [ + ]"}
+  .disc .note{position:absolute;right:0;bottom:calc(100% + 7px);z-index:3;
+    width:min(78vw,360px);padding:9px 11px;background:var(--tile);
+    border:1px solid var(--amber-dim);box-shadow:4px 4px 0 rgba(0,0,0,0.45);
+    color:var(--ink);font-size:11px;line-height:1.5;letter-spacing:.01em;
+    text-transform:none;text-align:left}
+  .disc .note b{color:var(--amber);font-weight:600}
+
   @media (max-width:540px){
     .grid{grid-template-columns:1fr}
     .titlebar{font-size:11px}
+    .disc .note{width:min(86vw,300px)}
   }
 </style>
 </head>
@@ -172,7 +191,10 @@
     </div>
     <div class="statusbar">
       <span class="sys">FIELD &gt; MARKUS-LYAPUNOV :: x -&gt; r*x*(1-x)</span>
-      <span>UI &amp; FIELD: CLAUDE &middot; TEXT: D. WYMARK<span class="cursor"></span></span>
+      <details class="disc">
+        <summary>UI &amp; FIELD: CLAUDE &middot; TEXT: D. WYMARK<span class="aff"></span><span class="cursor"></span></summary>
+        <div class="note"><b>Who wrote this?</b> This gallery &mdash; the terminal interface and the Markus-Lyapunov field behind it &mdash; is Claude's (Anthropic). Daniel Wymark directed the work and wrote the essay passages the depictions point to.</div>
+      </details>
     </div>
   </main>
 </div>

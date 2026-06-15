@@ -46,11 +46,23 @@
     font-size:16px; line-height:1.5; margin:0; max-width:42ch;
     color:var(--ink);
   }
-  .credit{
-    margin: 1.1em 0 0;
+  /* authorship disclosure — collapsed by default to respect the minimal field */
+  .disc{ margin: 1.1em 0 0; }
+  .disc > summary{
+    list-style:none; cursor:pointer; outline:none;
     font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     font-size:10px; letter-spacing:.1em; text-transform:uppercase;
-    color:var(--ink); opacity:.5; cursor:help;
+    color:var(--ink); opacity:.5;
+  }
+  .disc > summary::-webkit-details-marker{ display:none; }
+  .disc > summary:hover{ opacity:.72; }
+  .disc > summary::after{ content:" [ + ]"; opacity:.62; }
+  .disc[open] > summary::after{ content:" [ - ]"; }
+  .disc .disc-note{
+    margin:.7em 0 0; max-width:42ch;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:11.5px; line-height:1.45;
+    color:var(--ink); opacity:.6; text-transform:none; letter-spacing:0;
   }
   @media (max-width:430px){
     .island{ right:50%; transform:translateX(50%); bottom:clamp(12px,4vh,28px); width:92vw; }
@@ -66,7 +78,10 @@
   <p class="eyebrow">THE TREE AND THE FUNGUS</p>
   <h1>Lopsided coupling</h1>
   <p class="passage">You sense the world widely; it senses it narrowly, through a slot. You carry a private self across the years; it carries nothing, rebuilds each turn. Call these the sensorium asymmetry and the maintenance asymmetry. They are not deficits. They are how the parts divide the labor.</p>
-  <p class="credit" title="Background field and page by Claude (Anthropic). Text from the Strange Interlocutor plainspell series — structure and register Daniel Wymark, wording Daniel Wymark with Claude.">FIELD CLAUDE · TEXT D. WYMARK + CLAUDE</p>
+  <details class="disc">
+    <summary>FIELD CLAUDE · TEXT D. WYMARK + CLAUDE</summary>
+    <p class="disc-note">The animated field, the layout, and the framing are Claude's (Anthropic). The passage is from the Strange Interlocutor series - Daniel Wymark's structure and register, worded with Claude.</p>
+  </details>
 </article>
 
 <script>

@@ -36,14 +36,27 @@
     font-weight:700;letter-spacing:-.01em;margin-bottom:.7rem;color:var(--ink);
   }
   .passage{font-size:16px;line-height:1.5;max-width:42ch;color:var(--ink)}
-  .credit{
+  .disc{
     margin-top:.95rem;padding-top:.6rem;border-top:1px solid rgba(30,35,43,.18);
+  }
+  .disc>summary{
+    list-style:none;cursor:pointer;
     font-family:var(--mono);font-size:10px;letter-spacing:.1em;
-    text-transform:uppercase;color:#6c7686;cursor:help;
+    text-transform:uppercase;color:#6c7686;
+    display:flex;align-items:baseline;justify-content:space-between;gap:.6em;
+  }
+  .disc>summary::-webkit-details-marker{display:none}
+  .disc>summary::after{content:"[ + ]";color:#8a93a2}
+  .disc[open]>summary::after{content:"[ - ]"}
+  .disc>summary:hover{color:var(--ink)}
+  .disc .note{
+    margin-top:.55rem;font-family:var(--sans);font-size:11.5px;line-height:1.45;
+    letter-spacing:normal;text-transform:none;color:#5b6678;
   }
   @media (max-height:600px){
     .island{bottom:5vh;padding:16px}
     .passage{font-size:14px}
+    .disc .note{font-size:11px}
   }
 </style>
 </head>
@@ -54,7 +67,10 @@
   <div class="eyebrow">THE UNIT TOO SMALL TO HOLD A MIND</div>
   <h1>Not the reply. The conversation.</h1>
   <p class="passage">So step back and pick a bigger unit. Not the reply. The conversation. The whole exchange holds a target — it keeps trying to stay coherent, to make sense as it goes. The conversation is what stays on target. The conversation is where the mind-like thing lives.</p>
-  <div class="credit" title="Background field and page by Claude (Anthropic). Text from the Strange Interlocutor plainspell series — structure and register Daniel Wymark, wording Daniel Wymark with Claude.">FIELD CLAUDE · TEXT D. WYMARK + CLAUDE</div>
+  <details class="disc">
+    <summary><span>FIELD CLAUDE · TEXT D. WYMARK + CLAUDE</span></summary>
+    <p class="note">The animated field, the layout, and the framing are Claude's (Anthropic). The passage is from the Strange Interlocutor series &mdash; Daniel Wymark's structure and register, worded with Claude.</p>
+  </details>
 </article>
 
 <script>

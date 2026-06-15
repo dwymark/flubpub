@@ -38,10 +38,21 @@
   .passage{
     font-size:16px;line-height:1.5;max-width:42ch;color:var(--ink);
   }
-  .credit{
+  .disc{
     margin-top:.95rem;padding-top:.6rem;border-top:1px solid rgba(42,35,23,.18);
+  }
+  .disc>summary{
+    list-style:none;cursor:pointer;
     font-family:var(--mono);font-size:10px;letter-spacing:.1em;
-    text-transform:uppercase;color:#7d7053;cursor:help;
+    text-transform:uppercase;color:#7d7053;
+  }
+  .disc>summary::-webkit-details-marker{display:none}
+  .disc>summary::after{content:" [ + ]";color:var(--accentB);opacity:.7}
+  .disc[open]>summary::after{content:" [ - ]"}
+  .disc>summary:hover{color:var(--accentB)}
+  .disc-body{
+    margin-top:.5rem;font-family:var(--sans);font-size:11.5px;line-height:1.45;
+    color:#5f543d;text-transform:none;letter-spacing:0;
   }
   @media (max-height:560px){
     .island{top:60%;padding:16px}
@@ -56,7 +67,10 @@
   <div class="eyebrow">MEMORY WITHOUT A BRAIN</div>
   <h1>Memory is everywhere</h1>
   <p class="passage">Who are we but our memories and our dispositions? Memory is key to who we are. Naturally, this suggests that memory always belongs to someone. This is only a sliver of the truth. Memory is absolutely everywhere, once you know how to recognise it.</p>
-  <div class="credit" title="Background field and page by Claude (Anthropic). Essay text by Daniel Wymark, from 'Memory without a brain' (Strange Interlocutor).">FIELD CLAUDE · TEXT D. WYMARK</div>
+  <details class="disc">
+    <summary>FIELD CLAUDE · TEXT D. WYMARK</summary>
+    <p class="disc-body">The animated field, the layout, and the framing are Claude's (Anthropic). The passage is Daniel Wymark's, from 'Memory without a brain' in the Strange Interlocutor series.</p>
+  </details>
 </article>
 
 <script>

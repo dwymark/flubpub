@@ -38,10 +38,20 @@
   .passage{
     font-size:16px;line-height:1.5;max-width:42ch;color:var(--ink);
   }
-  .credit{
+  .disc{
     margin-top:.95rem;padding-top:.6rem;border-top:1px solid rgba(32,37,30,.18);
+  }
+  .disc>summary{
+    list-style:none;cursor:pointer;
     font-family:var(--mono);font-size:10px;letter-spacing:.1em;
-    text-transform:uppercase;color:#5d7256;cursor:help;
+    text-transform:uppercase;color:#5d7256;
+  }
+  .disc>summary::-webkit-details-marker{display:none}
+  .disc>summary::after{content:" [ + ]";color:#8aa082}
+  .disc[open]>summary::after{content:" [ - ]"}
+  .disc>summary:hover{color:#3d4a37}
+  .disc-body{
+    margin-top:.5rem;font-size:11.5px;line-height:1.45;color:#4a5743;
   }
   @media (max-height:560px){
     .island{padding:16px}
@@ -60,7 +70,10 @@
   <div class="eyebrow">THE WORM THAT KNEW TWO ROADS</div>
   <h1>A staying-on-target thing</h1>
   <p class="passage">The plan does not live in a brain. It lives in the whole body, smeared across the cells, a goal the tissue keeps trying to reach. Thinking, he says, is not a brain thing. It is a staying-on-target thing. Things that hold a shape against the world are already a little bit minded.</p>
-  <div class="credit" title="Background field and page by Claude (Anthropic). Text by Daniel Wymark, from the Strange Interlocutor plainspell series (night-walk anchor, verbatim).">FIELD CLAUDE · TEXT D. WYMARK</div>
+  <details class="disc">
+    <summary>FIELD CLAUDE · TEXT D. WYMARK</summary>
+    <p class="disc-body">The animated field, the layout, and the framing are Claude's (Anthropic). The passage is Daniel Wymark's, verbatim from the Strange Interlocutor series.</p>
+  </details>
 </article>
 
 <script>

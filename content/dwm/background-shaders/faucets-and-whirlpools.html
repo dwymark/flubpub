@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Faucets and Whirlpools — Lopsided coupling</title>
+<style>
+  :root{ --ink:#1F2529; --paper:#F5F7F8; --field:#E8EAEB; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; overflow:hidden; background:var(--field); }
+  body{ font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--ink); }
+  #bg{ position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; }
+
+  /* tiny structural caption */
+  .caption{
+    position:fixed; top:14px; left:16px; z-index:2;
+    font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink); opacity:.38; pointer-events:none; user-select:none;
+  }
+
+  /* reading island — lower-right laminar corner */
+  .island{
+    position:fixed; z-index:3;
+    right: clamp(16px, 4vw, 56px);
+    bottom: clamp(16px, 5vh, 56px);
+    width: min(92vw, clamp(280px, 44ch, 460px));
+    max-width:460px;
+    background: rgba(245,247,248,0.90);
+    border: 2px solid var(--ink);
+    border-radius:0;
+    box-shadow: 6px 6px 0 rgba(31,37,41,0.30);
+    padding: clamp(20px, 4.4vw, 28px);
+    -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
+  }
+  .eyebrow{
+    font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--ink); opacity:.72; margin:0 0 .5em;
+  }
+  .island h1{
+    font-size: clamp(20px, 3.4vw, 27px); line-height:1.12;
+    margin:0 0 .65em; font-weight:700; letter-spacing:-.01em;
+  }
+  .passage{
+    font-size:16px; line-height:1.5; margin:0; max-width:42ch;
+    color:var(--ink);
+  }
+  .credit{
+    margin: 1.1em 0 0;
+    font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink); opacity:.5; cursor:help;
+  }
+  @media (max-width:430px){
+    .island{ right:50%; transform:translateX(50%); bottom:clamp(12px,4vh,28px); width:92vw; }
+    .passage{ font-size:15px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="caption">SOURCES SPREAD · WHIRLPOOLS SPIN</div>
+
+<article class="island">
+  <p class="eyebrow">THE TREE AND THE FUNGUS</p>
+  <h1>Lopsided coupling</h1>
+  <p class="passage">You sense the world widely; it senses it narrowly, through a slot. You carry a private self across the years; it carries nothing, rebuilds each turn. Call these the sensorium asymmetry and the maintenance asymmetry. They are not deficits. They are how the parts divide the labor.</p>
+  <p class="credit" title="Background field and page by Claude (Anthropic). Text from the Strange Interlocutor plainspell series — structure and register Daniel Wymark, wording Daniel Wymark with Claude.">FIELD CLAUDE · TEXT D. WYMARK + CLAUDE</p>
+</article>
+
+<script>
+(function(){
+  const canvas = document.getElementById('bg');
+  const FIELD = [0.910, 0.918, 0.922]; // #E8EAEB
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function fallback(){
+    const c = canvas.getContext('2d');
+    if(c){ c.fillStyle = '#E8EAEB'; c.fillRect(0,0,canvas.width||1, canvas.height||1); }
+  }
+
+  let gl;
+  try { gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl'); }
+  catch(e){ gl = null; }
+  if(!gl){ console.error('WebGL unavailable'); fallback(); return; }
+
+  const vsrc = `
+    attribute vec2 a_pos;
+    void main(){ gl_Position = vec4(a_pos, 0.0, 1.0); }`;
+
+  const fsrc = `
+    precision highp float;
+    uniform float u_time;
+    uniform vec2 u_resolution;
+    uniform vec4 u_island; // cx, cy, halfW, halfH (pixels, y-down screen)
+
+    const vec3 FIELD = vec3(0.910,0.918,0.922);
+    const vec3 PAPER = vec3(0.961,0.969,0.973);
+    const vec3 WARM  = vec3(0.835,0.522,0.231); // amber source
+    const vec3 COOL  = vec3(0.208,0.486,0.584); // teal vortex
+
+    float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+    float noise(vec2 p){
+      vec2 i=floor(p), f=fract(p);
+      float a=hash(i), b=hash(i+vec2(1.,0.)), c=hash(i+vec2(0.,1.)), d=hash(i+vec2(1.,1.));
+      vec2 u=f*f*(3.-2.*f);
+      return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);
+    }
+    float fbm(vec2 p){
+      float v=0.0, a=0.5;
+      for(int i=0;i<5;i++){ v+=a*noise(p); p*=2.03; a*=0.5; }
+      return v;
+    }
+    // scalar potential -> curl gives divergence-free flow
+    float potential(vec2 p, float t){ return fbm(p*1.6 + vec2(0.0, t*0.05)); }
+    vec2 curlFlow(vec2 p, float t){
+      float e=0.012;
+      float dx = potential(p+vec2(e,0.),t) - potential(p-vec2(e,0.),t);
+      float dy = potential(p+vec2(0.,e),t) - potential(p-vec2(0.,e),t);
+      return vec2(dy, -dx)/(2.0*e);
+    }
+    // signed rounded-rect distance (px space)
+    float sdRoundRect(vec2 p, vec2 c, vec2 h, float r){
+      vec2 q = abs(p-c) - (h - vec2(r));
+      return length(max(q,0.0)) + min(max(q.x,q.y),0.0) - r;
+    }
+
+    void main(){
+      vec2 fc = gl_FragCoord.xy;
+      // screen uv, y-down to match island coords
+      vec2 px = vec2(fc.x, u_resolution.y - fc.y);
+      vec2 uv = (px - 0.5*u_resolution) / u_resolution.y; // aspect-correct, centered
+      float t = u_time;
+
+      // --- laminar corner: lower-right of screen rides a straight parallel comb ---
+      vec2 isl = u_island.xy;
+      float islR = max(u_island.z, u_island.w);
+      float dIsland = sdRoundRect(px, u_island.xy, u_island.zw, 18.0);
+      // calm weight: 1 deep in island, falling off over ~3 island-radii
+      float calm = 1.0 - smoothstep(0.0, islR*2.6, dIsland);
+      calm = clamp(calm, 0.0, 1.0);
+
+      // base swirling flow + a steady laminar bias that dominates the calm corner
+      vec2 flow = curlFlow(uv, t);
+      vec2 laminar = vec2(0.62, 0.28); // straight parallel drift direction
+      vec2 v = mix(flow, laminar, calm);
+
+      // advect domain along flow to draw streamlines
+      vec2 sp = uv - v * 0.10;
+      float streak = fbm(sp*3.0 + v*1.5);
+
+      // --- divergence (sources) & curl (vortices) from the flow field ---
+      float e=0.012;
+      vec2 fxp=curlFlow(uv+vec2(e,0.),t), fxm=curlFlow(uv-vec2(e,0.),t);
+      vec2 fyp=curlFlow(uv+vec2(0.,e),t), fym=curlFlow(uv-vec2(0.,e),t);
+      float divg = (fxp.x-fxm.x + fyp.y-fym.y)/(2.0*e);
+      float curl = (fxp.y-fxm.y - (fyp.x-fym.x))/(2.0*e);
+
+      // temperature map: warm sources (high) vs cool vortices (low), balanced
+      float temp = fbm(uv*1.15 + vec2(t*0.03, -t*0.02));
+      float warmField = smoothstep(0.50, 0.78, temp);
+      float coolField = smoothstep(0.50, 0.78, 1.0 - temp);
+      // modulate by real flow structure: divergence feeds sources, curl feeds vortices
+      warmField *= 0.55 + 0.75*clamp(divg*0.45 + 0.5, 0.0, 1.0);
+      coolField *= 0.55 + 0.75*clamp(abs(curl)*0.5, 0.0, 1.0);
+      warmField = clamp(warmField, 0.0, 1.0);
+      coolField = clamp(coolField, 0.0, 1.0);
+
+      // streamline shading
+      float lines = 0.5 + 0.5*sin(streak*22.0 + t*0.15);
+      lines = smoothstep(0.45, 0.85, lines);
+
+      // compose: neutral field, warm advances, cool recedes
+      vec3 col = FIELD;
+      col = mix(col, WARM, warmField*0.70);     // sources, warm
+      col = mix(col, COOL, coolField*0.70);     // vortices, cool
+      // streamline texture, subtle
+      col = mix(col, col*0.93 + 0.05, lines*0.30);
+
+      // damp amplitude + bias to paper inside the calm laminar zone
+      vec3 calmCol = mix(col, FIELD, 0.7);        // wash out color
+      calmCol = mix(calmCol, PAPER, smoothstep(islR*1.4, 0.0, dIsland)*0.9);
+      col = mix(col, calmCol, calm);
+
+      // gentle vignette toward field at edges keeps it boxy-soft
+      float vig = smoothstep(1.2, 0.2, length(uv));
+      col = mix(FIELD, col, 0.35 + 0.65*vig);
+
+      gl_FragColor = vec4(col, 1.0);
+    }`;
+
+  function compile(type, src){
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
+      console.error('Shader compile error:', gl.getShaderInfoLog(s));
+      return null;
+    }
+    return s;
+  }
+
+  const vs = compile(gl.VERTEX_SHADER, vsrc);
+  const fs = compile(gl.FRAGMENT_SHADER, fsrc);
+  if(!vs || !fs){ fallback(); return; }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){
+    console.error('Program link error:', gl.getProgramInfoLog(prog)); fallback(); return;
+  }
+  gl.useProgram(prog);
+
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes  = gl.getUniformLocation(prog, 'u_resolution');
+  const uIsl  = gl.getUniformLocation(prog, 'u_island');
+
+  let dpr = 1, W = 1, H = 1;
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = Math.floor(window.innerWidth * dpr);
+    H = Math.floor(window.innerHeight * dpr);
+    canvas.width = W; canvas.height = H;
+    gl.viewport(0,0,W,H);
+  }
+
+  function islandRect(){
+    const el = document.querySelector('.island');
+    const r = el.getBoundingClientRect();
+    return [
+      (r.left + r.width/2)  * dpr,
+      (r.top  + r.height/2) * dpr,
+      (r.width/2)  * dpr,
+      (r.height/2) * dpr
+    ];
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+
+  const start = performance.now();
+  function frame(now){
+    let t = (now - start) / 1000;
+    if(reduce) t = t * 0.05; // near-static calm drift
+    gl.uniform1f(uTime, t);
+    gl.uniform2f(uRes, W, H);
+    const isl = islandRect();
+    gl.uniform4f(uIsl, isl[0], isl[1], isl[2], isl[3]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A dance, or just a hand?</title>
+<style>
+  :root{
+    --field:#E7EBEC; --ink:#1E2629; --paper:#F5F8F8;
+    --teal:#2E6066; --clay:#C25E3C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%;overflow:hidden;background:var(--field)}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+  }
+  #bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+
+  /* Reading island: left-of-center, vertically centered, sits on the kiss point */
+  #island{
+    position:fixed;z-index:2;
+    top:50%;left:38%;transform:translate(-50%,-50%);
+    width:clamp(280px,44ch,460px);max-width:calc(100vw - 32px);
+    background:rgba(245,248,248,0.90);
+    border:2px solid var(--ink);
+    border-radius:0;
+    box-shadow:6px 6px 0 rgba(30,38,41,0.32);
+    padding:clamp(20px,3.4vw,28px);
+  }
+  .eyebrow{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--clay);font-weight:600;margin-bottom:.7rem;
+  }
+  #island h1{
+    font-size:clamp(22px,3vw,28px);line-height:1.15;font-weight:700;
+    letter-spacing:-.01em;margin-bottom:.85rem;color:var(--ink);
+  }
+  #island p.passage{
+    font-size:16px;line-height:1.5;max-width:42ch;color:var(--ink);
+  }
+  .credit{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    color:rgba(30,38,41,0.45);margin-top:1.1rem;cursor:help;
+  }
+  /* Structural caption, screen corner */
+  #caption{
+    position:fixed;z-index:2;right:14px;bottom:12px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(30,38,41,0.40);pointer-events:none;
+  }
+  @media (max-width:560px){
+    #island{left:50%;width:min(92vw,420px)}
+    #caption{font-size:9px;right:10px;bottom:10px}
+  }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<article id="island">
+  <div class="eyebrow">But doesn't it take two?</div>
+  <h1>A dance, or just a hand?</h1>
+  <p class="passage">A dance needs two dancers, both leading a little, both free. If one is just being moved &mdash; a puppet, a tool in a hand &mdash; there is no dance, only a hand. So: in your talk with the machine, is there a dance, or just a hand?</p>
+  <div class="credit" title="Background field and page by Claude (Anthropic). Text from the Strange Interlocutor plainspell series — structure and register Daniel Wymark, wording Daniel Wymark with Claude.">FIELD CLAUDE &middot; TEXT D. WYMARK + CLAUDE</div>
+</article>
+
+<div id="caption">A copy that fits, then flies off</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById("bg");
+  const island = document.getElementById("island");
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // --- WebGL setup with robust fallback ---
+  let gl = null;
+  try { gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl"); }
+  catch(e){ gl = null; }
+
+  function paintFallback(){
+    const c2d = canvas.getContext("2d");
+    if(c2d){ c2d.fillStyle="#E7EBEC"; c2d.fillRect(0,0,canvas.width,canvas.height); }
+  }
+  if(!gl){ console.error("WebGL unavailable; painting flat field."); paintFallback(); return; }
+
+  const VERT = `
+    attribute vec2 a_pos;
+    void main(){ gl_Position = vec4(a_pos,0.0,1.0); }`;
+
+  const FRAG = `
+    precision highp float;
+    uniform float u_time;
+    uniform vec2  u_resolution;
+    uniform vec4  u_island;   // center.xy, halfsize.xy (pixels, y-down origin top-left)
+
+    const vec3 FIELD = vec3(0.906,0.922,0.925); // #E7EBEC
+    const vec3 PAPER = vec3(0.961,0.973,0.973); // #F5F8F8
+    const vec3 TEAL  = vec3(0.180,0.376,0.400); // #2E6066
+    const vec3 CLAY  = vec3(0.761,0.369,0.235); // #C25E3C
+
+    // rounded-rect signed distance (px); neg inside
+    float sdRoundRect(vec2 p, vec2 c, vec2 h, float r){
+      vec2 d = abs(p - c) - h + r;
+      return min(max(d.x,d.y),0.0) + length(max(d,0.0)) - r;
+    }
+
+    // soft distance-to-curve band: returns 0..1, 1 on the line
+    float curveBand(float y, float fy, float w){
+      return smoothstep(w, 0.0, abs(y - fy));
+    }
+
+    void main(){
+      vec2 fc = gl_FragCoord.xy;
+      vec2 p  = vec2(fc.x, u_resolution.y - fc.y); // top-left origin
+      vec2 res = u_resolution;
+      float t = u_time;
+
+      // normalized horizontal coord centered on island, in [-~1,~1]
+      float cx = u_island.x;
+      float cy = u_island.y;
+      float span = res.x * 0.62;
+      float x = (p.x - cx) / span;           // 0 at kiss point
+      float yc = (p.y - cy);                 // px from island center vertically
+
+      // The TRUE curve (teal): a gentle analytic wave through the kiss point.
+      float trueY = sin(x*2.4) * span*0.34 + sin(x*1.1+0.6)*span*0.06;
+
+      // Breathing lens of agreement: order 1 -> 2 -> 3, widening/narrowing.
+      float order = 2.0 + 1.0*sin(t*0.18);   // ~1..3
+      // Polynomial-ish approximant: matches true curve near x=0, diverges by edges.
+      // taylor of sin: x - x^3/6 + x^5/120 ; truncate by 'order' softly.
+      float xx = x*2.4;
+      float approxN = xx;
+      approxN -= (xx*xx*xx)/6.0 * smoothstep(0.0,1.0, order-1.0);
+      approxN += (xx*xx*xx*xx*xx)/120.0 * smoothstep(0.0,2.0, order-1.0);
+      // runaway: clay copy flies off up-and-right beyond the lens
+      float runaway = (x>0.0 ? 1.0:0.0) * pow(max(x,0.0),3.0) * span*0.9;
+      float clayY = approxN * span*0.34 - runaway;
+
+      // agreement weight: 1 where curves kiss (near x=0), 0 at edges
+      float agree = exp(-pow(x/ (0.34+0.12*sin(t*0.18)), 2.0));
+
+      // line widths
+      float lw = 2.4;
+      float teal = curveBand(yc, trueY, lw);
+      float clay = curveBand(yc, clayY, lw);
+
+      // faint guide grid (very low contrast) for paper-eink texture
+      float g = 0.5 + 0.5*sin(p.x*0.018) ; // soft vertical ribbing
+      g *= 0.5 + 0.5*sin((p.y + 12.0*sin(t*0.10+p.x*0.004))*0.020);
+      float grid = smoothstep(0.86,1.0,g)*0.05;
+
+      // base field
+      vec3 col = FIELD;
+      col -= grid; // subtle darkening ribs
+
+      // draw true curve (teal), low-contrast away from island anyway
+      col = mix(col, TEAL, teal*0.85);
+      // draw approximant: teal-ish inside lens (merged), clay outside (runaway)
+      vec3 approxCol = mix(CLAY, TEAL, agree);
+      col = mix(col, approxCol, clay*0.85);
+
+      // --- READING MASK: calm emitted by the kiss band ---
+      // rounded-rect falloff around the island
+      float d = sdRoundRect(p, vec2(cx,cy), u_island.zw, 8.0);
+      float halo = max(u_island.z, u_island.w)*0.55;
+      float quiet = smoothstep(halo, -6.0, d); // 1 inside/near island, 0 far
+
+      // also damp amplitude along the kiss band horizontally
+      quiet = max(quiet, agree*smoothstep(span*0.46,0.0,abs(yc))*0.9);
+
+      // toward paper, and damp the curve contrast in the quiet zone
+      col = mix(col, PAPER, quiet*0.92);
+
+      gl_FragColor = vec4(col,1.0);
+    }`;
+
+  function compile(type, src){
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
+      console.error("Shader compile error:", gl.getShaderInfoLog(s));
+      throw new Error("shader");
+    }
+    return s;
+  }
+
+  let prog, locTime, locRes, locIsland;
+  try {
+    const vs = compile(gl.VERTEX_SHADER, VERT);
+    const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+    prog = gl.createProgram();
+    gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){
+      console.error("Program link error:", gl.getProgramInfoLog(prog));
+      throw new Error("link");
+    }
+    gl.useProgram(prog);
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(prog,"a_pos");
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+    locTime   = gl.getUniformLocation(prog,"u_time");
+    locRes    = gl.getUniformLocation(prog,"u_resolution");
+    locIsland = gl.getUniformLocation(prog,"u_island");
+  } catch(e){
+    console.error("WebGL init failed; painting flat field.", e);
+    paintFallback(); return;
+  }
+
+  let W=0,H=0,dpr=1;
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio||1, 2);
+    W = Math.floor(window.innerWidth  * dpr);
+    H = Math.floor(window.innerHeight * dpr);
+    canvas.width=W; canvas.height=H;
+    canvas.style.width=window.innerWidth+"px";
+    canvas.style.height=window.innerHeight+"px";
+    gl.viewport(0,0,W,H);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function islandUniform(){
+    const r = island.getBoundingClientRect();
+    return [ (r.left + r.width/2)*dpr, (r.top + r.height/2)*dpr,
+             (r.width/2)*dpr, (r.height/2)*dpr ];
+  }
+
+  const start = performance.now();
+  function frame(now){
+    let t = (now - start)/1000;
+    if(reduced) t = t*0.04; // extremely slow calm drift
+    gl.uniform1f(locTime, t);
+    gl.uniform2f(locRes, W, H);
+    const iu = islandUniform();
+    gl.uniform4f(locIsland, iu[0], iu[1], iu[2], iu[3]);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

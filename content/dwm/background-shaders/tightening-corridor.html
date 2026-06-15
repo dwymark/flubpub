@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nothing more and nothing less</title>
+<style>
+  :root{
+    --field:#EDEDEA; --ink:#21221F; --paper:#F8F8F4;
+    --wall:#BFC0BB; --gold:#A6822C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%;overflow:hidden;background:var(--field)}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink)}
+  #bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+
+  /* The reading island — dead center on the rail */
+  #island{
+    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+    z-index:2;width:clamp(280px,44ch,460px);max-width:calc(100vw - 40px);
+    background:rgba(248,248,244,0.90);
+    border:2px solid var(--ink);
+    border-radius:0;
+    box-shadow:6px 6px 0 rgba(33,34,31,0.28);
+    padding:clamp(20px,4.5vw,28px);
+  }
+  .eyebrow{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    text-transform:uppercase;letter-spacing:0.34em;font-size:11px;
+    color:var(--gold);font-weight:600;margin-bottom:0.85em;
+  }
+  #island h1{
+    font-size:clamp(20px,3.6vw,26px);line-height:1.2;font-weight:700;
+    letter-spacing:-0.01em;margin-bottom:0.7em;
+  }
+  #island p{
+    font-size:16px;line-height:1.5;max-width:42ch;color:var(--ink);
+  }
+  .credit{
+    margin-top:1.4em;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-size:10px;letter-spacing:0.12em;text-transform:uppercase;
+    color:rgba(33,34,31,0.55);cursor:help;
+  }
+
+  /* Tiny structural caption in a corner */
+  #caption{
+    position:fixed;right:14px;bottom:12px;z-index:1;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-size:10px;letter-spacing:0.16em;text-transform:uppercase;
+    color:rgba(33,34,31,0.36);user-select:none;pointer-events:none;
+  }
+  @media (max-width:420px){
+    .eyebrow{letter-spacing:0.26em}
+    #caption{right:10px;bottom:9px;font-size:9px}
+  }
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<article id="island">
+  <div class="eyebrow">The Answer</div>
+  <h1>Nothing more and nothing less</h1>
+  <p>The solution is a change of perspective. Rather than asking who we spoke with, ask what we just did. What am I doing when I chat with an LLM? The answer is at once entirely new and nothing new at all. The answer is conversation itself, nothing more and nothing less.</p>
+  <div class="credit" title="Background field and page by Claude (Anthropic). Essay text by Daniel Wymark, from 'Who were you talking to?' (Strange Interlocutor).">Field Claude &middot; Text D. Wymark</div>
+</article>
+
+<div id="caption">The band closes on a single value</div>
+
+<script>
+(function(){
+  "use strict";
+  var canvas = document.getElementById("bg");
+  var island = document.getElementById("island");
+  var FIELD = [0.929,0.929,0.917]; // #EDEDEA
+
+  function fail(msg, log){
+    if(log) console.error("[tightening-corridor]", msg, log);
+    else console.error("[tightening-corridor]", msg);
+    var g = canvas.getContext("2d");
+    if(g){
+      g.fillStyle = "#EDEDEA";
+      g.fillRect(0,0,canvas.width,canvas.height);
+    }
+  }
+
+  var gl = null;
+  try { gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl"); }
+  catch(e){ gl = null; }
+  if(!gl){ fail("WebGL context creation failed"); return; }
+
+  var VS = [
+    "attribute vec2 a_pos;",
+    "void main(){ gl_Position = vec4(a_pos,0.0,1.0); }"
+  ].join("\n");
+
+  var FS = [
+    "precision highp float;",
+    "uniform float u_time;",
+    "uniform vec2  u_resolution;",
+    "uniform vec4  u_island;",      // center.xy, half-size.xy (px)
+    "",
+    "const vec3 FIELD = vec3(0.929,0.929,0.917);", // #EDEDEA
+    "const vec3 PAPER = vec3(0.973,0.973,0.957);", // #F8F8F4
+    "const vec3 WALL  = vec3(0.749,0.753,0.733);", // #BFC0BB
+    "const vec3 GOLD  = vec3(0.651,0.510,0.173);", // #A6822C
+    "",
+    // signed distance to a rounded rectangle (p relative to center)
+    "float sdRoundRect(vec2 p, vec2 b, float r){",
+    "  vec2 q = abs(p) - b + r;",
+    "  return min(max(q.x,q.y),0.0) + length(max(q,0.0)) - r;",
+    "}",
+    "",
+    "void main(){",
+    "  vec2 frag = gl_FragCoord.xy;",
+    "  float minside = min(u_resolution.x,u_resolution.y);",
+    "  // normalized vertical coord centered on the rail (the rail = screen mid)",
+    "  float y0 = u_resolution.y * 0.5;",
+    "  float dy = (frag.y - y0) / minside;",  // signed, in min-side units
+    "",
+    "  // --- the tightening corridor: half-width breathes toward zero ---",
+    "  float phase = u_time * 0.18;",
+    "  float squeeze = 0.5 - 0.5*cos(phase);",        // 0..1, smooth in/out
+    "  squeeze = pow(squeeze, 1.4);",                 // dwell more when closed
+    "  float wMax = 0.235;",                          // widest gap
+    "  float wMin = 0.018;",                          // tightest gap (epsilon)
+    "  float halfGap = mix(wMax, wMin, squeeze);",
+    "",
+    "  float ad = abs(dy);",
+    "",
+    "  // --- envelope walls: soft grey bands sitting at +/- halfGap ---",
+    "  float wallThick = mix(0.030, 0.012, squeeze);",
+    "  float wall = smoothstep(wallThick, 0.0, abs(ad - halfGap));",
+    "  // fade the whole corridor outward so the field stays empty",
+    "  float reach = halfGap + wallThick*3.0 + 0.02;",
+    "  float corridorMask = smoothstep(reach, halfGap*0.4, ad);",
+    "  wall *= corridorMask;",
+    "",
+    "  // --- the target rail: clean muted-gold horizontal line ---",
+    "  float railW = 0.0016 + 0.0009*u_resolution.y/minside;",
+    "  float rail = smoothstep(railW*2.2, 0.0, ad);",
+    "  // a faint gold glow that brightens as the trap closes",
+    "  float glow = smoothstep(halfGap, 0.0, ad) * (0.10 + 0.22*squeeze);",
+    "",
+    "  // --- compose the field ---",
+    "  vec3 col = FIELD;",
+    "  col = mix(col, WALL, wall*0.55);",
+    "  col = mix(col, GOLD, glow);",
+    "  col = mix(col, GOLD, rail);",
+    "",
+    "  // --- reading mask: pull toward paper + damp amplitude near island ---",
+    "  vec2 ip = frag - u_island.xy;",
+    "  float r = min(u_island.z, u_island.w) * 0.35;",
+    "  float dRect = sdRoundRect(ip, u_island.zw, r);",
+    "  float feather = minside * 0.16;",
+    "  float calm = 1.0 - smoothstep(0.0, feather, dRect);", // 1 inside -> 0 outside
+    "  // damp the animated field toward paper in the calm zone",
+    "  col = mix(col, mix(col, PAPER, 0.6), calm);",
+    "",
+    "  gl_FragColor = vec4(col, 1.0);",
+    "}"
+  ].join("\n");
+
+  function compile(type, src){
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
+      var log = gl.getShaderInfoLog(s);
+      gl.deleteShader(s);
+      throw new Error(log || "shader compile error");
+    }
+    return s;
+  }
+
+  var prog;
+  try{
+    var vs = compile(gl.VERTEX_SHADER, VS);
+    var fs = compile(gl.FRAGMENT_SHADER, FS);
+    prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){
+      throw new Error(gl.getProgramInfoLog(prog) || "link error");
+    }
+  }catch(err){
+    fail("shader build failed", err.message);
+    return;
+  }
+
+  gl.useProgram(prog);
+
+  // full-screen triangle
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  var loc = gl.getAttribLocation(prog, "a_pos");
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+  var uTime = gl.getUniformLocation(prog, "u_time");
+  var uRes  = gl.getUniformLocation(prog, "u_resolution");
+  var uIsl  = gl.getUniformLocation(prog, "u_island");
+
+  var dpr = 1;
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = Math.floor(innerWidth * dpr);
+    var h = Math.floor(innerHeight * dpr);
+    if(canvas.width !== w || canvas.height !== h){
+      canvas.width = w; canvas.height = h;
+    }
+    canvas.style.width = innerWidth + "px";
+    canvas.style.height = innerHeight + "px";
+    gl.viewport(0,0,w,h);
+  }
+
+  // island rect in canvas pixel space (origin bottom-left for GL)
+  function islandUniform(){
+    var r = island.getBoundingClientRect();
+    var cx = (r.left + r.width/2) * dpr;
+    var cyTop = (r.top + r.height/2) * dpr;
+    var cy = canvas.height - cyTop;            // flip Y
+    var hw = (r.width/2 + 8) * dpr;
+    var hh = (r.height/2 + 8) * dpr;
+    gl.uniform4f(uIsl, cx, cy, hw, hh);
+  }
+
+  var reduce = false;
+  try{ reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
+
+  resize();
+  window.addEventListener("resize", resize);
+
+  var start = performance.now();
+  function frame(now){
+    var t = (now - start) / 1000;
+    if(reduce) t *= 0.04;            // near-frozen calm drift
+    gl.uniform1f(uTime, t);
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    islandUniform();
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

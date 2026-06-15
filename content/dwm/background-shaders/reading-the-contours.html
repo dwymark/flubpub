@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A staying-on-target thing</title>
+<style>
+  :root{
+    --field:#E7EAE1; --ink:#20251E; --paper:#F4F7EE;
+    --ring:#6E8A66; --accent:#D8462B;
+    --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--field);color:var(--ink)}
+  body{font-family:var(--sans)}
+  #bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+  .caption{
+    position:fixed;left:12px;bottom:10px;z-index:2;
+    font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+    text-transform:uppercase;color:#5d7256;user-select:none;pointer-events:none;
+  }
+  .island{
+    position:fixed;left:58%;top:50%;transform:translate(-50%,-50%);
+    z-index:3;width:min(90vw,clamp(280px,44ch,460px));
+    background:rgba(244,247,238,.90);border:2px solid var(--ink);
+    border-radius:0;box-shadow:6px 6px 0 rgba(32,37,30,.30);
+    padding:clamp(20px,4.4vw,28px);
+  }
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:#3d4a37;margin-bottom:.55rem;
+  }
+  .island h1{
+    font-size:clamp(1.45rem,5vw,1.9rem);line-height:1.12;
+    font-weight:700;letter-spacing:-.01em;margin-bottom:.7rem;color:var(--ink);
+  }
+  .passage{
+    font-size:16px;line-height:1.5;max-width:42ch;color:var(--ink);
+  }
+  .credit{
+    margin-top:.95rem;padding-top:.6rem;border-top:1px solid rgba(32,37,30,.18);
+    font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;color:#5d7256;cursor:help;
+  }
+  @media (max-height:560px){
+    .island{padding:16px}
+    .passage{font-size:14px}
+  }
+  @media (max-width:600px){
+    .island{left:50%;width:min(92vw,440px)}
+    .passage{max-width:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="caption">A LEVEL LINE IS A PLACE OF NO CHANGE</div>
+<article class="island">
+  <div class="eyebrow">THE WORM THAT KNEW TWO ROADS</div>
+  <h1>A staying-on-target thing</h1>
+  <p class="passage">The plan does not live in a brain. It lives in the whole body, smeared across the cells, a goal the tissue keeps trying to reach. Thinking, he says, is not a brain thing. It is a staying-on-target thing. Things that hold a shape against the world are already a little bit minded.</p>
+  <div class="credit" title="Background field and page by Claude (Anthropic). Text by Daniel Wymark, from the Strange Interlocutor plainspell series (night-walk anchor, verbatim).">FIELD CLAUDE · TEXT D. WYMARK</div>
+</article>
+
+<script>
+(function(){
+  var canvas=document.getElementById("bg");
+  function paintFlat(){
+    var c=canvas.getContext("2d");
+    if(c){c.fillStyle="#E7EAE1";c.fillRect(0,0,canvas.width,canvas.height);}
+  }
+  var gl=null;
+  try{ gl=canvas.getContext("webgl")||canvas.getContext("experimental-webgl"); }
+  catch(e){ gl=null; }
+  if(!gl){ console.error("WebGL unavailable; flat fallback."); paintFlat(); return; }
+
+  var VERT="attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
+
+  var FRAG=[
+    "precision highp float;",
+    "uniform float u_time;uniform vec2 u_resolution;uniform vec4 u_island;",
+    "const vec3 FIELD=vec3(0.906,0.918,0.882);",  // #E7EAE1
+    "const vec3 PAPER=vec3(0.957,0.969,0.933);",  // #F4F7EE
+    "const vec3 RING =vec3(0.431,0.541,0.400);",  // #6E8A66
+    "const vec3 ACC  =vec3(0.847,0.275,0.169);",  // #D8462B
+    // ---- value hash + smooth value noise ----
+    "float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}",
+    "float vnoise(vec2 x){vec2 i=floor(x);vec2 f=fract(x);",
+      "vec2 u=f*f*(3.0-2.0*f);",
+      "float a=hash(i),b=hash(i+vec2(1.0,0.0));",
+      "float c=hash(i+vec2(0.0,1.0)),d=hash(i+vec2(1.0,1.0));",
+      "return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}",
+    // ---- fbm height field (drifts slowly in time) ----
+    "float height(vec2 q){",
+      "float t=u_time*0.030;",
+      "vec2 d=vec2(t*0.6,-t*0.4);",
+      "float h=0.0,amp=0.58,frq=1.0;",
+      "for(int i=0;i<5;i++){",
+        "h+=amp*vnoise(q*frq+d*frq);",
+        "frq*=2.02;amp*=0.5;}",
+      "return h;}",
+    // ---- rounded-rect signed distance (px space) ----
+    "float rrect(vec2 q,vec2 c,vec2 h,float r){",
+      "vec2 d=abs(q-c)-h+vec2(r);",
+      "return length(max(d,0.0))+min(max(d.x,d.y),0.0)-r;}",
+    "void main(){",
+      "vec2 fc=gl_FragCoord.xy;",
+      "float asp=u_resolution.x/u_resolution.y;",
+      "vec2 uv=fc/u_resolution.xy;",            // 0..1, y up
+      "vec2 q=vec2((uv.x-0.5)*asp,uv.y-0.5)*3.2;",// world coords, aspect-correct
+      // ---- reading mask: calm shelf emitted by the field ----
+      "vec2 ic=u_island.xy;vec2 ih=u_island.zw;",
+      "float pad=u_resolution.y*0.22;",          // size of the parting halo
+      "float sd=rrect(fc,ic,ih*1.06,min(ih.x,ih.y)*0.14);",
+      "float calm=1.0-smoothstep(0.0,pad,sd);",  // 1 in/near island, 0 far
+      "calm=smoothstep(0.0,1.0,calm);",
+      // the field is biased toward a constant level inside the calm zone:
+      // a flat shelf => no contours can cross it, so the rings part.
+      "float SHELF=1.0;",                        // the level the shelf rests on
+      "float hf=height(q);",
+      "float h=mix(hf,SHELF,calm);",
+      // gradient by finite differences -> slope grades the ring values
+      "float e=2.6/u_resolution.y;",             // sample step in uv
+      "float hx=mix(height(vec2((uv.x+e-0.5)*asp,uv.y-0.5)*3.2),SHELF,calm);",
+      "float hy=mix(height(vec2((uv.x-0.5)*asp,uv.y+e-0.5)*3.2),SHELF,calm);",
+      "vec2 grad=vec2(hx-h,hy-h)/e;",
+      "float slope=length(grad);",
+      // ---- contour rings: iso-levels of h via fract, antialiased with fwidth ----
+      "float LV=11.0;",                          // contour density
+      "float c=h*LV;",
+      "float f=abs(fract(c)-0.5);",              // 0 at a contour line
+      "float aa=clamp(slope*LV/u_resolution.y,0.0015,0.03);", // line width w/o derivatives (WebGL1-safe)
+      "float ring=1.0-smoothstep(0.0,aa*1.6+0.012,f);",
+      // value-grade the rings by slope so they read in grayscale, never hue-only:
+      // steep slope -> darker/stronger ring; flat -> faint.
+      "float vgrade=0.45+0.55*clamp(slope*0.5,0.0,1.0);",  // always-visible base + slope emphasis
+      "vec3 ringDark=vec3(0.16,0.21,0.14);",               // deep green-ink, real value contrast
+      "vec3 ringCol=mix(RING,ringDark,clamp(slope*0.7,0.0,1.0));",
+      // ---- compose the low-contrast green field ----
+      "vec3 col=FIELD;",
+      "col=mix(col,FIELD*0.975,0.5+0.5*sin(h*6.2832*2.0));", // faint banding wash
+      "col=mix(col,ringCol,ring*vgrade*(1.0-calm*0.85));",   // rings part at the calm shelf
+      // ---- the single vermilion dart: a particle riding steepest descent ----
+      // it advances down -gradient over time, wrapping; trace a short comet.
+      "vec2 dartUV;",
+      "{",
+        "float ph=fract(u_time*0.045);",         // 0..1 march parameter
+        "vec2 pos=vec2(0.22,0.86);",             // start high on the slope
+        "for(int k=0;k<26;k++){",
+          "float kk=float(k)/26.0;",
+          "if(kk>ph)break;",
+          "vec2 wq=vec2((pos.x-0.5)*asp,pos.y-0.5)*3.2;",
+          "float hh=height(wq);",
+          "float gx=height(wq+vec2(0.02,0.0))-hh;",
+          "float gy=height(wq+vec2(0.0,0.02))-hh;",
+          "vec2 g=vec2(gx,gy);",
+          "g/=max(length(g),1e-3);",
+          "pos-=g*0.016;",                       // step downhill
+        "}",
+        "dartUV=pos;",
+      "}",
+      "float dd=length((uv-dartUV)*vec2(asp,1.0));",
+      "float dart=exp(-dd*dd*650.0);",           // crisp dot, clearly visible
+      "float glow=exp(-dd*dd*80.0);",            // soft halo
+      "col=mix(col,ACC,clamp(dart+glow*0.5,0.0,1.0)*(1.0-calm*0.9));",
+      // ---- apply the calm reading shelf: toward paper, damp amplitude ----
+      "float toPaper=smoothstep(0.0,1.0,calm);",
+      "col=mix(col,PAPER,toPaper*0.86);",
+      "col=mix(col,mix(col,FIELD,0.5),calm*0.35);",
+      // gentle top vignette so the field settles into the page bg
+      "col=mix(col,FIELD,smoothstep(0.86,1.0,uv.y)*0.22);",
+      "gl_FragColor=vec4(col,1.0);",
+    "}"
+  ].join("\n");
+
+  function compile(type,src){
+    var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){
+      console.error("Shader compile failed:",gl.getShaderInfoLog(s));
+      gl.deleteShader(s);return null;
+    }
+    return s;
+  }
+  var vs=compile(gl.VERTEX_SHADER,VERT),fs=compile(gl.FRAGMENT_SHADER,FRAG);
+  if(!vs||!fs){ paintFlat(); return; }
+  var prog=gl.createProgram();
+  gl.attachShader(prog,vs);gl.attachShader(prog,fs);gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){
+    console.error("Program link failed:",gl.getProgramInfoLog(prog));
+    paintFlat(); return;
+  }
+  gl.useProgram(prog);
+
+  var buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 3,-1, -1,3]),gl.STATIC_DRAW);
+  var loc=gl.getAttribLocation(prog,"p");
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+
+  var uTime=gl.getUniformLocation(prog,"u_time");
+  var uRes=gl.getUniformLocation(prog,"u_resolution");
+  var uIsland=gl.getUniformLocation(prog,"u_island");
+
+  var dpr=1,W=0,H=0;
+  function resize(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    W=Math.floor(innerWidth*dpr);H=Math.floor(innerHeight*dpr);
+    canvas.width=W;canvas.height=H;
+    canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px";
+    gl.viewport(0,0,W,H);
+  }
+  window.addEventListener("resize",resize);
+  resize();
+
+  var islandEl=document.querySelector(".island");
+  function islandUniform(){
+    var r=islandEl.getBoundingClientRect();
+    var cx=(r.left+r.width/2)*dpr;
+    var cy=H-(r.top+r.height/2)*dpr;          // gl_FragCoord y is bottom-up
+    gl.uniform4f(uIsland,cx,cy,(r.width/2)*dpr,(r.height/2)*dpr);
+  }
+
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var start=performance.now();
+  function frame(now){
+    var t=(now-start)/1000;
+    if(reduce) t=t*0.04;                        // hold near zero, calm drift
+    gl.uniform1f(uTime,t);
+    gl.uniform2f(uRes,W,H);
+    islandUniform();
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

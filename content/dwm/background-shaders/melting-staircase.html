@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Not the reply. The conversation.</title>
+<style>
+  :root{
+    --field:#E6E9EE; --ink:#1E232B; --paper:#F3F6FA;
+    --block:#98A2B0; --accent:#C77A4A;
+    --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--field);color:var(--ink)}
+  body{font-family:var(--sans)}
+  #bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+  .caption{
+    position:fixed;right:12px;top:10px;z-index:2;
+    font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+    text-transform:uppercase;color:#8a93a2;user-select:none;pointer-events:none;
+  }
+  .island{
+    position:fixed;left:max(16px,6vw);bottom:8vh;z-index:3;
+    width:min(88vw,clamp(280px,44ch,460px));
+    background:rgba(243,246,250,.90);border:2px solid var(--ink);
+    border-radius:0;box-shadow:6px 6px 0 rgba(30,35,43,.30);
+    padding:clamp(20px,4.4vw,28px);
+  }
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:#5b6678;margin-bottom:.55rem;
+  }
+  .island h1{
+    font-size:clamp(1.4rem,4.8vw,1.85rem);line-height:1.14;
+    font-weight:700;letter-spacing:-.01em;margin-bottom:.7rem;color:var(--ink);
+  }
+  .passage{font-size:16px;line-height:1.5;max-width:42ch;color:var(--ink)}
+  .credit{
+    margin-top:.95rem;padding-top:.6rem;border-top:1px solid rgba(30,35,43,.18);
+    font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;color:#6c7686;cursor:help;
+  }
+  @media (max-height:600px){
+    .island{bottom:5vh;padding:16px}
+    .passage{font-size:14px}
+  }
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="caption">BLOCKS MELT INTO THE EXACT CURVE</div>
+<article class="island">
+  <div class="eyebrow">THE UNIT TOO SMALL TO HOLD A MIND</div>
+  <h1>Not the reply. The conversation.</h1>
+  <p class="passage">So step back and pick a bigger unit. Not the reply. The conversation. The whole exchange holds a target — it keeps trying to stay coherent, to make sense as it goes. The conversation is what stays on target. The conversation is where the mind-like thing lives.</p>
+  <div class="credit" title="Background field and page by Claude (Anthropic). Text from the Strange Interlocutor plainspell series — structure and register Daniel Wymark, wording Daniel Wymark with Claude.">FIELD CLAUDE · TEXT D. WYMARK + CLAUDE</div>
+</article>
+
+<script>
+(function(){
+  var canvas=document.getElementById("bg");
+  function paintFlat(){
+    var c=canvas.getContext("2d");
+    if(c){c.fillStyle="#E6E9EE";c.fillRect(0,0,canvas.width,canvas.height);}
+  }
+  var gl=null;
+  try{ gl=canvas.getContext("webgl")||canvas.getContext("experimental-webgl"); }
+  catch(e){ gl=null; }
+  if(!gl){ console.error("WebGL unavailable; flat fallback."); paintFlat(); return; }
+
+  var VERT="attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
+
+  var FRAG=[
+    "precision highp float;",
+    "uniform float u_time;uniform vec2 u_resolution;uniform vec4 u_island;",
+    "const vec3 FIELD=vec3(0.902,0.914,0.933);",  // #E6E9EE
+    "const vec3 PAPER=vec3(0.953,0.965,0.980);",  // #F3F6FA
+    "const vec3 BLOCK=vec3(0.596,0.635,0.690);",  // #98A2B0
+    "const vec3 ACCENT=vec3(0.780,0.478,0.290);", // #C77A4A
+    // smooth integral curve f(x), x normalized 0..1, gentle slow drift
+    "float curve(float x){",
+      "float t=u_time*0.04;",
+      "float y=0.42;",
+      "y+=0.16*sin(x*3.0+0.6+t*0.7);",
+      "y+=0.07*sin(x*6.3-0.4-t*0.5);",
+      "return clamp(y,0.10,0.78);}",
+    // rounded-rect signed distance in px space (neg inside)
+    "float rrect(vec2 q,vec2 c,vec2 h,float r){",
+      "vec2 d=abs(q-c)-h+vec2(r);",
+      "return length(max(d,0.0))+min(max(d.x,d.y),0.0)-r;}",
+    "void main(){",
+      "vec2 fc=gl_FragCoord.xy;",
+      "vec2 uv=fc/u_resolution.xy;",                 // 0..1, y up
+      // ---- calm source: partition coarseness keyed to island proximity ----
+      "vec2 ic=u_island.xy;vec2 ih=u_island.zw;",
+      "float r=min(ih.x,ih.y)*0.18;",
+      "float sd=rrect(fc,ic,ih,r);",
+      "float falloff=clamp(sd/max(u_resolution.y*0.20,1.0),0.0,1.0);",
+      "float calm=1.0-smoothstep(0.0,1.0,falloff);", // 1 near/in island
+      // block count cycles low->high->low; near the island it is forced coarse
+      "float cyc=0.5-0.5*cos(u_time*0.18);",         // 0..1 breathing
+      "float nFar=mix(7.0,46.0,cyc);",               // partition away from text
+      "float nNear=6.0;",                            // coarse wide treads by text
+      "float N=mix(nFar,nNear,calm);",
+      // ---- staircase: each cell's flat top sits at the curve's cell-center ----
+      "float cell=uv.x*N;",
+      "float idx=floor(cell);",
+      "float xc=(idx+0.5)/N;",                       // cell center in 0..1
+      "float top=curve(xc);",                        // flat shelf height (Riemann)
+      "float exact=curve(uv.x);",                    // the smooth integral curve
+      "float baseline=0.06;",
+      // soft fill under the staircase tops (the discrete sum / area)
+      "float inBlock=smoothstep(0.006,-0.006,uv.y-top)*step(baseline,uv.y);",
+      // vertical risers between cells (the jagged step edges) — fade as N grows
+      "float fpos=fract(cell);",
+      "float edge=smoothstep(0.5/N,0.0,abs(fpos-0.5)-0.5+0.5/N);", // near cell wall
+      "float jag=1.0-smoothstep(18.0,40.0,N);",      // staircase roughness melts away
+      // ---- the warm exact curve the blocks melt onto ----
+      "float lw=0.0016+0.0006*sin(u_time*0.15);",
+      "float line=smoothstep(lw,0.0,abs(uv.y-exact));",
+      // value-stepped blue-grey: alternate cells a notch in value
+      "float vstep=mix(0.94,1.06,mod(idx,2.0));",
+      "vec3 blk=BLOCK*vstep;",
+      // compose
+      "vec3 col=FIELD;",
+      "col=mix(col,blk,inBlock*0.55);",                       // filled Riemann sum
+      "col=mix(col,blk*0.82,inBlock*edge*0.45*jag);",         // riser shading
+      "col=mix(col,ACCENT,line*0.85);",                       // the integral curve
+      // baseline rule
+      "col=mix(col,BLOCK*0.7,smoothstep(0.004,0.0,abs(uv.y-baseline))*0.5);",
+      // ---- reading mask: melt toward PAPER and damp amplitude over the text ----
+      "col=mix(col,PAPER,calm*0.82);",
+      "col=mix(col,mix(col,FIELD,0.5),calm*0.35);",           // damp residual contrast
+      // gentle top vignette toward field
+      "col=mix(col,FIELD,smoothstep(0.86,1.0,uv.y)*0.20);",
+      "gl_FragColor=vec4(col,1.0);",
+    "}"
+  ].join("\n");
+
+  function compile(type,src){
+    var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){
+      console.error("Shader compile failed:",gl.getShaderInfoLog(s));
+      gl.deleteShader(s);return null;
+    }
+    return s;
+  }
+  var vs=compile(gl.VERTEX_SHADER,VERT),fs=compile(gl.FRAGMENT_SHADER,FRAG);
+  if(!vs||!fs){ paintFlat(); return; }
+  var prog=gl.createProgram();
+  gl.attachShader(prog,vs);gl.attachShader(prog,fs);gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){
+    console.error("Program link failed:",gl.getProgramInfoLog(prog));
+    paintFlat(); return;
+  }
+  gl.useProgram(prog);
+
+  var buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 3,-1, -1,3]),gl.STATIC_DRAW);
+  var loc=gl.getAttribLocation(prog,"p");
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+
+  var uTime=gl.getUniformLocation(prog,"u_time");
+  var uRes=gl.getUniformLocation(prog,"u_resolution");
+  var uIsland=gl.getUniformLocation(prog,"u_island");
+
+  var dpr=1,W=0,H=0;
+  function resize(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    W=Math.floor(innerWidth*dpr);H=Math.floor(innerHeight*dpr);
+    canvas.width=W;canvas.height=H;
+    canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px";
+    gl.viewport(0,0,W,H);
+  }
+  window.addEventListener("resize",resize);
+  resize();
+
+  var islandEl=document.querySelector(".island");
+  function islandUniform(){
+    var rct=islandEl.getBoundingClientRect();
+    var cx=(rct.left+rct.width/2)*dpr;
+    var cyTop=(rct.top+rct.height/2)*dpr;
+    var cy=H-cyTop;                                  // gl_FragCoord y is bottom-up
+    var hw=(rct.width/2)*dpr, hh=(rct.height/2)*dpr;
+    gl.uniform4f(uIsland,cx,cy,hw,hh);
+  }
+
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var start=performance.now();
+  function frame(now){
+    var t=(now-start)/1000;
+    if(reduce) t=t*0.04;                             // hold near zero, drift slowly
+    gl.uniform1f(uTime,t);
+    gl.uniform2f(uRes,W,H);
+    islandUniform();
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

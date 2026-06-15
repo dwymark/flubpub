@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memory is everywhere</title>
+<style>
+  :root{
+    --field:#EFE7D6; --ink:#2A2317; --paper:#FAF5EA;
+    --accentA:#C69A3E; --accentB:#7A5A22;
+    --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--field);color:var(--ink)}
+  body{font-family:var(--sans)}
+  #bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+  .caption{
+    position:fixed;left:12px;bottom:10px;z-index:2;
+    font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+    text-transform:uppercase;color:#8a7c5e;user-select:none;pointer-events:none;
+  }
+  .island{
+    position:fixed;left:50%;top:64%;transform:translate(-50%,-50%);
+    z-index:3;width:min(90vw,clamp(280px,44ch,460px));
+    background:rgba(250,245,234,.90);border:2px solid var(--ink);
+    border-radius:0;box-shadow:6px 6px 0 rgba(42,35,23,.32);
+    padding:clamp(20px,4.4vw,28px);
+  }
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--accentB);margin-bottom:.55rem;
+  }
+  .island h1{
+    font-size:clamp(1.45rem,5vw,1.9rem);line-height:1.12;
+    font-weight:700;letter-spacing:-.01em;margin-bottom:.7rem;color:var(--ink);
+  }
+  .passage{
+    font-size:16px;line-height:1.5;max-width:42ch;color:var(--ink);
+  }
+  .credit{
+    margin-top:.95rem;padding-top:.6rem;border-top:1px solid rgba(42,35,23,.18);
+    font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;color:#7d7053;cursor:help;
+  }
+  @media (max-height:560px){
+    .island{top:60%;padding:16px}
+    .passage{font-size:14px}
+  }
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="caption">AREA UNDER A RATE BECOMES HEIGHT</div>
+<article class="island">
+  <div class="eyebrow">MEMORY WITHOUT A BRAIN</div>
+  <h1>Memory is everywhere</h1>
+  <p class="passage">Who are we but our memories and our dispositions? Memory is key to who we are. Naturally, this suggests that memory always belongs to someone. This is only a sliver of the truth. Memory is absolutely everywhere, once you know how to recognise it.</p>
+  <div class="credit" title="Background field and page by Claude (Anthropic). Essay text by Daniel Wymark, from 'Memory without a brain' (Strange Interlocutor).">FIELD CLAUDE · TEXT D. WYMARK</div>
+</article>
+
+<script>
+(function(){
+  var canvas=document.getElementById("bg");
+  var FIELD=[0.937,0.906,0.839]; // #EFE7D6
+  function paintFlat(){
+    var c=canvas.getContext("2d");
+    if(c){c.fillStyle="#EFE7D6";c.fillRect(0,0,canvas.width,canvas.height);}
+  }
+  var gl=null;
+  try{ gl=canvas.getContext("webgl")||canvas.getContext("experimental-webgl"); }
+  catch(e){ gl=null; }
+  if(!gl){ console.error("WebGL unavailable; flat fallback."); paintFlat(); return; }
+
+  var VERT=
+    "attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
+
+  var FRAG=[
+    "precision highp float;",
+    "uniform float u_time;uniform vec2 u_resolution;uniform vec4 u_island;",
+    // palette
+    "const vec3 FIELD=vec3(0.937,0.906,0.839);", // #EFE7D6
+    "const vec3 PAPER=vec3(0.980,0.961,0.918);", // #FAF5EA
+    "const vec3 OCHRE=vec3(0.776,0.604,0.243);", // #C69A3E
+    "const vec3 AMBER=vec3(0.478,0.353,0.133);", // #7A5A22
+    "float hash(float n){return fract(sin(n)*43758.5453123);}",
+    "float vnoise(float x){float i=floor(x);float f=fract(x);",
+      "float u=f*f*(3.0-2.0*f);",
+      "return mix(hash(i),hash(i+1.0),u);}",
+    // smooth rate curve f(x) over normalized x in [0,1], drifting in time
+    "float rate(float x){",
+      "float t=u_time*0.05;",
+      "float a=0.50;",
+      "a+=0.20*sin(x*4.2+t*1.3);",
+      "a+=0.12*sin(x*9.1-t*0.8+1.7);",
+      "a+=0.10*(vnoise(x*5.0+t)-0.5);",
+      "return clamp(a,0.06,0.94);}",
+    // numeric integral of rate from 0..x (running total)
+    "float integral(float x){",
+      "float s=0.0;const int N=40;",
+      "for(int i=0;i<N;i++){",
+        "float fi=(float(i)+0.5)/float(N);",
+        "if(fi>x)break;",
+        "s+=rate(fi);}",
+      "return s/float(N);}",
+    // rounded-rect signed distance (px space). returns dist outside, neg inside
+    "float rrect(vec2 q,vec2 c,vec2 h,float r){",
+      "vec2 d=abs(q-c)-h+vec2(r);",
+      "return length(max(d,0.0))+min(max(d.x,d.y),0.0)-r;}",
+    "void main(){",
+      "vec2 fc=gl_FragCoord.xy;",
+      "vec2 uv=fc/u_resolution.xy;", // 0..1, y up
+      "float curveY=0.34+0.30*rate(uv.x);", // baseline-ish band in upper field
+      "float baseline=0.30;",
+      // accumulated fill depth (deepens left->right with running total)
+      "float total=integral(uv.x);",
+      "float fillTop=baseline+ (curveY-baseline);", // top of fill = the rate curve
+      // is this fragment below the curve (in the integral region)?
+      "float below=smoothstep(0.012,-0.012,uv.y-fillTop);",
+      // low-freq wash that deepens with accumulated area
+      "float depth=clamp(total*1.15+0.10,0.0,1.0);",
+      "float washAmt=below*(0.10+0.16*depth);",
+      // the rate curve line itself (thin deep-amber)
+      "float lineW=0.0016+0.0010*sin(u_time*0.2);",
+      "float line=smoothstep(lineW,0.0,abs(uv.y-fillTop));",
+      // running-total meter riding up the right edge (waterline)
+      "float meter=smoothstep(0.006,0.0,abs(uv.x-0.985))*step(uv.y, baseline+total*0.62);",
+      // compose base field
+      "vec3 col=FIELD;",
+      "col=mix(col,OCHRE,washAmt);",                 // integral wash
+      "col=mix(col,FIELD*0.985,below*0.05*depth);",   // subtle deepening
+      "col=mix(col,AMBER,line*0.65);",                // rate curve line
+      "col=mix(col,AMBER,meter*0.35);",               // edge meter
+      // ---- reading mask: calm island emitted by the math ----
+      "vec2 ic=u_island.xy;vec2 ih=u_island.zw;",
+      "float r=min(ih.x,ih.y)*0.18;",
+      "float sd=rrect(fc,ic,ih,r);",                  // px-space distance
+      "float falloff=clamp(sd/max(u_resolution.y*0.16,1.0),0.0,1.0);",
+      "float calm=1.0-smoothstep(0.0,1.0,falloff);",  // 1 near/in island
+      // toward PAPER and damp amplitude where text sits
+      "col=mix(col,PAPER,calm*0.85);",
+      "col=mix(col,mix(col,FIELD,0.5),calm*0.4);",    // damp residual contrast
+      // gentle vignette toward field at very top
+      "col=mix(col,FIELD,smoothstep(0.82,1.0,uv.y)*0.25);",
+      "gl_FragColor=vec4(col,1.0);",
+    "}"
+  ].join("\n");
+
+  function compile(type,src){
+    var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){
+      console.error("Shader compile failed:",gl.getShaderInfoLog(s));
+      gl.deleteShader(s);return null;
+    }
+    return s;
+  }
+  var vs=compile(gl.VERTEX_SHADER,VERT),fs=compile(gl.FRAGMENT_SHADER,FRAG);
+  if(!vs||!fs){ paintFlat(); return; }
+  var prog=gl.createProgram();
+  gl.attachShader(prog,vs);gl.attachShader(prog,fs);gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){
+    console.error("Program link failed:",gl.getProgramInfoLog(prog));
+    paintFlat(); return;
+  }
+  gl.useProgram(prog);
+
+  var buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  // full-screen triangle
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 3,-1, -1,3]),gl.STATIC_DRAW);
+  var loc=gl.getAttribLocation(prog,"p");
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+
+  var uTime=gl.getUniformLocation(prog,"u_time");
+  var uRes=gl.getUniformLocation(prog,"u_resolution");
+  var uIsland=gl.getUniformLocation(prog,"u_island");
+
+  var dpr=1,W=0,H=0;
+  function resize(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    W=Math.floor(innerWidth*dpr);H=Math.floor(innerHeight*dpr);
+    canvas.width=W;canvas.height=H;
+    canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px";
+    gl.viewport(0,0,W,H);
+  }
+  window.addEventListener("resize",resize);
+  resize();
+
+  var islandEl=document.querySelector(".island");
+  function islandUniform(){
+    var rct=islandEl.getBoundingClientRect();
+    var cx=(rct.left+rct.width/2)*dpr;
+    // gl_FragCoord y is bottom-up; convert
+    var cyTop=(rct.top+rct.height/2)*dpr;
+    var cy=H-cyTop;
+    var hw=(rct.width/2)*dpr, hh=(rct.height/2)*dpr;
+    gl.uniform4f(uIsland,cx,cy,hw,hh);
+  }
+
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var start=performance.now();
+  function frame(now){
+    var t=(now-start)/1000;
+    if(reduce) t=0.0+t*0.02; // hold near zero, drift extremely slowly
+    gl.uniform1f(uTime,t);
+    gl.uniform2f(uRes,W,H);
+    islandUniform();
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

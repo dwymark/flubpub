@@ -24,6 +24,12 @@ index:
     - contexture-as-epistemic-temporal-structure
     - convergence-measures-prior-concentration
     - coherence-as-held-bisimulation
+  - label: Depictions
+    description: Seven ideas from the series rendered as animated mathematical fields,
+      each framing a passage. The gallery and the fields are Claude's, pointing at
+      the series' own text. A work in progress.
+    manual:
+    - depictions
 ---
 <style>
 #dwm-disc{position:relative;width:100%;z-index:60;margin-bottom:1.5rem;}

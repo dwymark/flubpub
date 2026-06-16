@@ -786,7 +786,7 @@ def _enumerate_content_site(site_dir: Path) -> tuple[Path | None, dict[str, Path
     for item in sorted(site_dir.iterdir()):
         if item.name.startswith(".") or item.name == RECYCLE_DIR_NAME:
             continue
-        if item.name == SITE_MANIFEST_NAME:
+        if item.name in (SITE_MANIFEST_NAME, PAGES_META_NAME):
             continue
         if index_entry is not None and item.resolve() == index_entry:
             continue

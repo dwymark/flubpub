@@ -109,6 +109,7 @@ partitioned by site key, mirroring the sites registry:
 content/
   dwm/
     home.md
+    _pages.yaml             # html-article metadata SSOT (see below)
     <slug>.{md,html}        # a ref-free page lands flat
     <slug>/                 # a page with assets/sub-pages lands as a dir,
       <entry>.{md,html}     #   entry keeps its source filename,
@@ -120,22 +121,32 @@ content/
 Exactly one shape per slug — the mirror drops the opposite flat/dir form on
 write, so the tree never carries a stale duplicate.
 
+An html article has no frontmatter, so its `pages.json`-only metadata
+(`description`, `tags`, `theme`, `color_scheme`, `parent`, `excerpt`, `title`)
+has nowhere to live in the bundle. The mirror writes it to
+`content/<key>/_pages.yaml`, keyed by slug, on every `push`/`revise` (and
+`delete` prunes it); `sync` reads it back as flags so an html article re-pushes
+losslessly. It merges rather than replaces, so a content-only revise that omits
+`--description` keeps the stored value. md articles keep their frontmatter and
+are never written there (no second home for md).
+
 Mirroring is skipped for: `--local` (the local dev install is not the SSOT,
 see below) and a raw `--remote` spec with no matching registry entry (the
 escape hatch isn't registry-backed). Opt out per-invocation with
 `--no-mirror` or globally with `FLUBPUB_NO_MIRROR=1`.
 
 Not auto-mirrored: per-page `tile` metadata (produced by `/card-construction`,
-not present in the markdown source) — see [`DWM.md`](./DWM.md) for the
-deferred plan.
+not present in the markdown source) — see [`DWM.md`](./DWM.md) for the deferred
+plan. When it lands it joins the other html metadata in `_pages.yaml`.
 
-> **TODO / known invariant gap.** Because `tile` is not mirrored, the SSOT
-> guarantee is "lossless rebuild-from-`content/` **modulo tiles**." For any
-> site that actually uses the gallery layout, `content/` alone is *not*
-> sufficient to reconstruct the site. Close this by committing a sanitized
-> `content/<key>/tiles.json` on write (see `DWM.md`) before the gallery goes
-> into production use; until then, state the claim with the "modulo tiles"
-> qualifier wherever it's made.
+> **TODO / known invariant gap.** Descriptions and the rest of the html-article
+> metadata now live in `_pages.yaml`, so the SSOT is lossless for them. `tile`
+> is still not mirrored, so the guarantee is "lossless rebuild-from-`content/`
+> **modulo tiles**." For any site that actually uses the gallery layout,
+> `content/` alone is *not* yet sufficient. Close this by writing `tile` into
+> `_pages.yaml` (another key per slug) on write before the gallery goes into
+> production use; until then, keep the "modulo tiles" qualifier wherever the
+> claim is made.
 
 To reconcile a remote that has drifted off content/, run `flubpub --site KEY
 sync`. The site's index file is declared in `content/<KEY>/_manifest.toml`

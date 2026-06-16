@@ -7,10 +7,12 @@ sibling document when there's anything to say about it.
 ## Tile metadata (deferred)
 
 Production's `data/pages.json` carries per-page `tile` entries produced by
-`/card-construction`. Those don't live in the markdown source. When the
-gallery layout starts getting used, commit a sanitized copy of those tile
-entries to `content/dwm/tiles.json` so a rebuild-from-content is lossless.
-Until then, the gallery is unused and `tiles.json` does not need to exist.
+`/card-construction`. Those don't live in the markdown source. The rest of an
+html article's pages.json-only metadata (description, tags, ...) is now mirrored
+to `content/dwm/_pages.yaml`; when the gallery layout starts getting used, add
+the sanitized `tile` entry as another key per slug there so a
+rebuild-from-content is lossless. Until then, the gallery is unused and no
+`tile` keys exist.
 
 ## Vendored project: blockipelago
 

@@ -1,0 +1,138 @@
+a-grammar-of-bach:
+  description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel
+    Wymark, with Claude (Anthropic)</span> A draft report presenting a type-theoretic
+    reading of the Bach chorales. Summarizes work done in a not-yet-public repo where
+    I developed an experimental grammar induction method; I do not yet fully trust
+    that project''s validity. <span class="ai-desc" title="This one-line description
+    was written by Daniel Wymark.">Description: written by Daniel Wymark</span>'
+  tags:
+  - vibe-coded
+  title: A Grammar of Bach
+a322111-pairing-theorem:
+  description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Claude
+    (Anthropic), with Daniel Wymark</span> A lecture-note style walkthrough of a pairing
+    theorem in OEIS sequence A322111. Daniel has not yet verified that the math is
+    all correct. <span class="ai-desc" title="This one-line description was written
+    by Daniel Wymark.">Description: written by Daniel Wymark</span>'
+  tags:
+  - vibe-coded
+  title: 'Tutorial #14: A Pairing Theorem in A322111'
+accumulator:
+  tags:
+  - draft
+  - strange-interlocutor
+  title: Memory is everywhere
+blockipelago:
+  description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Concept
+    by Daniel Wymark, implementation by Claude (Anthropic)</span> An interactive WebGL
+    atlas of every Unicode block, packed by Lloyd relaxation into a spiral archipelago
+    and rendered with a curated multilingual font stack so no codepoint becomes a
+    tofu rectangle. Best viewed on desktop. <span class="ai-desc" title="This one-line
+    description was written by Claude (Anthropic).">Description: written by Claude</span>'
+  tags:
+  - vibe-coded
+  title: Blockipelago
+combinatorics-workbench:
+  description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Claude
+    (Anthropic), with Daniel Wymark</span> A bench of interactive combinatorics tools
+    spanning enumeration, graph theory, Ramsey theory, and design theory, each branch
+    with its own little calculators and visualizers. <span class="ai-desc" title="This
+    one-line description was written by Claude (Anthropic).">Description: written
+    by Claude</span>'
+  tags:
+  - vibe-coded
+  title: The Combinatorics Workbench
+depictions:
+  description: '<span class="ai-work" title="Gallery interface and animated fields
+    by Claude (Anthropic); the framed passages are by Daniel Wymark.">Claude (Anthropic),
+    framing text by Daniel Wymark</span> Vibe-coded experimental visualizations with
+    snippets from the essay. <span class="ai-desc" title="This one-line description
+    was written by Daniel Wymark.">Description: written by Daniel Wymark</span>'
+  tags:
+  - draft
+  - strange-interlocutor
+  title: Depictions
+faucets-and-whirlpools:
+  tags:
+  - draft
+  - strange-interlocutor
+  title: Lopsided coupling
+hare-lynx:
+  description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel
+    Wymark, with Claude (Anthropic)</span> A predator-prey sandbox on the Rosenzweig-MacArthur
+    model: tune the parameters and watch hare and lynx populations cycle, crash, or
+    settle. <span class="ai-desc" title="This one-line description was written by
+    Claude (Anthropic).">Description: written by Claude</span>'
+  tags:
+  - vibe-coded
+  title: Hare & Lynx
+kissing-polynomial:
+  tags:
+  - draft
+  - strange-interlocutor
+  title: A dance, or just a hand?
+marble-all-the-way-down:
+  tags:
+  - draft
+  - strange-interlocutor
+  title: A conversation of one
+melting-staircase:
+  tags:
+  - draft
+  - strange-interlocutor
+  title: Not the reply. The conversation.
+memory-without-a-brain:
+  description: '<span class="ai-work" title="Written by Daniel Wymark; planned in
+    dialogue with an LLM, prose by hand.">Daniel Wymark</span> Memory is not only
+    key to who we are, it is ubiquitous in living things. Here we meet a memory unlike
+    our own. <span class="ai-desc" title="This one-line description was written by
+    Daniel Wymark.">Description: written by Daniel Wymark</span>'
+  tags:
+  - draft
+  title: Memory without a brain
+memory-without-a-brain-palm:
+  tags:
+  - draft
+  title: Memory without a brain
+micropolis-systems-atlas:
+  description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Claude
+    (Anthropic), with Daniel Wymark</span> An atlas of the SimCity simulation, reverse-engineered
+    from the Micropolis source: the demand valves, zone lifecycles, power flood-fill,
+    and disaster rolls behind the 1989 city sim, drawn as system diagrams. <span class="ai-desc"
+    title="This one-line description was written by Claude (Anthropic).">Description:
+    written by Claude</span>'
+  tags:
+  - vibe-coded
+  title: Micropolis Systems Atlas
+reading-the-contours:
+  tags:
+  - draft
+  - strange-interlocutor
+  title: A staying-on-target thing
+sphere-holonomy:
+  description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Claude
+    (Anthropic), with Daniel Wymark</span> Drag a vector around a loop on a sphere
+    and watch parallel transport rotate it, a hands-on feel for curvature and holonomy.
+    <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">Description:
+    written by Claude</span>'
+  tags:
+  - vibe-coded
+  title: Sphere & Holonomy
+strange-interlocutor:
+  tags:
+  - draft
+  - strange-interlocutor
+  title: Strange Interlocutor
+tightening-corridor:
+  tags:
+  - draft
+  - strange-interlocutor
+  title: Nothing more and nothing less
+who-were-you-talking-to-field:
+  tags:
+  - draft
+  title: Who were you talking to?
+who-were-you-talking-to-palm:
+  tags:
+  - draft
+  title: Who were you talking to?

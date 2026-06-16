@@ -659,6 +659,75 @@ def _unmirror_from_content(site_key: str, slug: str) -> None:
         click.echo(f"Removed from content/{site_key}/: {', '.join(removed)}")
 
 
+# --- html-article metadata SSOT: content/<site>/_pages.yaml ------------------
+# An html article has no frontmatter, so the pages.json fields with no other
+# SSOT home (description, tags, theme, ...) are mirrored here, keyed by slug.
+# md articles keep their frontmatter and are never written here.
+PAGES_META_NAME = "_pages.yaml"
+_PAGES_META_FIELDS = ("title", "description", "tags", "theme",
+                      "color_scheme", "parent", "excerpt")
+
+
+def _pages_meta_path(site_key: str) -> Path | None:
+    root = _content_root()
+    return None if root is None else root / site_key / PAGES_META_NAME
+
+
+def _load_pages_meta(path: Path) -> dict:
+    if not path.is_file():
+        return {}
+    data = yaml.safe_load(path.read_text()) or {}
+    return data if isinstance(data, dict) else {}
+
+
+def _save_pages_meta(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=True,
+                                   default_flow_style=False))
+
+
+def _write_pages_meta(site_key: str, slug: str, entry_path: Path,
+                      meta: dict) -> None:
+    """Upsert an html article's pages.json-only metadata into _pages.yaml. A
+    no-op for .md (frontmatter is its SSOT). Merges rather than replaces: only
+    non-empty provided fields are set, so a content-only revise that omits
+    --description keeps the stored value, matching the server's partial PUT."""
+    if entry_path.suffix.lower() != ".html":
+        return
+    path = _pages_meta_path(site_key)
+    if path is None:
+        return
+    data = _load_pages_meta(path)
+    entry = dict(data.get(slug) or {})
+    for key in _PAGES_META_FIELDS:
+        val = list(meta.get(key)) if key == "tags" and meta.get(key) else meta.get(key)
+        if val:
+            entry[key] = val
+    data[slug] = entry
+    _save_pages_meta(path, data)
+    click.echo(f"Recorded metadata → content/{site_key}/{PAGES_META_NAME}")
+
+
+def _remove_pages_meta(site_key: str, slug: str) -> None:
+    """Drop a slug from _pages.yaml (no-op if absent, e.g. an md page)."""
+    path = _pages_meta_path(site_key)
+    if path is None:
+        return
+    data = _load_pages_meta(path)
+    if slug in data:
+        del data[slug]
+        _save_pages_meta(path, data)
+        click.echo(f"Removed {slug} from content/{site_key}/{PAGES_META_NAME}")
+
+
+def _read_pages_meta(site_key: str, slug: str) -> dict:
+    """Return an html article's stored metadata subset, or {} (md / absent)."""
+    path = _pages_meta_path(site_key)
+    if path is None:
+        return {}
+    return dict(_load_pages_meta(path).get(slug) or {})
+
+
 def _should_mirror(ctx) -> bool:
     return bool(ctx.obj.get("mirror")) and bool(ctx.obj.get("site_key"))
 
@@ -889,7 +958,13 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
         if _should_mirror(ctx):
-            _mirror_to_content(ctx.obj["site_key"], slug or _slugify(title), path)
+            mirror_slug = slug or _slugify(title)
+            _mirror_to_content(ctx.obj["site_key"], mirror_slug, path)
+            _write_pages_meta(ctx.obj["site_key"], mirror_slug, path, {
+                "title": title, "description": description, "tags": tags,
+                "theme": theme, "color_scheme": color_scheme,
+                "parent": parent, "excerpt": excerpt,
+            })
         return
 
     suffix = path.suffix.lower()
@@ -1107,6 +1182,11 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
         _remote_cleanup(remote)
         if _should_mirror(ctx):
             _mirror_to_content(ctx.obj["site_key"], slug, path)
+            _write_pages_meta(ctx.obj["site_key"], slug, path, {
+                "title": title, "description": description, "tags": tags,
+                "theme": theme, "color_scheme": color_scheme,
+                "parent": parent, "excerpt": excerpt,
+            })
         return
 
     content = path.read_text()
@@ -1209,6 +1289,7 @@ def delete(ctx, slug):
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=f"delete {shlex.quote(slug)}")
         if _should_mirror(ctx):
             _unmirror_from_content(ctx.obj["site_key"], slug)
+            _remove_pages_meta(ctx.obj["site_key"], slug)
         return
 
     with httpx.Client() as client:
@@ -1437,16 +1518,28 @@ def sync(ctx, dry_run):
         ctx.invoke(delete, slug=slug)
         recycled_ok.append(slug)
 
+    # An html entry's metadata lives in _pages.yaml (no frontmatter to lift), so
+    # feed it back as flags; md entries carry their own frontmatter.
+    def _meta_kwargs(slug: str, entry: Path) -> dict:
+        if entry.suffix.lower() != ".html":
+            return {}
+        m = _read_pages_meta(site_key, slug)
+        kw = {k: m[k] for k in ("title", "description", "theme",
+                                "color_scheme", "parent", "excerpt") if m.get(k)}
+        if m.get("tags"):
+            kw["tags"] = tuple(m["tags"])
+        return kw
+
     pushed_ok: list[str] = []
     for slug in to_push:
         entry = local_pages[slug]
-        ctx.invoke(push, file_path=str(entry), slug=slug)
+        ctx.invoke(push, file_path=str(entry), slug=slug, **_meta_kwargs(slug, entry))
         pushed_ok.append(slug)
 
     revised_ok: list[str] = []
     for slug in to_revise:
         entry = local_pages[slug]
-        ctx.invoke(revise, slug=slug, file_path=str(entry))
+        ctx.invoke(revise, slug=slug, file_path=str(entry), **_meta_kwargs(slug, entry))
         revised_ok.append(slug)
 
     if index_entry:

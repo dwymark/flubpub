@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memory without a brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Winky+Rough:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
+<style>
+  :root{ --paper:#e7dcc1; --cream:#f1e9d4; --ink:#1a1410; --edge:#3a2f22; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Winky Rough",system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #gl{position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0;}
+  #fallback{position:fixed; inset:0; z-index:0; display:none; background:
+     radial-gradient(120% 90% at 50% 0%, #efe6cd 0%, #e2d6b8 55%, #cdbf9c 100%);}
+
+  .scroll{position:relative; z-index:1; min-height:100%;
+    padding:clamp(28px,8vh,90px) clamp(14px,5vw,40px) 22vh;
+    display:flex; flex-direction:column; align-items:center; gap:clamp(26px,6vh,64px);}
+  .island{
+    width:100%; max-width:600px;
+    background:linear-gradient(180deg, rgba(243,236,217,.93), rgba(236,227,203,.90));
+    border:1px solid rgba(58,47,34,.45); border-radius:3px;
+    box-shadow:0 1px 0 rgba(255,250,235,.6) inset, 0 10px 26px rgba(40,28,12,.30), 0 2px 6px rgba(40,28,12,.22);
+    padding:clamp(18px,4.5vw,30px) clamp(20px,5vw,34px);
+    backdrop-filter:blur(2px) saturate(108%); -webkit-backdrop-filter:blur(2px) saturate(108%);
+  }
+  .island p{margin:0; font-size:clamp(16px,4.4vw,18.5px); line-height:1.62;}
+  .island em{font-style:italic;}
+
+  .title-island{ text-align:center; max-width:600px;
+    background:linear-gradient(180deg, rgba(245,238,221,.95), rgba(238,229,206,.92)); }
+  .title-island h1{ margin:0; font-weight:600; letter-spacing:.01em; font-size:clamp(26px,8vw,40px); line-height:1.06; }
+
+  .disclosure-island{ background:linear-gradient(180deg, rgba(238,230,210,.90), rgba(231,221,198,.88)); }
+  .disc-header{ margin:0 0 .7em; font-size:clamp(11px,3vw,12.5px); letter-spacing:.22em; text-transform:uppercase; opacity:.66; }
+  .disc-body{ margin:0; font-size:clamp(13.5px,3.7vw,15px); line-height:1.55; opacity:.92; }
+  .disc-body em{ font-style:italic; }
+  .disc-license{ margin:.95em 0 0; padding-top:.7em; border-top:1px solid rgba(58,47,34,.30);
+    font-size:clamp(11px,3vw,12px); letter-spacing:.05em; opacity:.62; }
+  .disc-license a{ color:inherit; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="fallback"></div>
+
+<div class="scroll">
+  <section class="island title-island">
+    <h1>Memory without a brain</h1>
+  </section>
+
+  <section class="island disclosure-island" role="region" aria-label="Authorship disclosure">
+    <p class="disc-header">Who wrote this?</p>
+    <p class="disc-body">The essay, <em>Memory without a brain</em>, is Daniel Wymark's, written by hand. The page around it (the design, and the shader-driven field that integrates a nonlinear reaction-diffusion equation toward its target) was built by Claude (Anthropic) under Daniel's direction. That field is an evocation of the bioelectric dynamics the essay describes, not a visualization of real data. The page renders WebGL in your browser and loads one web font from Google Fonts; no telemetry, no cookies, no storage.</p>
+    <p class="disc-license">Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC&nbsp;BY-SA&nbsp;4.0</a> &middot; Daniel Wymark</p>
+  </section>
+
+  <!--ESSAY:BEGIN (islands generated from memory-without-a-brain.md via gen_mwab_demo.py; edit the markdown, then regenerate)-->
+  <section class="island"><p>Who are we but our memories and our dispositions? Memory is a key part of who we are. Naturally, this suggests that memory always <em>belongs to someone</em>. This is only a sliver of the truth. Memory is absolutely everywhere, once you know how to recognise it.</p></section>
+
+  <section class="island"><p>Michael Levin's planarian flatworm is the canonical example of a memory unlike our own. This flatworm is a strange little creature, equipped with a brain and a knack for regeneration. While a worm with a brain is already intriguing, it's really the tail where the interest is. Assuming you cut the head off first.</p></section>
+
+  <section class="island"><p>Cutting the planarian flatworm in half would be cruel. But if you do so for science, you see that being cut in half is not as bad for the worm as you might assume. The cells that make up the worm shimmer invisibly with a dynamic electrical pattern, its bioelectric field. The pattern is held remarkably steady. This is because the pattern is collectively defended against perturbation by the cells.</p></section>
+
+  <section class="island"><p>The genome provides the language that the bioelectric pattern speaks. The pattern held by the amputated tail influences the genes that its cells turn on as they get to work. The cells dutifully divide and specialize as necessary, until the tail has grown a head and the head has grown a tail. The pattern that the cells keep alive during calmer times acts as a map through morphological space, providing each cell with a clear local target to settle towards.</p></section>
+
+  <section class="island"><p>Notice that the brain is nowhere to be found. Yet the solitary tail grows into a fully-formed, healthy worm as if it had never been injured in the first place. If you measure the bioelectric signal flowing through the worm while it is growing back its head, the pattern ripples and drifts, with the pattern flowing outward into the growing flesh. Equilibrium is reached only when the pattern has converged on its defended form.</p></section>
+
+  <section class="island"><p>Stranger still, Levin's lab can reliably modify the held pattern. This involves manipulating the ion channels that cells use to maintain the bioelectric pattern. Cutting a population of pattern-modified worms gives rise to a regenerated population where about a quarter of the worms have two heads rather than a head and a tail. No gene was edited. And if you cut one of the double-headed worms in half again, however many times you like over the remainder of its lifespan, the amputated parts regenerate as double-headed worms. This pattern is an unfamiliar kind of memory; a memory that belongs not to an individual someone but instead to a collective someone.</p></section>
+  <!--ESSAY:END-->
+</div>
+
+<script>
+const canvas = document.getElementById("gl");
+const gl = canvas.getContext("webgl", {antialias:false, alpha:false, preserveDrawingBuffer:false, powerPreference:"low-power"})
+        || canvas.getContext("experimental-webgl");
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function bail(){ document.getElementById("fallback").style.display="block"; if(canvas) canvas.style.display="none"; }
+if(!gl){ bail(); } else { try{ run(); }catch(e){ console.error(e); bail(); } }
+
+function run(){
+  // ---- float / half-float render targets (needed to integrate a PDE on a texture) ----
+  const hf = gl.getExtension("OES_texture_half_float");
+  const hfl = gl.getExtension("OES_texture_half_float_linear");
+  const ff = gl.getExtension("OES_texture_float");
+  const ffl = gl.getExtension("OES_texture_float_linear");
+  const candidates = [];
+  if(hf) candidates.push({type:hf.HALF_FLOAT_OES, linear:!!hfl});
+  if(ff) candidates.push({type:gl.FLOAT, linear:!!ffl});
+  if(!candidates.length){ bail(); return; }
+
+  const VERT = `
+    attribute vec2 a_pos; varying vec2 v_uv;
+    void main(){ v_uv = a_pos*0.5+0.5; gl_Position = vec4(a_pos,0.0,1.0); }`;
+
+  // Two coupled systems on one field:
+  //  (1) Allen-Cahn / Ginzburg-Landau:  u_t = D*lap(u) + (u - u^3) + beta*target(x)
+  //      double-well reaction drives u -> +/-1 (bistable), diffusion sharpens & freezes
+  //      interfaces, target bias relaxes the steady pattern toward a fixed "defended form".
+  //  (2) a dormant turbulence system: a divergence-free curl-noise flow that advects the
+  //      field, scaled by u_env (near zero most of the time; swells for ~8s every 30s).
+  const SIM = `
+    precision highp float;
+    varying vec2 v_uv;
+    uniform sampler2D u_prev;
+    uniform float u_texel, u_dt, u_D, u_beta, u_kick, u_seed, u_time, u_env;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453123); }
+    float vnoise(vec2 p){
+      vec2 i = floor(p), f = fract(p);
+      float a = hash(i), b = hash(i+vec2(1.,0.)), c = hash(i+vec2(0.,1.)), d = hash(i+vec2(1.,1.));
+      vec2 u = f*f*(3.0-2.0*f);
+      return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+    }
+    float fbm2(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<2;i++){ v+=a*vnoise(p); p*=2.0; a*=0.5; } return v; }
+    float target(vec2 p){
+      vec2 q = p*6.28318;
+      float a = sin(q.x*1.0+0.6)*cos(q.y*1.2-0.3);
+      float b = sin((q.x+q.y)*0.7+1.1);
+      float c = cos((q.x-q.y)*0.9-0.5);
+      return clamp(0.6*a + 0.5*b + 0.4*c, -1.0, 1.0);
+    }
+    float U(vec2 uv){ return texture2D(u_prev, fract(uv)).r; }   // fract = toroidal wrap
+    // divergence-free velocity = curl of a drifting noise potential (turbulent swirls)
+    vec2 flow(vec2 p){
+      float e = 1.5*u_texel;
+      vec2 dr = vec2(u_time*0.030, -u_time*0.022);
+      float a = fbm2((p+vec2(0.0, e))*3.0 + dr);
+      float b = fbm2((p-vec2(0.0, e))*3.0 + dr);
+      float c = fbm2((p+vec2(e, 0.0))*3.0 + dr);
+      float d = fbm2((p-vec2(e, 0.0))*3.0 + dr);
+      return vec2( (a-b)/(2.0*e), -(c-d)/(2.0*e) );
+    }
+    void main(){
+      vec2 uv = v_uv; float t = u_texel;
+      if(u_kick > 0.5){
+        gl_FragColor = vec4(hash(v_uv*vec2(311.7,257.3)+u_seed)*2.0-1.0, 0.0, 0.0, 1.0);
+      } else {
+        vec2 off = vec2(0.0);
+        if(u_env > 0.001){                                   // turbulence runs ONLY during a swell
+          off = clamp(flow(uv) * (u_env * 0.0055), -0.02, 0.02);
+        }
+        vec2 p = uv - off;
+        float c = U(p);
+        float lap = U(p+vec2(-t,0.)) + U(p+vec2(t,0.)) + U(p+vec2(0.,-t)) + U(p+vec2(0.,t)) - 4.0*c;
+        float nc = c + u_dt*(u_D*lap + (c - c*c*c) + u_beta*target(uv));
+        gl_FragColor = vec4(clamp(nc,-1.2,1.2), 0.0, 0.0, 1.0);
+      }
+    }`;
+
+  const DISP = `
+    precision highp float;
+    varying vec2 v_uv;
+    uniform sampler2D u_state; uniform vec2 u_resolution;
+    void main(){
+      float c = texture2D(u_state, v_uv).r;
+      vec3 paper = vec3(0.905,0.840,0.700);
+      vec3 ink   = vec3(0.090,0.070,0.050);
+      float s = smoothstep(-0.18, 0.18, c);                 // ink domains on sepia
+      vec3 col = mix(paper, ink, s);
+      float wall = 1.0 - smoothstep(0.0, 0.10, abs(c));      // the converging interface
+      col = mix(col, ink, wall*0.13);
+      vec2 v = v_uv - 0.5; v.x *= u_resolution.x/u_resolution.y;
+      col *= 1.0 - 0.22*dot(v,v);
+      gl_FragColor = vec4(col, 1.0);
+    }`;
+
+  // Mass projection: average the field u to a 1x1 mean (RED, applied at every level),
+  // then subtract it (CORRECT) so total mass is pinned to 0 each frame. This catches ALL
+  // drift, including the non-conservative semi-Lagrangian advection of the turbulence.
+  const CORRECT = `
+    precision highp float;
+    varying vec2 v_uv;
+    uniform sampler2D u_src, u_mean;
+    void main(){
+      float c = texture2D(u_src, v_uv).r;
+      float m = texture2D(u_mean, vec2(0.5)).r;
+      gl_FragColor = vec4(c - m, 0.0, 0.0, 1.0);
+    }`;
+
+  const RED = `
+    precision highp float;
+    varying vec2 v_uv;
+    uniform sampler2D u_src;
+    uniform float u_srcTexel;
+    void main(){
+      float o = 0.5*u_srcTexel;                              // two source texel-centers per axis
+      float a = texture2D(u_src, v_uv+vec2(-o,-o)).r + texture2D(u_src, v_uv+vec2(o,-o)).r
+              + texture2D(u_src, v_uv+vec2(-o, o)).r + texture2D(u_src, v_uv+vec2(o, o)).r;
+      gl_FragColor = vec4(0.25*a, 0.0, 0.0, 1.0);
+    }`;
+
+  function compile(type, src){
+    const s = gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ console.error(gl.getShaderInfoLog(s)); return null; }
+    return s;
+  }
+  function link(fsrc){
+    const v = compile(gl.VERTEX_SHADER, VERT), f = compile(gl.FRAGMENT_SHADER, fsrc);
+    if(!v||!f) return null;
+    const p = gl.createProgram(); gl.attachShader(p,v); gl.attachShader(p,f); gl.linkProgram(p);
+    if(!gl.getProgramParameter(p, gl.LINK_STATUS)){ console.error(gl.getProgramInfoLog(p)); return null; }
+    return p;
+  }
+  const simProg = link(SIM), dispProg = link(DISP), redProg = link(RED), corrProg = link(CORRECT);
+  if(!simProg || !dispProg || !redProg || !corrProg){ bail(); return; }
+
+  const quad = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  function bindAttr(prog){ const l = gl.getAttribLocation(prog,"a_pos"); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,2,gl.FLOAT,false,0,0); }
+
+  const N = 256;   // power of two so the reduction halves cleanly to 1x1
+  let tex = [null,null], fbo = [null,null], src = 0, dst = 1;
+  function makeTex(type, linear){
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,N,N,0,gl.RGBA,type,null);
+    const f = linear?gl.LINEAR:gl.NEAREST;
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,f);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,f);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    return t;
+  }
+  // try each candidate type until the FBO is render-complete
+  let chosen = null;
+  for(const cand of candidates){
+    tex = [makeTex(cand.type,cand.linear), makeTex(cand.type,cand.linear)];
+    fbo = [gl.createFramebuffer(), gl.createFramebuffer()];
+    let ok = true;
+    for(let i=0;i<2;i++){
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo[i]);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex[i], 0);
+      if(gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) ok = false;
+    }
+    if(ok){ chosen = cand; break; }
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  if(!chosen){ bail(); return; }
+
+  // reduction pyramid levels: 128, 64, ... , 1 (for N=256)
+  const redSizes = []; for(let s=N>>1; s>=1; s>>=1) redSizes.push(s);
+  function makeTexSized(size, type){
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,size,size,0,gl.RGBA,type,null);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    return t;
+  }
+  const redTex = [], redFbo = [];
+  for(let i=0;i<redSizes.length;i++){
+    const t = makeTexSized(redSizes[i], chosen.type);
+    const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+    if(gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE){ bail(); return; }
+    redTex.push(t); redFbo.push(f);
+  }
+  gl.clearColor(0,0,0,0);                                  // zero every target (frame-0 safety)
+  for(const f of [fbo[0], fbo[1]].concat(redFbo)){ gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.clear(gl.COLOR_BUFFER_BIT); }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+  // uniforms
+  const uPrev=gl.getUniformLocation(simProg,"u_prev"), uTexel=gl.getUniformLocation(simProg,"u_texel"),
+        uDt=gl.getUniformLocation(simProg,"u_dt"), uD=gl.getUniformLocation(simProg,"u_D"),
+        uBeta=gl.getUniformLocation(simProg,"u_beta"), uKick=gl.getUniformLocation(simProg,"u_kick"),
+        uSeed=gl.getUniformLocation(simProg,"u_seed"),
+        uTime=gl.getUniformLocation(simProg,"u_time"), uEnv=gl.getUniformLocation(simProg,"u_env");
+  const uState=gl.getUniformLocation(dispProg,"u_state"), uRes=gl.getUniformLocation(dispProg,"u_resolution");
+  const rSrc=gl.getUniformLocation(redProg,"u_src"), rTexel=gl.getUniformLocation(redProg,"u_srcTexel");
+  const cSrc=gl.getUniformLocation(corrProg,"u_src"), cMean=gl.getUniformLocation(corrProg,"u_mean");
+
+  const DT=0.2, DC=0.8, BETA=0.06, SUBSTEPS=4;
+  // turbulence subsystem: dormant, then an ~8s swell every 30s (2.5s ramps in/out)
+  const TURB_PERIOD=30.0, TURB_DUR=8.0, TURB_RAMP=2.5, TURB_START=22.0;
+
+  // average the field u over the whole grid into redTex[last] (1x1) = mean(u)
+  function reduceMean(srcTex){
+    gl.useProgram(redProg); bindAttr(redProg);
+    let inTex = srcTex, inSize = N;
+    for(let k=0;k<redSizes.length;k++){
+      gl.bindFramebuffer(gl.FRAMEBUFFER, redFbo[k]); gl.viewport(0,0,redSizes[k],redSizes[k]);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, inTex); gl.uniform1i(rSrc,0);
+      gl.uniform1f(rTexel, 1.0/inSize);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+      inTex = redTex[k]; inSize = redSizes[k];
+    }
+  }
+
+  function step(kick, seed, time, env){
+    gl.useProgram(simProg); bindAttr(simProg);
+    gl.viewport(0,0,N,N);
+    gl.uniform1f(uTexel,1.0/N); gl.uniform1f(uDt,DT); gl.uniform1f(uD,DC); gl.uniform1f(uBeta,BETA);
+    gl.uniform1f(uSeed,seed); gl.uniform1f(uTime,time); gl.uniform1f(uEnv,env);
+    for(let i=0;i<SUBSTEPS;i++){
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo[dst]);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[src]); gl.uniform1i(uPrev,0);
+      gl.uniform1f(uKick, i===0?kick:0.0);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+      const tmp=src; src=dst; dst=tmp;
+    }
+    if(kick < 0.5){                                       // mass projection: pin total mass to 0
+      reduceMean(tex[src]);
+      gl.useProgram(corrProg); bindAttr(corrProg);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo[dst]); gl.viewport(0,0,N,N);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[src]); gl.uniform1i(cSrc,0);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, redTex[redSizes.length-1]); gl.uniform1i(cMean,1);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+      const tmp=src; src=dst; dst=tmp;
+    }
+  }
+  function display(){
+    gl.useProgram(dispProg); bindAttr(dispProg);
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    gl.viewport(0,0,canvas.width,canvas.height);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[src]); gl.uniform1i(uState,0);
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+  function resizeCanvas(){
+    const dpr = Math.min(window.devicePixelRatio||1, window.innerWidth<700?1.5:2.0);
+    const w=Math.floor(window.innerWidth*dpr), h=Math.floor(window.innerHeight*dpr);
+    if(canvas.width!==w||canvas.height!==h){ canvas.width=w; canvas.height=h; }
+  }
+  window.addEventListener("resize", resizeCanvas, {passive:true});
+  resizeCanvas();
+
+  const SEED=11.0;
+  function smooth01(s){ s=Math.max(0,Math.min(1,s)); return s*s*(3-2*s); }
+  function envAt(t){                                   // ~8s swell each 30s, smooth ramps
+    const x = t % TURB_PERIOD, s = x - TURB_START;
+    if(s < 0) return 0;
+    const up = smooth01(s/TURB_RAMP);
+    const down = 1 - smooth01((s-(TURB_DUR-TURB_RAMP))/TURB_RAMP);
+    return Math.max(0, Math.min(up, down));
+  }
+  let startMs=performance.now(), frame=0, raf=null, tPause=0;
+  function loop(now){
+    const t=(now-startMs)/1000;
+    const kick = (frame===0) ? 1.0 : 0.0;             // seed once; turbulence does the perturbing
+    const env  = reduce ? 0.0 : envAt(t);
+    step(kick, SEED, t, env);
+    display();
+    frame++;
+    if(reduce && frame>170){ raf=null; return; }                 // converged: hold a still frame
+    raf=requestAnimationFrame(loop);
+  }
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.hidden){ tPause=(performance.now()-startMs)/1000; if(raf){cancelAnimationFrame(raf); raf=null;} }
+    else if(raf==null && !(reduce && frame>170)){ startMs=performance.now()-tPause*1000; raf=requestAnimationFrame(loop); }
+  });
+  canvas.addEventListener("webglcontextlost", (e)=>{ e.preventDefault(); if(raf){cancelAnimationFrame(raf); raf=null;} bail(); }, false);
+  raf=requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

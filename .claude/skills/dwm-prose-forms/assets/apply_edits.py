@@ -11,7 +11,7 @@ whitelist (em/strong/a/code/br/i/b) is restored, and literal apostrophes /
 em-dashes are left as UTF-8. Review `git diff` afterward for house-style entity
 choices the script does not impose.
 """
-import re, sys, pathlib
+import html, re, sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import formkit as fk
 
@@ -21,6 +21,36 @@ INLINE = r"em|strong|a|code|br|i|b"
 def encode(text):
     esc = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     return re.sub(r"&lt;(/?(?:%s)\b[^&]*?)&gt;" % INLINE, r"<\1>", esc)
+
+
+_AIDESC_RE = re.compile(r'<span class="ai-desc"[^>]*>.*?</span>', re.S)
+_KNOWN_NOTE_TIP = {fk.AI_DESC_CLAUDE_VIS: fk.AI_DESC_CLAUDE_TIP,
+                   fk.AI_DESC_DANIEL_VIS: fk.AI_DESC_DANIEL_TIP}
+
+
+def flip_note(desc):
+    """Rewriting a blurb makes Daniel its author, so flip the .ai-desc note's
+    visible text and tooltip from Claude to Daniel. Tooltip first: it contains
+    the visible phrase as a substring."""
+    return (desc.replace(fk.AI_DESC_CLAUDE_TIP, fk.AI_DESC_DANIEL_TIP)
+                .replace(fk.AI_DESC_CLAUDE_VIS, fk.AI_DESC_DANIEL_VIS))
+
+
+def apply_note(desc, note_text, label=""):
+    """Swap the .ai-desc note's visible text. A known authorship phrase carries
+    its canonical tooltip; arbitrary text keeps the existing tooltip."""
+    note_text = note_text.strip()
+    m = _AIDESC_RE.search(desc)
+    if not m:
+        print("  ! %s: no .ai-desc span; note edit skipped" % label)
+        return desc
+    tip = _KNOWN_NOTE_TIP.get(note_text)
+    if tip is None:
+        existing = re.search(r'title="([^"]*)"', m.group(0))
+        tip = html.unescape(existing.group(1)) if existing else None
+    tip_attr = ' title="%s"' % html.escape(tip, quote=True) if tip else ''
+    span = '<span class="ai-desc"%s>%s</span>' % (tip_attr, encode(note_text))
+    return _AIDESC_RE.sub(lambda _: span, desc, count=1)
 
 
 def parse(blob):
@@ -86,8 +116,8 @@ def apply_disclosures(content_dir, edits, dry):
 
 
 def splice_description(desc, fields, label=""):
-    """Apply byline/blurb edits into an existing description string, preserving
-    the .ai-desc note and both span tooltips."""
+    """Apply byline/blurb/note edits into an existing description string,
+    preserving spans not being edited."""
     if "byline" in fields:
         new = encode(fields["byline"])
         desc, c = re.subn(r'(<span class="ai-work"[^>]*>)(.*?)(</span>)',
@@ -106,6 +136,17 @@ def splice_description(desc, fields, label=""):
             desc = blurb + " " + desc[note.start():].lstrip()
         else:
             desc = blurb
+    if "note" in fields:
+        desc = apply_note(desc, fields["note"], label)
+    return desc
+
+
+def build_description(old_desc, fields, label=""):
+    """Splice the edits, then auto-flip the .ai-desc note to Daniel when the
+    blurb changed and no explicit note edit overrides it."""
+    desc = splice_description(old_desc, fields, label)
+    if "blurb" in fields and "note" not in fields:
+        desc = flip_note(desc)
     return desc
 
 
@@ -123,8 +164,8 @@ def apply_descriptions(content_dir, edits, dry):
     except ModuleNotFoundError:
         sys.exit("needs pyyaml: run via `uv run --with pyyaml python3 apply_edits.py`")
     by_key = group_by_key(edits)
-    prod = {k: v for k, v in by_key.items() if k.startswith("@prod:")}
-    local = {k: v for k, v in by_key.items() if not k.startswith("@prod:")}
+    meta = {k: v for k, v in by_key.items() if k.startswith("@meta:")}
+    local = {k: v for k, v in by_key.items() if not k.startswith("@meta:")}
     changed = []
     for key, fields in local.items():
         path = content_dir / key
@@ -134,7 +175,7 @@ def apply_descriptions(content_dir, edits, dry):
             print("  ! %s: no frontmatter -- skipped" % key); continue
         fm_text = m.group(1)
         fm = yaml.safe_load(fm_text) or {}
-        desc = splice_description(fm.get("description", ""), fields, key)
+        desc = build_description(fm.get("description", ""), fields, key)
         dumped = yaml.safe_dump({"description": desc}, allow_unicode=True, default_flow_style=False).rstrip("\n")
         lines = fm_text.split("\n")
         i = next((k for k, ln in enumerate(lines) if ln.startswith("description:")), None)
@@ -149,35 +190,42 @@ def apply_descriptions(content_dir, edits, dry):
             changed.append(key)
             if not dry:
                 path.write_text(out, encoding="utf-8")
-    if prod:
-        apply_prod_descriptions(content_dir, prod)
+    if meta:
+        apply_meta_descriptions(content_dir, meta, dry)
     return changed
 
 
-def apply_prod_descriptions(content_dir, prod):
-    """html-article descriptions live only in production pages.json. Re-fetch the
-    current description, splice the edits, and EMIT the revise command -- a
-    production write is never auto-run here."""
-    import shlex
-    pages = fk.fetch_prod_pages("dwm")
-    cur = {pg.get("slug"): pg.get("description", "") for pg in (pages or [])}
-    print("\nProduction (pages.json) descriptions -- review and run to publish:")
-    if pages is None:
-        print("  ! could not fetch prod pages.json; cannot reconstruct. Edits, raw:")
-        for key, fields in prod.items():
-            print("    %s -> %s" % (key, fields));
-        return
-    for key, fields in prod.items():
-        slug = key[len("@prod:"):]
-        if slug not in cur:
-            print("  ! %s: slug not in prod pages.json -- skipped" % slug); continue
-        new_desc = splice_description(cur[slug], fields, slug)
-        cf = fk.content_file_for(content_dir, slug)
-        if cf is None:
-            print("  ! %s: no content/dwm entry file -- cannot revise" % slug); continue
-        rel = cf.relative_to(fk.repo_root())
-        print("  flubpub --site dwm revise %s %s \\\n      --description %s"
-              % (slug, rel, shlex.quote(new_desc)))
+def apply_meta_descriptions(content_dir, meta, dry):
+    """html-article descriptions live in content/<key>/_pages.yaml (the SSOT).
+    Splice the edits into each slug's stored description, write _pages.yaml back,
+    and publish with `flubpub --site dwm sync`. No production write here."""
+    try:
+        import yaml
+    except ModuleNotFoundError:
+        sys.exit("needs pyyaml: run via `uv run --with pyyaml python3 apply_edits.py`")
+    path = content_dir / "_pages.yaml"
+    if not path.is_file():
+        print("  ! %s not found; cannot apply html-article edits" % path); return
+    data = yaml.safe_load(path.read_text()) or {}
+    changed = []
+    for key, fields in meta.items():
+        slug = key[len("@meta:"):]
+        entry = data.get(slug) or {}
+        if not entry.get("description"):
+            print("  ! %s: no _pages.yaml description -- skipped" % slug); continue
+        new = build_description(entry["description"], fields, slug)
+        if new != entry["description"]:
+            entry["description"] = new
+            data[slug] = entry
+            changed.append(slug)
+    if changed and not dry:
+        path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=True,
+                                       default_flow_style=False), encoding="utf-8")
+    verb = "would change" if dry else "changed"
+    print("\n_pages.yaml: %d html-article description(s) %s%s" %
+          (len(changed), verb, (": " + ", ".join(changed)) if changed else ""))
+    if changed and not dry:
+        print("Publish with: flubpub --site dwm sync")
 
 
 def main():

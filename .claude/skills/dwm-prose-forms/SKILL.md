@@ -1,6 +1,6 @@
 ---
 name: dwm-prose-forms
-description: Use when the user wants to batch-review or batch-rewrite the AI-authorship prose on the dwm site — the on-page "Who wrote this?" disclosures and the article listing descriptions (md frontmatter plus html-article descriptions pulled from production pages.json). Regenerates two browser paste-back forms from the current content/dwm SSOT, then ingests the form's exported edits back into the content files (and emits revise commands for production-only descriptions). Invoke on "disclosure batch editor", "description batch editor", "edit the dwm disclosures/descriptions", "rebuild the disclosure form".
+description: Use when the user wants to batch-review or batch-rewrite the AI-authorship prose on the dwm site — the on-page "Who wrote this?" disclosures and the article listing descriptions (md frontmatter plus html-article descriptions in content/dwm/_pages.yaml). Regenerates two browser paste-back forms from the current content/dwm SSOT, then ingests the form's exported edits back into the content files. Invoke on "disclosure batch editor", "description batch editor", "edit the dwm disclosures/descriptions", "rebuild the disclosure form".
 ---
 
 # dwm prose batch-edit forms
@@ -15,11 +15,13 @@ they always reflect current content.
   `provenance-body`/`provenance-behavior`, `disc-body`, and the depictions
   `note` div). One editable field per disclosure paragraph.
 - **Descriptions** — the listing `description:` of every dwm article, split into
-  an editable **byline** (the `.ai-work` credit) and **blurb** (the listing
-  prose); the "Description: written by Claude" note is preserved untouched. Two
-  sources in one form: `.md` articles from frontmatter (the SSOT), and
-  html-bundle articles from production `pages.json` (cards keyed `@prod:<slug>`,
-  tagged "prod · pages.json"), since their description lives only on the box.
+  three editable fields: **byline** (the `.ai-work` work credit), **blurb** (the
+  listing prose), and **note** (`.ai-desc`, who wrote the blurb). Rewriting a
+  blurb auto-flips its note to Daniel (the blurb's author owns its one-line
+  description); the byline never auto-changes. Two sources in one form, both
+  version-controlled SSOT: `.md` articles from frontmatter, and html articles
+  from `content/dwm/_pages.yaml` (cards keyed `@meta:<slug>`, tagged
+  "html · _pages.yaml").
 
 Forms are styled `/style web palm-eink` illuminated. Changed fields are flagged
 by a gold border, never a tinted background — the variant forbids accent colour
@@ -40,11 +42,9 @@ under running text.
    uv run --with pyyaml python3 .claude/skills/dwm-prose-forms/assets/build_description_form.py
    ```
    Each writes to `scratch/<name>-edit-form.html` (gitignored throwaway) unless
-   you pass an output path. Pass `[OUT_HTML]` to place it elsewhere. The SSOT is
-   `content/dwm`; if production has drifted, `flubpub --site dwm sync` first. The
-   description build also SSH-pulls the dwm `pages.json` for html-article
-   descriptions; set `FLUBPUB_FORMS_NO_REMOTE=1` for an md-only form (or if
-   offline).
+   you pass an output path. Pass `[OUT_HTML]` to place it elsewhere. Both forms
+   read only `content/dwm` (md frontmatter + `_pages.yaml`), so they are fully
+   offline and always reflect the SSOT; no production round-trip.
 
 2. **Open it.** `wslview scratch/disclosure-edit-form.html` (interop warnings are
    spurious). The user rewrites any subset and clicks **Copy edits**.
@@ -62,14 +62,15 @@ under running text.
    conservative (HTML-escape, restore a small inline-tag whitelist
    em/strong/a/code/br/i/b, leave apostrophes and em-dashes as UTF-8), so check
    for any house-style entity choices it did not impose (`&apos;`, `&mdash;`) and
-   adjust by hand if wanted. Then deploy: `flubpub --site dwm sync` (or a per-page
-   `revise`). Commit the `content/dwm` changes.
+   adjust by hand if wanted. Both `.md` (frontmatter) and `@meta:<slug>`
+   (`content/dwm/_pages.yaml`) edits write local files only. Then publish:
+   `flubpub --site dwm sync` (now lossless for html, carrying `_pages.yaml`
+   descriptions). Commit the `content/dwm` changes.
 
-   **`@prod:<slug>` (html-article) edits** touch no local file: apply_edits
-   re-fetches the current prod description, splices the byline/blurb in, and
-   **prints** a ready-to-run `flubpub --site dwm revise <slug> <content-file>
-   --description '...'` command per slug. It never runs the production write —
-   review each command, then run it yourself to publish.
+   The `.ai-desc` note: rewriting a blurb auto-flips it to "written by Daniel
+   Wymark" (visible text + tooltip). An explicit `note` field edit overrides the
+   auto-flip; a known phrase ("written by Claude/Daniel Wymark") carries its
+   canonical tooltip, arbitrary text keeps the existing one.
 
 ## Paste-back format
 
@@ -83,22 +84,23 @@ new paragraph prose...
 === end ===
 ```
 Descriptions use `=== flubpub-description-edits-v1 ===` with field ids
-`[<file> :: byline]` / `[<file> :: blurb]` for `.md` articles, and
-`[@prod:<slug> :: byline]` / `[@prod:<slug> :: blurb]` for html-article
-descriptions pulled from prod. The bracket id is the routing key the apply
-script parses; for disclosures `<index>` is the 1-based occurrence of that class
-in the file.
+`[<file> :: byline|blurb|note]` for `.md` articles, and
+`[@meta:<slug> :: byline|blurb|note]` for html-article descriptions in
+`content/dwm/_pages.yaml`. The bracket id is the routing key the apply script
+parses; for disclosures `<index>` is the 1-based occurrence of that class in the
+file.
 
 ## Files
 
-- `assets/formkit.py` — repo discovery, registry/remote helpers (prod
-  `pages.json` fetch, content-file resolver), the shared palm-eink illuminated
-  template, and the generic card/field renderer both forms use.
+- `assets/formkit.py` — repo discovery, the shared `.ai-desc` authorship
+  constants, the palm-eink illuminated template (with the blurb -> note
+  auto-flip cue), and the generic card/field renderer both forms use.
 - `assets/build_disclosure_form.py` / `assets/build_description_form.py` —
-  extract from `content/dwm` (the description build also pulls prod
-  `pages.json`) and emit a form.
-- `assets/apply_edits.py` — parse a paste-back block, write `content/dwm` edits,
-  and emit `revise` commands for `@prod:` html-article descriptions.
+  extract from `content/dwm` (the description build reads md frontmatter and
+  `_pages.yaml`) and emit a form.
+- `assets/apply_edits.py` — parse a paste-back block and write `content/dwm`
+  edits: md frontmatter for `.md` articles, `content/dwm/_pages.yaml` for
+  `@meta:` html articles.
 
 Adding a sixth disclosure markup variant: add its body/heading class to
 `BODY_CLASSES`/`HEAD_CLASSES` in `build_disclosure_form.py` and teach

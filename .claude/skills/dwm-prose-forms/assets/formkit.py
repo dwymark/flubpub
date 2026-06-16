@@ -20,6 +20,15 @@ def decode(s):
     return html.unescape(re.sub(r"\s+", " ", s)).strip()
 
 
+# Canonical .ai-desc authorship phrases (visible text + tooltip), shared by the
+# form builder and the apply script. The blurb's author owns its one-line
+# description, so rewriting a blurb flips this note to Daniel.
+AI_DESC_CLAUDE_VIS = "Description: written by Claude"
+AI_DESC_DANIEL_VIS = "Description: written by Daniel Wymark"
+AI_DESC_CLAUDE_TIP = "This one-line description was written by Claude (Anthropic)."
+AI_DESC_DANIEL_TIP = "This one-line description was written by Daniel Wymark."
+
+
 # --- registry / remote helpers (for prod pages.json: html-article descriptions) ---
 
 def registry_path():
@@ -168,6 +177,7 @@ DATA.forEach(d => {
   head.querySelector(".title").textContent=d.title||"";
   card.appendChild(head);
   if(d.tag){ const t=document.createElement("span"); t.className="tag"; t.textContent=d.tag; card.appendChild(t); }
+  const roleInputs={};
   d.fields.forEach(f => {
     const wrap=document.createElement("div"); wrap.className="field"; wrap.dataset.id=f.id;
     const meta=document.createElement("div"); meta.className="field-meta";
@@ -179,6 +189,7 @@ DATA.forEach(d => {
     else { inp=document.createElement("input"); inp.type="text"; inp.className="line"; }
     inp.value=(f.id in saved)?saved[f.id]:f.value;
     inp.dataset.orig=f.value;
+    roleInputs[f.role||f.id.split(" :: ").pop()]=inp;
     wrap.appendChild(meta); wrap.appendChild(inp); card.appendChild(wrap);
     const sync=()=>{ const c=inp.value.trim()!==f.value.trim(); wrap.classList.toggle("changed",c);
       if(c) saved[f.id]=inp.value; else delete saved[f.id]; save(saved); refresh(); };
@@ -186,6 +197,18 @@ DATA.forEach(d => {
     meta.querySelector(".revert").addEventListener("click",()=>{ inp.value=f.value; if(f.multiline) autosize(inp); sync(); });
     if(f.multiline) requestAnimationFrame(()=>autosize(inp));
   });
+  // "During edits" cue: rewriting a blurb flips its .ai-desc note to Daniel.
+  // Leaves a hand-edited note (anything other than the original or the flip
+  // target) alone; reverts when the blurb is reverted.
+  const blurbInp=roleInputs["blurb"], noteInp=roleInputs["note"];
+  if(blurbInp && noteInp && d.note_autoflip){
+    const flip=d.note_autoflip, noteOrig=noteInp.dataset.orig, blurbOrig=blurbInp.dataset.orig;
+    blurbInp.addEventListener("input",()=>{
+      if(noteInp.value!==noteOrig && noteInp.value!==flip) return;
+      const want=(blurbInp.value.trim()!==blurbOrig.trim())?flip:noteOrig;
+      if(noteInp.value!==want){ noteInp.value=want; noteInp.dispatchEvent(new Event("input")); }
+    });
+  }
   if(d.foot){ const n=document.createElement("p"); n.className="foot"; n.textContent=d.foot; card.appendChild(n); }
   list.appendChild(card);
 });

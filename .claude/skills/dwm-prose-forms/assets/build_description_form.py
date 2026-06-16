@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """Extract the listing description: of every dwm article and emit the palm-eink
-illuminated batch-edit form. Each description splits into byline (.ai-work) and
-blurb. Paste-back ingested by apply_edits.py.
+illuminated batch-edit form. Each description splits into byline (.ai-work),
+blurb, and note (.ai-desc). Paste-back ingested by apply_edits.py.
 
-Two sources, both in one form:
-  - .md articles: the frontmatter `description:` (the version-controlled SSOT).
-  - html-bundle articles: the listing description from production `pages.json`,
-    which lives only on the box (cards keyed `@prod:<slug>`, written back via
-    `flubpub --site dwm revise`).
+Two sources, both in one form, both version-controlled SSOT:
+  - .md articles: the frontmatter `description:`.
+  - html articles: content/<key>/_pages.yaml (cards keyed `@meta:<slug>`),
+    written back to _pages.yaml and published via `flubpub --site dwm sync`.
 
 Usage: python3 build_description_form.py [OUT_HTML]   (default: <repo>/scratch/description-edit-form.html)
-       FLUBPUB_FORMS_NO_REMOTE=1  -> skip the pages.json pull (md-only form)
 """
-import os, re, sys, pathlib
+import re, sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import formkit as fk
 
@@ -39,11 +37,12 @@ def make_card(key, title, byline, blurb, note, tag=None):
         "key": key,
         "title": title,
         "tag": tag,
+        "note_autoflip": fk.AI_DESC_DANIEL_VIS,
         "fields": [
-            {"id": "%s :: byline" % key, "label": "byline (.ai-work)", "value": byline, "multiline": False},
-            {"id": "%s :: blurb" % key, "label": "blurb", "value": blurb, "multiline": True},
+            {"id": "%s :: byline" % key, "role": "byline", "label": "byline (.ai-work)", "value": byline, "multiline": False},
+            {"id": "%s :: blurb" % key, "role": "blurb", "label": "blurb", "value": blurb, "multiline": True},
+            {"id": "%s :: note" % key, "role": "note", "label": "note (.ai-desc)", "value": note or "", "multiline": False},
         ],
-        "foot": ("preserved note: " + note) if note else "",
     }
 
 
@@ -64,32 +63,32 @@ def extract_md(content_dir):
     return cards, md_slugs
 
 
-def extract_prod(content_dir, md_slugs):
-    """html-article descriptions from production pages.json (slugs without a
-    frontmatter-description .md). Returns (cards, status_message)."""
-    pages = fk.fetch_prod_pages("dwm")
-    if pages is None:
-        return [], "remote pages.json unavailable (set FLUBPUB_FORMS_NO_REMOTE=1 to silence) -- md-only"
+def extract_meta(content_dir, md_slugs):
+    """html-article descriptions from content/<key>/_pages.yaml (the SSOT). Cards
+    keyed @meta:<slug>. Returns (cards, status_message)."""
+    path = content_dir / "_pages.yaml"
+    if not path.is_file():
+        return [], "no _pages.yaml found -- md-only"
+    data = yaml.safe_load(path.read_text()) or {}
     cards = []
-    for pg in pages:
-        slug, desc = pg.get("slug"), pg.get("description")
-        if not slug or not desc or slug in md_slugs:
+    for slug in sorted(data):
+        meta = data[slug] or {}
+        desc = meta.get("description")
+        if not desc or slug in md_slugs:
             continue
-        cf = fk.content_file_for(content_dir, slug)
-        if cf is None:
-            continue  # no content/dwm bundle to revise from -- skip
         byline, blurb, note = split_desc(desc)
-        cards.append(make_card("@prod:" + slug, pg.get("title", slug), byline, blurb, note,
-                               tag="prod · pages.json"))
-    return cards, "pulled %d html-article description(s) from prod pages.json" % len(cards)
+        cards.append(make_card("@meta:" + slug, meta.get("title", slug), byline, blurb, note,
+                               tag="html · _pages.yaml"))
+    return cards, "loaded %d html-article description(s) from _pages.yaml" % len(cards)
 
 
 SUB = ('The listing <code>description:</code> of every dwm article, split into '
-       '<b>byline</b> (.ai-work credit) and <b>blurb</b> (the listing prose). '
-       '<b>.md</b> articles come from frontmatter (the SSOT); <b>prod &middot; pages.json</b> '
-       'cards are html bundles whose description lives only on the box. The '
-       '"Description: written by Claude" note is preserved. Rewrite any subset, '
-       'press <b>Copy edits</b>, paste back into chat.')
+       'three editable fields: <b>byline</b> (.ai-work work credit), <b>blurb</b> '
+       '(the listing prose), and <b>note</b> (.ai-desc, who wrote the blurb). '
+       '<b>.md</b> articles come from frontmatter; <b>html &middot; _pages.yaml</b> '
+       'cards come from the SSOT metadata file. Rewriting a blurb auto-flips its '
+       'note to Daniel; the byline never auto-changes. Rewrite any subset, press '
+       '<b>Copy edits</b>, paste back into chat.')
 
 
 def main():
@@ -97,19 +96,15 @@ def main():
     content_dir = root / "content" / "dwm"
     cards, md_slugs = extract_md(content_dir)
     n_md = len(cards)
-    n_prod = 0
-    if os.environ.get("FLUBPUB_FORMS_NO_REMOTE"):
-        status = "remote pull skipped (FLUBPUB_FORMS_NO_REMOTE) -- md-only"
-    else:
-        prod, status = extract_prod(content_dir, md_slugs)
-        cards += prod
-        n_prod = len(prod)
+    meta, status = extract_meta(content_dir, md_slugs)
+    cards += meta
+    n_meta = len(meta)
     html = fk.build_html("dwm description batch editor", SUB,
                          "flubpub-description-edits-v1", "dwm-description-editor:v1", cards)
     out = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else root / "scratch" / "description-edit-form.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
-    print("wrote %s  (%d md + %d prod = %d descriptions)" % (out, n_md, n_prod, len(cards)))
+    print("wrote %s  (%d md + %d html = %d descriptions)" % (out, n_md, n_meta, len(cards)))
     print("  " + status)
 
 

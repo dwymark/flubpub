@@ -85,17 +85,48 @@ def apply_disclosures(content_dir, edits, dry):
     return changed
 
 
+def splice_description(desc, fields, label=""):
+    """Apply byline/blurb edits into an existing description string, preserving
+    the .ai-desc note and both span tooltips."""
+    if "byline" in fields:
+        new = encode(fields["byline"])
+        desc, c = re.subn(r'(<span class="ai-work"[^>]*>)(.*?)(</span>)',
+                          lambda mm: mm.group(1) + new + mm.group(3), desc, count=1, flags=re.S)
+        if not c:
+            print("  ! %s: no .ai-work span; byline edit skipped" % label)
+    if "blurb" in fields:
+        blurb = encode(fields["blurb"])
+        work = re.search(r'<span class="ai-work"[^>]*>.*?</span>', desc, re.S)
+        note = re.search(r'<span class="ai-desc"[^>]*>.*?</span>', desc, re.S)
+        if work and note:
+            desc = desc[:work.end()].rstrip() + " " + blurb + " " + desc[note.start():].lstrip()
+        elif work:
+            desc = desc[:work.end()].rstrip() + " " + blurb
+        elif note:
+            desc = blurb + " " + desc[note.start():].lstrip()
+        else:
+            desc = blurb
+    return desc
+
+
+def group_by_key(edits):
+    by_key = {}
+    for fid, text in edits:
+        key, field = [p.strip() for p in fid.split(" :: ")]
+        by_key.setdefault(key, {})[field] = text
+    return by_key
+
+
 def apply_descriptions(content_dir, edits, dry):
     try:
         import yaml
     except ModuleNotFoundError:
         sys.exit("needs pyyaml: run via `uv run --with pyyaml python3 apply_edits.py`")
-    by_file = {}
-    for fid, text in edits:
-        key, field = [p.strip() for p in fid.split(" :: ")]
-        by_file.setdefault(key, {})[field] = text
+    by_key = group_by_key(edits)
+    prod = {k: v for k, v in by_key.items() if k.startswith("@prod:")}
+    local = {k: v for k, v in by_key.items() if not k.startswith("@prod:")}
     changed = []
-    for key, fields in by_file.items():
+    for key, fields in local.items():
         path = content_dir / key
         src = path.read_text(encoding="utf-8")
         m = re.match(r"---\n(.*?)\n---", src, re.S)
@@ -103,25 +134,7 @@ def apply_descriptions(content_dir, edits, dry):
             print("  ! %s: no frontmatter -- skipped" % key); continue
         fm_text = m.group(1)
         fm = yaml.safe_load(fm_text) or {}
-        desc = fm.get("description", "")
-        if "byline" in fields:
-            new = encode(fields["byline"])
-            desc, c = re.subn(r'(<span class="ai-work"[^>]*>)(.*?)(</span>)',
-                              lambda mm: mm.group(1) + new + mm.group(3), desc, count=1, flags=re.S)
-            if not c:
-                print("  ! %s: no .ai-work span; byline edit skipped" % key)
-        if "blurb" in fields:
-            blurb = encode(fields["blurb"])
-            work = re.search(r'<span class="ai-work"[^>]*>.*?</span>', desc, re.S)
-            note = re.search(r'<span class="ai-desc"[^>]*>.*?</span>', desc, re.S)
-            if work and note:
-                desc = desc[:work.end()].rstrip() + " " + blurb + " " + desc[note.start():].lstrip()
-            elif work:
-                desc = desc[:work.end()].rstrip() + " " + blurb
-            elif note:
-                desc = blurb + " " + desc[note.start():].lstrip()
-            else:
-                desc = blurb
+        desc = splice_description(fm.get("description", ""), fields, key)
         dumped = yaml.safe_dump({"description": desc}, allow_unicode=True, default_flow_style=False).rstrip("\n")
         lines = fm_text.split("\n")
         i = next((k for k, ln in enumerate(lines) if ln.startswith("description:")), None)
@@ -136,7 +149,35 @@ def apply_descriptions(content_dir, edits, dry):
             changed.append(key)
             if not dry:
                 path.write_text(out, encoding="utf-8")
+    if prod:
+        apply_prod_descriptions(content_dir, prod)
     return changed
+
+
+def apply_prod_descriptions(content_dir, prod):
+    """html-article descriptions live only in production pages.json. Re-fetch the
+    current description, splice the edits, and EMIT the revise command -- a
+    production write is never auto-run here."""
+    import shlex
+    pages = fk.fetch_prod_pages("dwm")
+    cur = {pg.get("slug"): pg.get("description", "") for pg in (pages or [])}
+    print("\nProduction (pages.json) descriptions -- review and run to publish:")
+    if pages is None:
+        print("  ! could not fetch prod pages.json; cannot reconstruct. Edits, raw:")
+        for key, fields in prod.items():
+            print("    %s -> %s" % (key, fields));
+        return
+    for key, fields in prod.items():
+        slug = key[len("@prod:"):]
+        if slug not in cur:
+            print("  ! %s: slug not in prod pages.json -- skipped" % slug); continue
+        new_desc = splice_description(cur[slug], fields, slug)
+        cf = fk.content_file_for(content_dir, slug)
+        if cf is None:
+            print("  ! %s: no content/dwm entry file -- cannot revise" % slug); continue
+        rel = cf.relative_to(fk.repo_root())
+        print("  flubpub --site dwm revise %s %s \\\n      --description %s"
+              % (slug, rel, shlex.quote(new_desc)))
 
 
 def main():

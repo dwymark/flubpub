@@ -1,10 +1,11 @@
-"""Shared kit for the dwm prose paste-back forms: repo discovery, the
-palm-eink illuminated template, and a generic card/field renderer.
+"""Shared kit for the dwm prose paste-back forms: repo discovery, registry /
+remote helpers, the palm-eink illuminated template, and a generic card/field
+renderer.
 
 A card is {key, title, tag?, foot?, fields:[{id, label, value, multiline}]}.
 Each field's id IS its export key (the bracket contents in the paste-back).
 """
-import html, json, pathlib, re
+import html, json, os, pathlib, re, subprocess
 
 
 def repo_root(start=None):
@@ -17,6 +18,58 @@ def repo_root(start=None):
 
 def decode(s):
     return html.unescape(re.sub(r"\s+", " ", s)).strip()
+
+
+# --- registry / remote helpers (for prod pages.json: html-article descriptions) ---
+
+def registry_path():
+    return pathlib.Path(os.environ.get("FLUBPUB_SITES_CONFIG",
+                                       pathlib.Path.home() / ".config" / "flubpub" / "sites.json"))
+
+
+def site_remote(key="dwm"):
+    """Return (ssh_target, remote_dir) for a registry site key, or (None, None)."""
+    cfg = registry_path()
+    if not cfg.is_file():
+        return None, None
+    spec = (json.loads(cfg.read_text()).get("sites", {}).get(key, {}) or {}).get("remote")
+    if not spec or ":" not in spec:
+        return None, None
+    target, remote_dir = spec.split(":", 1)
+    return target, remote_dir
+
+
+def fetch_prod_pages(key="dwm"):
+    """SSH-read the production pages.json for a site. Returns the list of page
+    dicts, or None on any failure (caller degrades to local-only)."""
+    target, remote_dir = site_remote(key)
+    if not target:
+        return None
+    cmd = ["ssh", "-o", "ConnectTimeout=12", "-o", "BatchMode=yes",
+           target, "cat %s/data/pages.json" % remote_dir]
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if out.returncode != 0 or not out.stdout.strip():
+        return None
+    try:
+        data = json.loads(out.stdout)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(data, dict):
+        data = data.get("pages", list(data.values()))
+    return data if isinstance(data, list) else None
+
+
+def content_file_for(content_dir, slug):
+    """Resolve the content/dwm entry file for a published slug, or None."""
+    for cand in (content_dir / (slug + ".html"),
+                 content_dir / slug / "index.html",
+                 content_dir / slug / (slug + ".html")):
+        if cand.is_file():
+            return cand
+    return None
 
 
 STYLE = r"""

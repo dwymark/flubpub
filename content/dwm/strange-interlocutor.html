@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Strange Interlocutor</title>
+<script>
+  /* Pre-paint: open in the reader's last-chosen style so the hub previews it
+     without a flash of the default. The choice is the collection-scoped key
+     every piece honors, so picking here follows you across the series. */
+  (function(){
+    var V={shader:1,palm:1,wallpaper:1};
+    var k=null; try{ k=localStorage.getItem("flubpub:style:strange-interlocutor"); }catch(e){}
+    document.documentElement.dataset.fpStyle = (k&&V[k])? k : "shader";
+  })();
+</script>
+<style>
+  :root{
+    --serif:"Iowan Old Style",Palatino,Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  }
+  /* three skins, echoing the three renditions */
+  :root[data-fp-style="shader"]{
+    --bg:#dfe6d2; --panel:rgba(241,245,230,.93); --tile:rgba(241,245,230,.74);
+    --ink:#20251e; --dim:#5d7256; --accent:#5d7a3a; --on:#f1f5e6; --rule:#232a1a;
+    --font:var(--serif); --radius:0px; --shadow:6px 6px 0 rgba(35,42,26,.22);
+  }
+  :root[data-fp-style="palm"]{
+    --bg:#ffffff; --panel:#ffffff; --tile:#ffffff;
+    --ink:#000000; --dim:#000000; --accent:#000000; --on:#ffffff; --rule:#000000;
+    --font:var(--sans); --radius:0px; --shadow:4px 4px 0 #000;
+  }
+  :root[data-fp-style="wallpaper"]{
+    --bg:#e8dfc7; --panel:#f3ecdb; --tile:#efe7d2;
+    --ink:#2a2f3a; --dim:#6b7280; --accent:#b5512f; --on:#f3ecdb; --rule:#cdbf9c;
+    --font:var(--serif); --radius:3px; --shadow:0 8px 22px rgba(60,45,20,.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--font);
+    line-height:1.5;transition:background .4s ease,color .4s ease;}
+  /* a faint living ground for the shader skin only */
+  body::before{content:"";position:fixed;inset:0;z-index:0;opacity:0;transition:opacity .5s ease;
+    background:
+      repeating-radial-gradient(circle at 30% 18%, transparent 0 26px, rgba(93,122,58,.05) 26px 27px),
+      radial-gradient(130% 90% at 20% 0%, #e6ecd9, #d8e0c6 60%, #cdd6b6);}
+  :root[data-fp-style="shader"] body::before{opacity:1}
+
+  .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;
+    padding:clamp(30px,7vh,72px) clamp(16px,5vw,32px) 18vh;}
+
+  header.masthead{margin-bottom:clamp(20px,4vh,34px)}
+  .masthead .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.24em;
+    text-transform:uppercase;color:var(--accent);}
+  .masthead h1{font-size:clamp(30px,8vw,50px);line-height:1.04;font-weight:600;margin:.25em 0 .35em;letter-spacing:-.01em}
+  .masthead p.lede{font-size:clamp(15px,4vw,17px);color:var(--ink);max-width:54ch}
+
+  /* disclosure */
+  .disc{margin:clamp(16px,3vh,24px) 0;border:1px solid var(--rule);border-radius:var(--radius);
+    background:var(--panel);padding:13px 15px;}
+  .disc h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--accent);margin-bottom:.5em;font-weight:700}
+  .disc p{font-size:13.5px;line-height:1.5;color:var(--ink)}
+
+  /* chooser */
+  .chooser{margin:clamp(20px,4vh,30px) 0 clamp(12px,2vh,18px)}
+  .chooser .lead{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--dim);margin-bottom:.6em;display:block}
+  .seg{display:inline-flex;flex-wrap:wrap;border:1.5px solid var(--rule);border-radius:var(--radius);overflow:hidden}
+  .seg button{appearance:none;cursor:pointer;background:transparent;border:0;border-right:1.5px solid var(--rule);
+    color:var(--ink);font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    padding:.62em 1.05em;transition:background .2s ease,color .2s ease}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-current="true"]{background:var(--accent);color:var(--on);font-weight:700}
+  .chooser .blurb{margin-top:.7em;font-size:13.5px;font-style:italic;color:var(--dim);min-height:1.3em}
+
+  h2.section{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--dim);margin:clamp(26px,5vh,40px) 0 .8em;padding-bottom:.4em;border-bottom:1px solid var(--rule)}
+
+  .pieces{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .tile{display:flex;flex-direction:column;gap:7px;padding:16px;background:var(--tile);
+    border:1.5px solid var(--rule);border-radius:var(--radius);box-shadow:var(--shadow);
+    text-decoration:none;color:var(--ink);transition:transform .15s ease,border-color .15s ease}
+  .tile:hover,.tile:focus-visible{border-color:var(--accent);transform:translateY(-2px);outline:none}
+  .tile .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--accent);font-weight:700}
+  .tile h3{font-size:18px;line-height:1.16;font-weight:600}
+  .tile .go{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--dim)}
+
+  ul.links{list-style:none}
+  ul.links li{margin:.35em 0;font-size:15px}
+  ul.links a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule)}
+  ul.links a:hover{color:var(--accent);border-color:var(--accent)}
+  .small{font-size:12.5px;color:var(--dim);margin-top:.4em}
+
+  footer.foot{margin-top:clamp(28px,6vh,46px);font-family:var(--mono);font-size:10.5px;
+    letter-spacing:.06em;color:var(--dim);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="kicker">A series</span>
+    <h1>Strange Interlocutor</h1>
+    <p class="lede">What is it that we are doing when we talk with a machine that talks back? A short series of essays, with supporting pieces and a gallery of animated depictions.</p>
+  </header>
+
+  <aside class="disc" role="region" aria-label="Authorship disclosure">
+    <h2>Who wrote this?</h2>
+    <p>This page &mdash; the style chooser and its framing &mdash; was built by Claude (Anthropic), directed by Daniel Wymark, who conceived the series. The essays are Daniel's, written by hand. Each rendition and supporting piece carries its own fuller note.</p>
+  </aside>
+
+  <div class="chooser">
+    <span class="lead">Read the essays as</span>
+    <div class="seg" id="seg" role="group" aria-label="Reading style"></div>
+    <p class="blurb" id="blurb"></p>
+  </div>
+
+  <h2 class="section">Pieces</h2>
+  <div class="pieces" id="pieces"></div>
+
+  <h2 class="section">Artifacts</h2>
+  <p class="small">Supporting documents authored by Claude in dialogue with Daniel. Each carries its own authorship note.</p>
+  <ul class="links">
+    <li><a href="/simulator-of-simulator-dynamics/">Simulator of a simulator</a></li>
+    <li><a href="/contexture-individuation-per-substrate/">Individuation per substrate</a></li>
+    <li><a href="/identity-attractor-as-fixed-point/">Identity as a fixed point</a></li>
+    <li><a href="/contexture-as-epistemic-temporal-structure/">An epistemic-temporal structure</a></li>
+    <li><a href="/convergence-measures-prior-concentration/">Convergence vs. truth</a></li>
+    <li><a href="/coherence-as-held-bisimulation/">Coherence as held bisimulation</a></li>
+  </ul>
+
+  <h2 class="section">Depictions</h2>
+  <p class="small">Ideas from the series rendered as animated mathematical fields. The gallery and the fields are Claude's, pointing at the series' own text.</p>
+  <ul class="links">
+    <li><a href="/depictions/">The Depictions gallery</a></li>
+  </ul>
+
+  <footer class="foot">
+    <span>Strange Interlocutor &middot; draft</span>
+    <span id="stylestate">style: shader</span>
+  </footer>
+
+</div>
+
+<script>
+/* Inline B3 catalogue (SSOT mirror committed at content/dwm/renditions.json).
+   The hub is the chooser: it sets the collection key, previews the style by
+   restyling itself, and points the piece tiles at the chosen rendition. */
+var FP_MANIFEST = {
+  collection: "strange-interlocutor",
+  default: "shader",
+  variants: {
+    shader:    { label:"Shader",     accent:"#5d7a3a", blurb:"A slowly drifting field behind floating text islands." },
+    palm:      { label:"Palm e-ink", accent:"#000000", blurb:"A monochrome PDA reader, paged one screen at a time." },
+    wallpaper: { label:"Wallpaper",  accent:"#b5512f", blurb:"Plain themed prose on a patterned ground." }
+  },
+  pieces: {
+    "who-were-you-talking-to": { title:"Who were you talking to?", renditions:{
+      shader:"/who-were-you-talking-to-field/", palm:"/who-were-you-talking-to-palm/", wallpaper:"/who-were-you-talking-to/" } },
+    "memory-without-a-brain": { title:"Memory without a brain", renditions:{
+      shader:"/memory-without-a-brain/", palm:"/memory-without-a-brain-palm/", wallpaper:"/memory-without-a-brain-wallpaper/" } }
+  }
+};
+
+(function(){
+  var KEY = "flubpub:style:" + FP_MANIFEST.collection;
+  function get(){ try{ return localStorage.getItem(KEY); }catch(e){ return null; } }
+  function set(v){ try{ localStorage.setItem(KEY, v); }catch(e){} }
+
+  var seg = document.getElementById("seg");
+  var blurb = document.getElementById("blurb");
+  var pieces = document.getElementById("pieces");
+  var stylestate = document.getElementById("stylestate");
+  var variants = Object.keys(FP_MANIFEST.variants);
+  var current = (function(){ var k=get(); return (k && FP_MANIFEST.variants[k]) ? k : FP_MANIFEST.default; })();
+
+  function setBlurb(v){ blurb.textContent = FP_MANIFEST.variants[v].blurb || ""; }
+  function tileHref(pk){ return FP_MANIFEST.pieces[pk].renditions[current] || "#"; }
+  function paintActive(){
+    [].forEach.call(seg.children, function(b){
+      if(b.dataset.v===current) b.setAttribute("aria-current","true"); else b.removeAttribute("aria-current");
+    });
+  }
+  function repointTiles(){
+    [].forEach.call(pieces.children, function(a){ a.href = tileHref(a.dataset.piece); });
+  }
+  function applySkin(v){ document.documentElement.dataset.fpStyle = v; stylestate.textContent = "style: " + v; }
+
+  variants.forEach(function(v){
+    var b = document.createElement("button");
+    b.type="button"; b.dataset.v=v; b.textContent = FP_MANIFEST.variants[v].label;
+    b.addEventListener("mouseenter", function(){ setBlurb(v); });
+    b.addEventListener("focus", function(){ setBlurb(v); });
+    b.addEventListener("click", function(){
+      current = v; set(v);
+      paintActive(); repointTiles(); setBlurb(v); applySkin(v);
+    });
+    seg.appendChild(b);
+  });
+
+  var n=0;
+  Object.keys(FP_MANIFEST.pieces).forEach(function(pk){
+    n++;
+    var a = document.createElement("a");
+    a.className="tile"; a.dataset.piece=pk; a.href=tileHref(pk);
+    a.innerHTML = '<span class="k">'+String(n).padStart(2,"0")+'</span>'+
+                  '<h3>'+FP_MANIFEST.pieces[pk].title+'</h3>'+
+                  '<span class="go">open &rsaquo;</span>';
+    pieces.appendChild(a);
+  });
+
+  paintActive(); setBlurb(current); applySkin(current); repointTiles();
+})();
+</script>
+</body>
+</html>

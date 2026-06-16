@@ -1,0 +1,33 @@
+{
+  "_comment": "B3 catalogue (SSOT) for the Strange Interlocutor style switcher. The strange-interlocutor hub page inlines a copy of this as FP_MANIFEST; keep the two in sync. Each piece offers three renditions; the hub sets a collection-scoped localStorage key and points its tiles at the chosen rendition's published slug.",
+  "collections": {
+    "strange-interlocutor": {
+      "label": "Strange Interlocutor",
+      "hub": "/strange-interlocutor/",
+      "default": "shader",
+      "variants": {
+        "shader":    { "label": "Shader",     "accent": "#5d7a3a", "blurb": "A slowly drifting field behind floating text islands." },
+        "palm":      { "label": "Palm e-ink", "accent": "#000000", "blurb": "A monochrome PDA reader, paged one screen at a time." },
+        "wallpaper": { "label": "Wallpaper",  "accent": "#b5512f", "blurb": "Plain themed prose on a patterned ground." }
+      },
+      "pieces": {
+        "who-were-you-talking-to": {
+          "title": "Who were you talking to?",
+          "renditions": {
+            "shader":    "/who-were-you-talking-to-field/",
+            "palm":      "/who-were-you-talking-to-palm/",
+            "wallpaper": "/who-were-you-talking-to/"
+          }
+        },
+        "memory-without-a-brain": {
+          "title": "Memory without a brain",
+          "renditions": {
+            "shader":    "/memory-without-a-brain/",
+            "palm":      "/memory-without-a-brain-palm/",
+            "wallpaper": "/memory-without-a-brain-wallpaper/"
+          }
+        }
+      }
+    }
+  }
+}

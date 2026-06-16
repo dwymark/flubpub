@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Memory without a brain — palm-eink reader</title>
+<style>
+  /* palm-eink (mono) skin + deck pager. Two inks, boxy chrome, offset shadows,
+     no transitions. Body sans + zoomable; chrome monospace + fixed px. */
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{ background:#fff; color:#000;
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;
+    display:flex; align-items:stretch; justify-content:center;
+    overflow:hidden; -webkit-text-size-adjust:100%; }
+  *{transition:none!important;animation:none!important}   /* e-ink ghosts on motion */
+  :root{ --mono:ui-monospace,"SFMono-Regular",Menlo,"Courier New",monospace; }
+
+  .device{ --zoom:1; width:100%; max-width:440px; height:100%; background:#fff;
+    border-left:2px solid #000; border-right:2px solid #000;
+    display:flex; flex-direction:column; position:relative; }
+
+  .titlebar{ background:#000; color:#fff; display:flex; align-items:center; justify-content:space-between;
+    padding:7px 9px; gap:8px; font-family:var(--mono); flex:0 0 auto; }
+  .titlebar .app{ font-size:12px; font-weight:700; letter-spacing:1px; }
+  .cat{ font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.5px;
+    color:#fff; background:#000; border:1.5px solid #fff; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .cat:active{ background:#fff; color:#000; }
+
+  .header{ flex:0 0 auto; border-bottom:2px solid #000; display:flex; align-items:center;
+    justify-content:space-between; gap:8px; padding:7px 9px; }
+  .header .ptitle{ font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:.3px;
+    line-height:1.15; flex:1 1 auto; min-width:0; }
+  .hgroup{ display:flex; align-items:center; gap:5px; flex:0 0 auto; }
+  .zbtn{ font-family:var(--mono); font-weight:700; font-size:11px; border:1.5px solid #000;
+    background:#fff; color:#000; padding:3px 7px; cursor:pointer; line-height:1; }
+  .zbtn:active{ background:#000; color:#fff; }
+  .zbtn[disabled]{ border-style:dotted; cursor:default; }
+  .zbtn[disabled]:active{ background:#fff; color:#000; }
+  .counter{ font-family:var(--mono); font-size:11px; font-weight:700; border:1.5px solid #000;
+    padding:2px 6px; white-space:nowrap; }
+
+  .region{ flex:1 1 auto; display:flex; min-height:0; position:relative; }
+  .stage{ flex:1 1 auto; min-height:0; padding:13px 14px 12px; overflow-y:auto; overflow-x:hidden;
+    overscroll-behavior:contain; font-size:calc(13px * var(--zoom)); }
+  .stage *{ max-width:100%; overflow-wrap:break-word; word-break:break-word; }
+
+  .read p{ font-size:1.04em; line-height:1.42; }
+  .read p + p{ margin-top:.7em; }
+  .read em{ font-style:italic; }
+
+  .answer-wrap{ min-height:100%; display:flex; align-items:center; }
+  .answer{ background:#000; color:#fff; padding:16px 15px; width:100%; }
+  .answer .lab{ font-family:var(--mono); font-size:.72em; font-weight:700; letter-spacing:1.4px;
+    display:inline-block; border-bottom:1px solid #fff; padding-bottom:1px; margin-bottom:7px; }
+  .answer p{ font-size:1.08em; line-height:1.4; }
+
+  .colo .lab{ font-family:var(--mono); font-size:.74em; font-weight:700; letter-spacing:1.4px;
+    border-bottom:1px solid #000; padding-bottom:1px; margin-bottom:6px; display:inline-block; }
+  .colo p{ font-size:.98em; line-height:1.4; }
+  .colo p + p{ margin-top:.6em; }
+  .colo .lic{ margin-top:11px; padding-top:6px; border-top:1px solid #000;
+    font-family:var(--mono); font-size:.78em; letter-spacing:.4px; }
+  .colo .lic a{ color:#000; }
+
+  .cover{ min-height:100%; display:flex; flex-direction:column; justify-content:center; }
+  .cover .dither{ height:16px; margin-bottom:14px;
+    background-image:repeating-linear-gradient(45deg,#000 0,#000 1px,#fff 1px,#fff 2px); }
+  .cover h1{ font-size:1.95em; line-height:1.04; letter-spacing:-.5px; margin-bottom:8px; }
+  .cover .sub{ font-family:var(--mono); font-size:.85em; letter-spacing:1px; text-transform:uppercase; }
+  .cover .status{ margin-top:14px; font-family:var(--mono); font-size:.82em; border:2px solid #000; padding:6px 8px; display:inline-block; }
+  .cover .tag2{ margin-top:14px; font-size:1em; line-height:1.36; }
+
+  .morehint{ position:absolute; right:30px; bottom:6px; display:none; font-family:var(--mono);
+    font-size:9.5px; font-weight:700; letter-spacing:.5px; background:#000; color:#fff; padding:2px 6px; pointer-events:none; }
+  .region.has-more .morehint{ display:block; }
+
+  .pbar{ flex:0 0 24px; border-left:2px solid #000; display:flex; flex-direction:column; }
+  .pbar .arr{ flex:0 0 24px; border:none; background:#fff; color:#000; cursor:pointer; font-size:12px; font-family:var(--mono); font-weight:700; }
+  .pbar .arr.top{ border-bottom:2px solid #000; }
+  .pbar .arr.bot{ border-top:2px solid #000; }
+  .pbar .arr:active{ background:#000; color:#fff; }
+  .pbar .track{ flex:1 1 auto; position:relative; }
+  .pbar .thumb{ position:absolute; left:3px; right:3px; background:#000; min-height:10px; }
+
+  .silk{ flex:0 0 auto; border-top:2px solid #000; display:flex; gap:8px; padding:9px; background:#fff; }
+  .btn{ font-family:var(--mono); font-weight:700; letter-spacing:.5px; background:#fff; color:#000;
+    border:2px solid #000; box-shadow:3px 3px 0 #000; padding:9px 6px; cursor:pointer; font-size:12px;
+    display:flex; align-items:center; justify-content:center; }
+  .btn:active{ transform:translate(3px,3px); box-shadow:none; background:#000; color:#fff; }
+  .btn.sq{ flex:0 0 auto; width:42px; }
+  .btn.wide{ flex:1 1 auto; }
+  .btn[disabled]{ box-shadow:none; border-style:dotted; cursor:default; }
+  .btn[disabled]:active{ transform:none; background:#fff; color:#000; }
+
+  .overlay{ position:absolute; inset:0; background:#fff; display:none; flex-direction:column; }
+  .overlay.on{ display:flex; }
+  .overlay .obar{ background:#000; color:#fff; font-family:var(--mono); font-size:12px; font-weight:700;
+    letter-spacing:1px; padding:8px 9px; display:flex; justify-content:space-between; align-items:center; }
+  .overlay .odone{ border:1.5px solid #fff; background:#000; color:#fff; font-family:var(--mono);
+    font-weight:700; font-size:11px; padding:3px 9px; cursor:pointer; }
+  .overlay .odone:active{ background:#fff; color:#000; }
+  .toc{ flex:1 1 auto; overflow-y:auto; padding:8px; }
+  .toc .grp{ font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:1.5px;
+    border-bottom:2px solid #000; padding:7px 2px 2px; margin-top:6px; }
+  .toc .grp:first-child{ margin-top:0; }
+  .toc .row{ display:flex; gap:8px; align-items:baseline; border:1.5px solid #000; box-shadow:2px 2px 0 #000;
+    margin:6px 2px; padding:7px 8px; cursor:pointer; background:#fff; }
+  .toc .row:active,.toc .row.cur{ background:#000; color:#fff; }
+  .toc .row .rid{ font-family:var(--mono); font-weight:700; font-size:11px; min-width:26px; }
+  .toc .row .rt{ font-size:12.5px; line-height:1.2; }
+</style>
+</head>
+<body>
+<div class="device" id="device">
+  <div class="titlebar">
+    <span class="app">STRANGE INTERLOCUTOR</span>
+    <span class="cat" id="cat" title="cycle section">FRONT &#9656;</span>
+  </div>
+  <div class="header">
+    <span class="ptitle" id="ptitle">&mdash;</span>
+    <span class="hgroup">
+      <button class="zbtn" id="zout" title="smaller text">A&minus;</button>
+      <button class="zbtn" id="zin" title="larger text">A+</button>
+      <span class="counter" id="counter">01 / 08</span>
+    </span>
+  </div>
+  <div class="region" id="region">
+    <div class="stage" id="stage"></div>
+    <div class="morehint" id="morehint">MORE &#9660;</div>
+    <div class="pbar">
+      <button class="arr top" id="up" title="previous">&#9650;</button>
+      <div class="track" id="track"><div class="thumb" id="thumb"></div></div>
+      <button class="arr bot" id="dn" title="next">&#9660;</button>
+    </div>
+  </div>
+  <div class="silk">
+    <button class="btn sq" id="home" title="cover">&#8962;</button>
+    <button class="btn wide" id="prev">&#9664; PREV</button>
+    <button class="btn wide" id="menu">MENU</button>
+    <button class="btn wide" id="next">NEXT &#9654;</button>
+  </div>
+  <div class="overlay" id="overlay">
+    <div class="obar"><span>CONTENTS</span><button class="odone" id="odone">DONE</button></div>
+    <div class="toc" id="toc"></div>
+  </div>
+</div>
+
+<script>
+const G = {FRONT:"FRONT", ESSAY:"ESSAY", NOTE:"NOTE"};
+
+const PAGES = [
+  { g:G.FRONT, id:"—", title:"COVER", kind:"cover" },
+
+  { g:G.ESSAY, id:"1", title:"MEMORY IS EVERYWHERE", html:`
+    <p>Who are we but our memories and our dispositions? Memory is a key part of who we are. Naturally, this suggests that memory always <em>belongs to someone</em>. This is only a sliver of the truth. Memory is absolutely everywhere, once you know how to recognise it.</p>` },
+
+  { g:G.ESSAY, id:"2", title:"THE FLATWORM", html:`
+    <p>Michael Levin&rsquo;s planarian flatworm is the canonical example of a memory unlike our own. This flatworm is a strange little creature, equipped with a brain and a knack for regeneration. While a worm with a brain is already intriguing, it&rsquo;s really the tail where the interest is. Assuming you cut the head off first.</p>` },
+
+  { g:G.ESSAY, id:"3", title:"CUT FOR SCIENCE", html:`
+    <p>Cutting the planarian flatworm in half would be cruel. But if you do so for science, you see that being cut in half is not as bad for the worm as you might assume. The cells that make up the worm shimmer invisibly with a dynamic electrical pattern, its bioelectric field. The pattern is held remarkably steady. This is because the pattern is collectively defended against perturbation by the cells.</p>` },
+
+  { g:G.ESSAY, id:"4", title:"A MAP THROUGH FORM", html:`
+    <p>The genome provides the language that the bioelectric pattern speaks. The pattern held by the amputated tail influences the genes that its cells turn on as they get to work. The cells dutifully divide and specialize as necessary, until the tail has grown a head and the head has grown a tail. The pattern that the cells keep alive during calmer times acts as a map through morphological space, providing each cell with a clear local target to settle towards.</p>` },
+
+  { g:G.ESSAY, id:"5", title:"NO BRAIN, STILL WHOLE", html:`
+    <p>Notice that the brain is nowhere to be found. Yet the solitary tail grows into a fully-formed, healthy worm as if it had never been injured in the first place. If you measure the bioelectric signal flowing through the worm while it is growing back its head, the pattern ripples and drifts, with the pattern flowing outward into the growing flesh. Equilibrium is reached only when the pattern has converged on its defended form.</p>` },
+
+  { g:G.ESSAY, id:"6", title:"TWO HEADS", html:`
+    <p>Stranger still, Levin&rsquo;s lab can reliably modify the held pattern. This involves manipulating the ion channels that cells use to maintain the bioelectric pattern. Cutting a population of pattern-modified worms gives rise to a regenerated population where about a quarter of the worms have two heads rather than a head and a tail. No gene was edited. And if you cut one of the double-headed worms in half again, however many times you like over the remainder of its lifespan, the amputated parts regenerate as double-headed worms. <em>This pattern is an unfamiliar kind of memory; a memory that belongs not to an individual someone but instead to a collective someone.</em></p>` },
+
+  { g:G.NOTE, id:"i", title:"WHO WROTE THIS", kind:"colophon", html:`
+    <span class="lab">WHO WROTE THIS</span>
+    <p>The essay, <em>Memory without a brain</em>, is Daniel Wymark&rsquo;s, written by hand (a working draft). This palm-eink reader &mdash; the deck, the chrome, the pagination &mdash; was built by Claude (Anthropic) under Daniel&rsquo;s direction. The text is unchanged from the current draft.</p>
+    <p>No telemetry, no cookies, no storage; the page renders offline with no external assets.</p>
+    <div class="lic">CC BY-SA 4.0 &middot; Daniel Wymark &middot; <a href="/strange-interlocutor/">Strange Interlocutor</a></div>` },
+];
+
+const N = PAGES.length;
+let idx = 0;
+const ZMIN=0.75, ZMAX=1.9, ZSTEP=0.15; let zoom = 1;
+
+const $ = id => document.getElementById(id);
+const device=$("device"), stage=$("stage"), region=$("region"), ptitle=$("ptitle"),
+      counter=$("counter"), cat=$("cat"), thumb=$("thumb"), track=$("track"),
+      prevB=$("prev"), nextB=$("next"), overlay=$("overlay"), toc=$("toc"), zin=$("zin"), zout=$("zout");
+
+function pad(n){ return String(n).padStart(2,"0"); }
+
+function bodyFor(p){
+  if(p.kind==="cover"){
+    return `<div class="cover">
+      <div class="dither"></div>
+      <h1>Memory<br>without a brain</h1>
+      <div class="sub">&mdash; Strange Interlocutor &middot; Piece 1 &mdash;</div>
+      <div class="status">PALM-EINK READER<br>WORKING DRAFT</div>
+      <div class="tag2">An essay, paged for reading.<br>Use PREV / NEXT, the arrows, or swipe.</div>
+    </div>`;
+  }
+  if(p.kind==="answer"){ return `<div class="answer-wrap"><div class="answer">${p.html}</div></div>`; }
+  if(p.kind==="colophon"){ return `<div class="colo">${p.html}</div>`; }
+  return `<div class="read">${p.html}</div>`;
+}
+
+function refreshOverflow(){
+  const more = (stage.scrollHeight - stage.clientHeight) > 2;
+  const atBottom = (stage.scrollTop + stage.clientHeight) >= (stage.scrollHeight - 2);
+  region.classList.toggle("has-more", more && !atBottom);
+}
+function render(){
+  const p = PAGES[idx];
+  stage.innerHTML = bodyFor(p);
+  stage.scrollTop = 0;
+  ptitle.innerHTML = (p.id && p.id!=="—") ? (p.id+" · "+p.title) : p.title;
+  counter.textContent = pad(idx+1)+" / "+pad(N);
+  cat.innerHTML = p.g + " &#9656;";
+  const h = track.clientHeight, th = Math.max(10, Math.round(h/N));
+  thumb.style.height = th+"px";
+  thumb.style.top = Math.round(Math.max(0,h-th) * (N>1? idx/(N-1):0))+"px";
+  prevB.disabled = (idx===0); nextB.disabled = (idx===N-1);
+  refreshOverflow();
+}
+function go(i){ idx = Math.max(0, Math.min(N-1, i)); render(); }
+function applyZoom(){
+  device.style.setProperty("--zoom", zoom.toFixed(2));
+  zout.disabled = zoom <= ZMIN + 1e-9; zin.disabled = zoom >= ZMAX - 1e-9;
+  refreshOverflow();
+}
+const order=[G.FRONT,G.ESSAY,G.NOTE];
+function firstOf(g){ return PAGES.findIndex(p=>p.g===g); }
+cat.onclick = ()=>{ const ng=order[(order.indexOf(PAGES[idx].g)+1)%order.length]; go(firstOf(ng)); };
+prevB.onclick = ()=>go(idx-1); nextB.onclick = ()=>go(idx+1);
+$("up").onclick = ()=>go(idx-1); $("dn").onclick = ()=>go(idx+1); $("home").onclick = ()=>go(0);
+zin.onclick  = ()=>{ zoom=Math.min(ZMAX, +(zoom+ZSTEP).toFixed(2)); applyZoom(); };
+zout.onclick = ()=>{ zoom=Math.max(ZMIN, +(zoom-ZSTEP).toFixed(2)); applyZoom(); };
+stage.addEventListener("scroll", refreshOverflow, {passive:true});
+function buildTOC(){
+  let html="", lastG=null;
+  PAGES.forEach((p,i)=>{
+    if(p.g!==lastG){ html += `<div class="grp">${p.g}</div>`; lastG=p.g; }
+    const rid = (p.id==="—")? "⌂" : p.id;
+    html += `<div class="row${i===idx?" cur":""}" data-i="${i}"><span class="rid">${rid}</span><span class="rt">${p.title}</span></div>`;
+  });
+  toc.innerHTML = html;
+  toc.querySelectorAll(".row").forEach(r=>{ r.onclick = ()=>{ go(parseInt(r.dataset.i,10)); closeTOC(); }; });
+}
+function openTOC(){ buildTOC(); overlay.classList.add("on"); }
+function closeTOC(){ overlay.classList.remove("on"); }
+$("menu").onclick = openTOC; $("odone").onclick = closeTOC;
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ closeTOC(); return; }
+  if(overlay.classList.contains("on")) return;
+  if(e.key==="ArrowLeft") go(idx-1);
+  if(e.key==="ArrowRight") go(idx+1);
+  if(e.key==="+"||e.key==="=") zin.onclick();
+  if(e.key==="-"||e.key==="_") zout.onclick();
+});
+let sx=null, sy=null;
+stage.addEventListener("touchstart",e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; },{passive:true});
+stage.addEventListener("touchend",e=>{
+  if(sx===null) return;
+  const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy; sx=null; sy=null;
+  if(Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)){ go(idx + (dx<0?1:-1)); }
+},{passive:true});
+window.addEventListener("resize", ()=>{ render(); });
+applyZoom(); render();
+</script>
+</body>
+</html>

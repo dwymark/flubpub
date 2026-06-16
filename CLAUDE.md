@@ -198,6 +198,11 @@ When creating or restyling a dwm index or an AI-authored content page, reproduce
 both mechanisms; the canonical reference markup lives in
 `content/dwm/vibe-coded-nonsense.md`.
 
+To batch-review or batch-rewrite this prose across the whole site, use the
+`dwm-prose-forms` project skill: it regenerates two browser paste-back forms from
+the `content/dwm` SSOT (one for the on-page disclosures, one for the frontmatter
+listing descriptions) and ingests the exported edits back into the content files.
+
 ## Vendoring provenance
 
 A page copied in from another repo — a source document or a runtime bundle —

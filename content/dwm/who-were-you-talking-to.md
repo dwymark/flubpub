@@ -5,9 +5,10 @@ theme: harbor
 tags:
 - draft
 description: '<span class="ai-work" title="Written by Daniel Wymark; planned in dialogue
-  with an LLM, prose by hand.">Daniel Wymark</span> The series opens on the question
-  itself: who, or what, were you talking to? <span class="ai-desc" title="This one-line
-  description was written by Claude (Anthropic).">Description: written by Claude</span>'
+  with an LLM, prose by hand.">Daniel Wymark</span> Don''t ask yourself whether the
+  LLM is sentient. Ask yourself what you are doing when you talk with an LLM. <span
+  class="ai-desc" title="This one-line description was written by Daniel Wymark.">Description:
+  written by Daniel Wymark</span>'
 ---
 # Who were you talking to?
 

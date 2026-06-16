@@ -18,9 +18,11 @@ index:
     - micropolis-systems-atlas
 slug: vibe-coded-nonsense
 description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel
-  Wymark, with Claude (Anthropic)</span> A cabinet of interactive toys and experiments,
-  built fast and by feel. <span class="ai-desc" title="This one-line description was
-  written by Claude (Anthropic).">Description: written by Claude</span>'
+  Wymark, with Claude (Anthropic)</span> Intriguing web-page shaped experiments I
+  made with Claude. Largely focused on experimental web design concepts, mathematics
+  tutorials and visualizations, and one-off tools. Effort spent varies greatly and
+  is documented in each page''s AI disclosure. <span class="ai-desc" title="This one-line
+  description was written by Daniel Wymark.">Description: written by Daniel Wymark</span>'
 ---
 <style>
 #dwm-disc{position:relative;width:100%;z-index:60;margin-bottom:1.5rem;}

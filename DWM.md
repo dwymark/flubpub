@@ -64,17 +64,50 @@ server strips before rendering — and differ in slug and in how they install.
   ```
 
 - **Topic indexes** — ordinary pages that also carry an `index:` block, each at
-  its own slug. `content/dwm/vibe-coded-nonsense.md` lists toys by tag;
-  `content/dwm/strange-interlocutor.md` lists a curated series in two described
-  `sections`. Publish these with plain `push`, **not** `set-index` — `set-index`
-  would overwrite the front page:
+  its own slug. `content/dwm/vibe-coded-nonsense.md` lists toys by tag. Publish
+  these with plain `push`, **not** `set-index` — `set-index` would overwrite the
+  front page:
 
   ```bash
-  uv run flubpub --site dwm push content/dwm/strange-interlocutor.md
+  uv run flubpub --site dwm push content/dwm/vibe-coded-nonsense.md
   ```
+
+  The Strange Interlocutor series page is not a topic index but a style-switcher
+  hub; see its own section below.
 
 A topic index resolves its members from the live `pages.json`, so push the
 member pages before the index that lists them.
+
+## Strange Interlocutor style switcher
+
+`content/dwm/strange-interlocutor.html` is a **hub**, not a topic index: a
+self-contained `html_raw` page that lets a reader pick a reading style and opens
+the series essays in it. The choice is a collection-scoped `localStorage` key
+(`flubpub:style:strange-interlocutor`) the hub persists, so it follows the
+reader across the series. The default style is `wallpaper`.
+
+Each essay has three renditions, one published page per rendition:
+
+| Piece | shader | palm ("Monochrome PDA") | wallpaper (default) |
+|---|---|---|---|
+| who-were-you-talking-to | `who-were-you-talking-to-field` | `who-were-you-talking-to-palm` | `who-were-you-talking-to` |
+| memory-without-a-brain | `memory-without-a-brain` | `memory-without-a-brain-palm` | `memory-without-a-brain-wallpaper` |
+
+The `wallpaper` rendition reuses the base slug where one already serves the
+themed essay (who-were-you's base is harbor-themed; memory's base slug is its
+`shader` rendition, the convergence page). The `palm` rendition key keeps slug
+suffix `-palm` whatever its display label.
+
+The catalogue is `content/dwm/renditions.json` (the SSOT): collection ->
+variants (label, accent, blurb) -> pieces -> per-variant published URL, plus the
+default variant. **The hub inlines a copy as `FP_MANIFEST`; edit both or they
+drift** — nothing wires one to the other.
+
+Switching is hub-mediated: the hub repoints its tiles and previews a style by
+restyling itself, and each rendition links back to the hub. A per-page
+cross-rendition auto-redirect and an accent-curtain transition are deferred —
+the redirect conflicts with palm-eink's no-animation rule and with themed pages
+— so a reader changes style from the hub, not from inside a piece.
 
 ## Unlisted drafts
 

@@ -11,7 +11,7 @@
   (function(){
     var V={shader:1,palm:1,wallpaper:1};
     var k=null; try{ k=localStorage.getItem("flubpub:style:strange-interlocutor"); }catch(e){}
-    document.documentElement.dataset.fpStyle = (k&&V[k])? k : "shader";
+    document.documentElement.dataset.fpStyle = (k&&V[k])? k : "wallpaper";
   })();
 </script>
 <style>
@@ -139,7 +139,7 @@
 
   <footer class="foot">
     <span>Strange Interlocutor &middot; draft</span>
-    <span id="stylestate">style: shader</span>
+    <span id="stylestate">style: wallpaper</span>
   </footer>
 
 </div>
@@ -150,10 +150,10 @@
    restyling itself, and points the piece tiles at the chosen rendition. */
 var FP_MANIFEST = {
   collection: "strange-interlocutor",
-  default: "shader",
+  default: "wallpaper",
   variants: {
     shader:    { label:"Shader",     accent:"#5d7a3a", blurb:"A slowly drifting field behind floating text islands." },
-    palm:      { label:"Palm e-ink", accent:"#000000", blurb:"A monochrome PDA reader, paged one screen at a time." },
+    palm:      { label:"Monochrome PDA", accent:"#000000", blurb:"A monochrome PDA reader, paged one screen at a time." },
     wallpaper: { label:"Wallpaper",  accent:"#b5512f", blurb:"Plain themed prose on a patterned ground." }
   },
   pieces: {

@@ -4,10 +4,10 @@
     "strange-interlocutor": {
       "label": "Strange Interlocutor",
       "hub": "/strange-interlocutor/",
-      "default": "shader",
+      "default": "wallpaper",
       "variants": {
         "shader":    { "label": "Shader",     "accent": "#5d7a3a", "blurb": "A slowly drifting field behind floating text islands." },
-        "palm":      { "label": "Palm e-ink", "accent": "#000000", "blurb": "A monochrome PDA reader, paged one screen at a time." },
+        "palm":      { "label": "Monochrome PDA", "accent": "#000000", "blurb": "A monochrome PDA reader, paged one screen at a time." },
         "wallpaper": { "label": "Wallpaper",  "accent": "#b5512f", "blurb": "Plain themed prose on a patterned ground." }
       },
       "pieces": {

@@ -369,6 +369,19 @@
   function schedule(){ if(rafId===null) rafId=requestAnimationFrame(tick); }
   function stop(){ if(rafId){cancelAnimationFrame(rafId);rafId=null;} }
 
+  // pre-roll the simulation into a natural flock formation (no rendering), so
+  // the first painted frame — and any static fallback — shows a real flock
+  // rather than the spawn scatter. Cheap; runs once.
+  function settle(steps){ for(var k=0;k<steps;k++){ attractors(k*0.05); step(1); } }
+  // animate only when it will actually be seen and is supported. Reduced-motion
+  // and a missing WebGL (retro needs the shader) fall back to a static frame.
+  function shouldLoop(){
+    if(reduce) return false;
+    if(style==="wallpaper") return false;
+    if(style==="palm" && !useGL) return false;
+    return true;
+  }
+
   function resize(){
     W=Math.max(1,Math.floor(window.innerWidth)); H=Math.max(1,Math.floor(window.innerHeight));
     var dpr=Math.min(window.devicePixelRatio||1,2), pw=Math.floor(W*dpr), ph=Math.floor(H*dpr);
@@ -386,7 +399,7 @@
     }
   }
   window.addEventListener("resize",resize);
-  document.addEventListener("visibilitychange",function(){ if(document.hidden) stop(); else if(style!=="wallpaper") schedule(); });
+  document.addEventListener("visibilitychange",function(){ if(document.hidden) stop(); else if(shouldLoop()) schedule(); });
 
   /* ===================== reading-style chooser ===================== */
   var KEY="flubpub:style:strange-interlocutor", VALID={shader:1,palm:1,wallpaper:1};
@@ -403,7 +416,7 @@
     retroCv.style.display = (s==="palm" && useGL) ? "block" : "none";
     wall.style.display    = (s==="wallpaper") ? "block" : "none";
     stop();
-    if(s!=="wallpaper"){ paintFlock(); if(!reduce) schedule(); }
+    if(s!=="wallpaper"){ paintFlock(); if(shouldLoop()) schedule(); }
     chButtons.forEach(function(b){ b.classList.toggle("on", b.dataset.s===s); });
     repointPieces();
   }
@@ -497,8 +510,9 @@
 
   /* ===================== boot ===================== */
   useGL=initGL();
-  spawn(0,280); inited=280;        // spawn enough for either preset
-  resize();
+  resize();                        // establish W,H before spawning
+  spawn(0,280); inited=280;        // scatter across the real viewport (not a 1x1 origin)
+  settle(160);                     // pre-roll into a flock formation
   paint();
   applyStyle(style);   /* sets dynamics, background, active button, link targets */
 })();

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Strange Interlocutor — flocking sky</title>
+<title>Strange Interlocutor</title>
 <style>
   :root{
     --ink:#15262d; --dim:#5a6e76; --accent:#0f7d88;
@@ -17,43 +17,59 @@
   html,body{height:100%}
   body{background:#eef4f5;overflow:hidden;font-family:var(--serif);color:var(--ink)}
 
-  /* the sky sits behind everything; it never takes the pointer */
+  /* backgrounds: the animated/paused flock, or the static bird wallpaper */
   #sky{position:fixed;inset:0;display:block;width:100%;height:100%;z-index:0;pointer-events:none}
+  #wall{position:fixed;inset:0;z-index:0;display:none;pointer-events:none;
+    background-color:#eef4f5;background-repeat:repeat;background-size:200px 200px;
+    background-image:url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSB0aWxpbmc6IGJpcmRzLXBpbndoZWVsCiAgICAgZ3JvdXA6IHA0CiAgICAgcGVyaW9kX3g6IDI1NiAgcGVyaW9kX3k6IDI1NgogICAgIGZ1bmRhbWVudGFsOiBxdWFydGVyLWNlbGwKICAgICBtb3RpZjogZmxvY2sgYmlyZCBnbHlwaCAodHdvIGNvbnZlcmdpbmcgYXJjcyksIGZyb20gc3RyYW5nZS1pbnRlcmxvY3V0b3IKICAgICB2ZXJpZmllZDogZmFsc2UgLS0+CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgdmlld0JveD0iMCAwIDI1NiAyNTYiPgogIDxyZWN0IHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiBmaWxsPSJ2YXIoLS10aWxpbmctYmcsICNlZWY0ZjUpIi8+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ2YXIoLS10aWxpbmctZmcsICMyZjdlODYpIiBzdHJva2Utd2lkdGg9IjIuNCIKICAgICBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIG9wYWNpdHk9InZhcigtLXRpbGluZy1vcGFjaXR5LCAwLjUpIj4KICAgIDxnIGlkPSJ1Ij48cGF0aCBkPSJNMTY1LjU4LDEzNS42MyBRMTgwLjUyLDExNi41OCAxOTEuOTcsOTUuNTEgTTE0Ny4wNCw3OC41NyBRMTcwLjMzLDg1LjIwIDE5MS45Nyw5NS41MSIvPjxwYXRoIGQ9Ik0xMzIuOTIsMTc2Ljc3IFExNDguMjgsMTg1LjY4IDE2NC43NSwxOTEuODQgTTE3Mi40NywxNTcuNDggUTE3MC4wMywxNzUuMDcgMTY0Ljc1LDE5MS44NCIvPjwvZz4KICAgIDx1c2UgaHJlZj0iI3UiIHRyYW5zZm9ybT0icm90YXRlKDAsMTI4LDEyOCkiLz48dXNlIGhyZWY9IiN1IiB0cmFuc2Zvcm09InJvdGF0ZSg5MCwxMjgsMTI4KSIvPjx1c2UgaHJlZj0iI3UiIHRyYW5zZm9ybT0icm90YXRlKDE4MCwxMjgsMTI4KSIvPjx1c2UgaHJlZj0iI3UiIHRyYW5zZm9ybT0icm90YXRlKDI3MCwxMjgsMTI4KSIvPgogIDwvZz4KPC9zdmc+")}
 
-  /* minimalist deck: a wordmark up-left, two palm-eink rockers in the lower
-     corners, a sparse paged card centred over the flock. No frame, no border. */
-  .wordmark{position:fixed;top:18px;left:20px;z-index:2;font-family:var(--serif);font-weight:600;
+  .wordmark{position:fixed;top:18px;left:20px;z-index:3;font-family:var(--serif);font-weight:600;
     font-size:clamp(17px,2.4vw,22px);letter-spacing:-.01em;color:var(--ink);
     text-shadow:var(--halo);pointer-events:none}
 
+  /* reading-style chooser: radio semantics, vertical column, upper-right, 80% chrome */
+  .chooser{position:fixed;top:16px;right:16px;z-index:3;display:flex;flex-direction:column;gap:8px}
+  .ch{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    background:var(--paper);color:var(--ink);border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);
+    padding:7px 12px;cursor:pointer;text-align:center;min-width:94px;
+    -webkit-user-select:none;user-select:none;pointer-events:auto}
+  .ch:active{transform:translate(3px,3px);box-shadow:none}
+  .ch.on{background:var(--ink);color:var(--paper);box-shadow:none;transform:translate(3px,3px)}
+
   .deck{position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;
-    padding:16vh 9vw;pointer-events:none}
-  .card{max-width:34rem;width:100%;
+    padding:13vh 7vw;pointer-events:none}
+  .card{max-width:33rem;width:100%;
     background:rgba(251,251,249,.84);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
     border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);
-    padding:clamp(20px,3.4vw,30px) clamp(22px,3.6vw,32px)}
-  .card h2{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
-    color:var(--accent);margin:0 0 1.1em;text-shadow:var(--halo)}
-  .card .lede{font-family:var(--gen);font-size:clamp(20px,4.6vw,38px);line-height:1.22;
-    color:var(--ink);margin:0;text-shadow:var(--halo)}
-  .card .row{margin:0 0 1.2em}
-  .card .row a,.card .mini a{font-family:var(--serif);color:var(--ink);text-decoration:none;
-    border-bottom:1px solid var(--accent);pointer-events:auto;text-shadow:var(--halo)}
-  .card .row a{font-size:clamp(19px,2.8vw,24px)}
-  .card .row .g{display:block;font-family:var(--serif);font-size:14px;color:var(--dim);
-    margin-top:.25em;text-shadow:var(--halo)}
-  .card .mini{list-style:none;margin:0;padding:0}
-  .card .mini li{margin:.55em 0;font-size:clamp(16px,2.2vw,19px)}
-  .card .alloc{display:grid;grid-template-columns:auto 1fr;gap:5px 16px;margin:0}
-  .card .alloc dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
-    color:var(--dim);padding-top:3px;text-shadow:var(--halo)}
-  .card .alloc dd{margin:0;color:var(--ink);font-family:var(--serif);font-size:16px;text-shadow:var(--halo)}
+    padding:clamp(18px,3vw,28px) clamp(20px,3.4vw,30px)}
+  /* Retro: solid panel, no translucency */
+  body.solid .card{background:#ffffff;-webkit-backdrop-filter:none;backdrop-filter:none}
 
-  .counter{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:2;
+  .card h2{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 .9em}
+  .card .lede{font-family:var(--gen);font-size:clamp(20px,4.4vw,34px);line-height:1.22;color:var(--ink);margin:0}
+
+  /* one entry: title, author byline (left), gloss, description byline (right) */
+  .entry{margin:0 0 1em}
+  .entry:last-child{margin-bottom:0}
+  .entry a{font-family:var(--serif);font-size:clamp(18px,2.5vw,21px);color:var(--ink);
+    text-decoration:none;border-bottom:1px solid var(--accent);pointer-events:auto}
+  .ai-work{display:block;font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.04em;
+    color:var(--dim);margin-top:3px}
+  .gloss{display:block;font-family:var(--serif);font-size:14px;line-height:1.38;color:var(--ink);margin-top:3px}
+  .ai-desc{display:block;font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;
+    color:var(--dim);text-align:right;margin-top:2px}
+
+  .alloc{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+  .alloc dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--dim);padding-top:3px;white-space:nowrap}
+  .alloc dd{margin:0;font-family:var(--serif);font-size:14px;line-height:1.34;color:var(--ink)}
+  .note{margin:.8em 0 0;font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;color:var(--dim)}
+
+  .counter{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:3;
     font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--dim);
     text-shadow:var(--halo);pointer-events:none}
-
-  .nav button{position:fixed;bottom:18px;z-index:2;font-family:var(--mono);font-size:12px;
+  .nav button{position:fixed;bottom:18px;z-index:3;font-family:var(--mono);font-size:12px;
     letter-spacing:.12em;text-transform:uppercase;background:var(--paper);color:var(--ink);
     border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:9px 14px;cursor:pointer;
     -webkit-user-select:none;user-select:none;pointer-events:auto}
@@ -65,10 +81,17 @@
 </head>
 <body>
   <canvas id="sky"></canvas>
+  <div id="wall"></div>
 
   <div class="wordmark">Strange Interlocutor</div>
+  <div class="chooser">
+    <button class="ch" data-s="shader" type="button">Animated</button>
+    <button class="ch" data-s="palm" type="button">Retro</button>
+    <button class="ch" data-s="wallpaper" type="button">Plain</button>
+  </div>
+
   <div class="deck"><div class="card" id="card"></div></div>
-  <div class="counter" id="counter">01 / 05</div>
+  <div class="counter" id="counter">01 / 06</div>
   <div class="nav">
     <button class="prev" id="prev" type="button">&#9664; Prev</button>
     <button class="next" id="next" type="button">Next &#9654;</button>
@@ -78,299 +101,258 @@
 (function(){
   "use strict";
 
-  /* ----------------------------------------------------------------------
-     A flocking sky. The simulation core (SoA state, toroidal spatial-grid
-     neighbour search, the three Reynolds rules with a field-of-view gate,
-     clamp-and-wrap integration) is lifted from Daniel's BOIDS instrument.
-     The instrument chrome is gone; this is ambient. Two slow roving
-     attractors keep the flock migrating and reforming instead of settling,
-     and the agents draw as small converging-arc bird glyphs on a pale sky.
-     ---------------------------------------------------------------------- */
+  /* ===================== flock simulation (core from BOIDS) ===================== */
+  var P = { N:230, maxSpeed:1.5, wSep:1.5, wAli:1.05, wCoh:0.85, wSeek:0.5, vision:48, personal:15, fov:300 };
+  var AGILITY=0.05, ACCENT_FRAC=0.05;
+  var SKY=[[0.00,"#e6f0f3"],[0.55,"#eef6f6"],[1.00,"#f7fcfc"]];
+  var LAYER=[{col:"#123f54",w:1.75,sz:6.8},{col:"#1d6473",w:1.50,sz:5.8},{col:"#357f88",w:1.30,sz:4.9},
+             {col:"#6aa1a8",w:1.10,sz:4.1},{col:"#a6c7cc",w:0.95,sz:3.5}];
+  var NL=LAYER.length, ACCENT={col:"#ef6a3a",w:1.6};
 
-  // ---- tuning (calm, ambient) ------------------------------------------
-  var P = {
-    N: 230, maxSpeed: 1.5,
-    wSep: 1.5, wAli: 1.05, wCoh: 0.85, wSeek: 0.5,
-    vision: 48, personal: 15, fov: 300
-  };
-  var AGILITY = 0.05;     // steering force ceiling, as a fraction of maxSpeed
-  var ACCENT_FRAC = 0.05; // share of birds drawn as a vivid stray
+  var CAP=2600;
+  var px=new Float32Array(CAP),py=new Float32Array(CAP),vx=new Float32Array(CAP),vy=new Float32Array(CAP);
+  var ax=new Float32Array(CAP),ay=new Float32Array(CAP),zz=new Float32Array(CAP);
+  var lb=new Int8Array(CAP),acc=new Uint8Array(CAP),grp=new Uint8Array(CAP);
+  var flap=new Float32Array(CAP),lhx=new Float32Array(CAP),lhy=new Float32Array(CAP);
+  var inited=0,W=1,H=1;
+  var gHead=new Int32Array(1),gNext=new Int32Array(CAP);
 
-  // ---- palette ---------------------------------------------------------
-  // pale cool sky, vertical
-  var SKY = [ [0.00,"#e6f0f3"], [0.55,"#eef6f6"], [1.00,"#f7fcfc"] ];
-  // depth layers, near (dark cerulean-teal) -> far (pale). value carries depth.
-  var LAYER = [
-    {col:"#123f54", w:1.75, sz:6.8},
-    {col:"#1d6473", w:1.50, sz:5.8},
-    {col:"#357f88", w:1.30, sz:4.9},
-    {col:"#6aa1a8", w:1.10, sz:4.1},
-    {col:"#a6c7cc", w:0.95, sz:3.5}
-  ];
-  var NL = LAYER.length;
-  var ACCENT = {col:"#ef6a3a", w:1.6};   // vivid warm stray on the cool field
+  var cv=document.getElementById("sky"), ctx=cv.getContext("2d",{alpha:false});
+  var wall=document.getElementById("wall");
 
-  // ---- state (structure-of-arrays) ------------------------------------
-  var CAP = 2600;
-  var px=new Float32Array(CAP), py=new Float32Array(CAP);
-  var vx=new Float32Array(CAP), vy=new Float32Array(CAP);
-  var ax=new Float32Array(CAP), ay=new Float32Array(CAP);
-  var zz=new Float32Array(CAP);     // depth 0..1 (fixed per bird)
-  var lb=new Int8Array(CAP);        // layer bucket
-  var acc=new Uint8Array(CAP);      // accent flag
-  var grp=new Uint8Array(CAP);      // which attractor a bird seeks
-  var flap=new Float32Array(CAP);   // wingbeat phase
-  var lhx=new Float32Array(CAP), lhy=new Float32Array(CAP); // last heading, for turn
-  var inited=0, W=1, H=1;
-
-  var gHead=new Int32Array(1), gNext=new Int32Array(CAP);
-
-  // ---- dom -------------------------------------------------------------
-  var cv=document.getElementById("sky");
-  var ctx=cv.getContext("2d",{alpha:false});
-
-  // ---- birds -----------------------------------------------------------
   function spawn(a,n){
-    for (var i=a;i<n;i++){
+    for(var i=a;i<n;i++){
       px[i]=Math.random()*W; py[i]=Math.random()*H;
       var ang=Math.random()*Math.PI*2, sp=P.maxSpeed*(0.6+Math.random()*0.4);
-      vx[i]=Math.cos(ang)*sp; vy[i]=Math.sin(ang)*sp;
-      lhx[i]=Math.cos(ang); lhy[i]=Math.sin(ang);
-      var z=Math.random(); zz[i]=z;
-      var bk=(z*NL)|0; if(bk>=NL)bk=NL-1; lb[i]=bk;
-      acc[i]= Math.random()<ACCENT_FRAC ? 1 : 0;
-      grp[i]= Math.random()<0.5 ? 0 : 1;
-      flap[i]=Math.random()*Math.PI*2;
+      vx[i]=Math.cos(ang)*sp; vy[i]=Math.sin(ang)*sp; lhx[i]=Math.cos(ang); lhy[i]=Math.sin(ang);
+      var z=Math.random(); zz[i]=z; var bk=(z*NL)|0; if(bk>=NL)bk=NL-1; lb[i]=bk;
+      acc[i]=Math.random()<ACCENT_FRAC?1:0; grp[i]=Math.random()<0.5?0:1; flap[i]=Math.random()*Math.PI*2;
     }
   }
   function setPop(n){ n=Math.max(1,Math.min(CAP,n|0)); if(n>inited){spawn(inited,n);inited=n;} P.N=n; }
 
-  // ---- roving attractors ----------------------------------------------
-  var gx=[0,0], gy=[0,0];
+  var gx=[0,0],gy=[0,0];
   function attractors(t){
-    gx[0]=W*(0.5+0.40*Math.sin(t*0.061));        gy[0]=H*(0.5+0.34*Math.sin(t*0.083+1.1));
-    gx[1]=W*(0.5+0.42*Math.sin(t*0.047+2.3));    gy[1]=H*(0.5+0.30*Math.sin(t*0.072+4.0));
+    gx[0]=W*(0.5+0.40*Math.sin(t*0.061)); gy[0]=H*(0.5+0.34*Math.sin(t*0.083+1.1));
+    gx[1]=W*(0.5+0.42*Math.sin(t*0.047+2.3)); gy[1]=H*(0.5+0.30*Math.sin(t*0.072+4.0));
   }
 
-  // ---- one simulation step --------------------------------------------
   var cellBuf=new Int32Array(9);
   function step(){
-    var n=P.N; if(n<1) return;
-    var visR=P.vision, sepR=P.personal;
-    var cell=Math.max(visR,sepR,1);
-    var cols=Math.max(1,Math.ceil(W/cell)), rows=Math.max(1,Math.ceil(H/cell));
-    var ncells=cols*rows;
-    if (gHead.length<ncells) gHead=new Int32Array(ncells);
-    for (var k=0;k<ncells;k++) gHead[k]=-1;
-    for (var i=0;i<n;i++){
-      var ci=(px[i]/cell)|0; if(ci<0)ci=0; else if(ci>=cols)ci=cols-1;
-      var cj=(py[i]/cell)|0; if(cj<0)cj=0; else if(cj>=rows)cj=rows-1;
+    var n=P.N; if(n<1)return;
+    var visR=P.vision,sepR=P.personal,cell=Math.max(visR,sepR,1);
+    var cols=Math.max(1,Math.ceil(W/cell)),rows=Math.max(1,Math.ceil(H/cell)),ncells=cols*rows;
+    if(gHead.length<ncells)gHead=new Int32Array(ncells);
+    for(var k=0;k<ncells;k++)gHead[k]=-1;
+    for(var i=0;i<n;i++){
+      var ci=(px[i]/cell)|0; if(ci<0)ci=0;else if(ci>=cols)ci=cols-1;
+      var cj=(py[i]/cell)|0; if(cj<0)cj=0;else if(cj>=rows)cj=rows-1;
       var idx=cj*cols+ci; gNext[i]=gHead[idx]; gHead[idx]=i;
     }
-    var halfW=W*0.5, halfH=H*0.5, visR2=visR*visR, sepR2=sepR*sepR;
-    var maxS=P.maxSpeed, maxF=maxS*AGILITY;
-    var fovFull=P.fov>=359.5, fovCos=Math.cos(P.fov*Math.PI/360);
-
-    for (var i2=0;i2<n;i2++){
-      var x=px[i2], y=py[i2], mvx=vx[i2], mvy=vy[i2];
-      var spd=Math.sqrt(mvx*mvx+mvy*mvy);
-      var hx=spd>1e-6?mvx/spd:1, hy=spd>1e-6?mvy/spd:0;
-      var aVx=0,aVy=0,cA=0, cDx=0,cDy=0,cC=0, sDx=0,sDy=0,cS=0;
-
-      var ci2=(x/cell)|0; if(ci2<0)ci2=0; else if(ci2>=cols)ci2=cols-1;
-      var cj2=(y/cell)|0; if(cj2<0)cj2=0; else if(cj2>=rows)cj2=rows-1;
+    var halfW=W*0.5,halfH=H*0.5,visR2=visR*visR,sepR2=sepR*sepR,maxS=P.maxSpeed,maxF=maxS*AGILITY;
+    var fovFull=P.fov>=359.5,fovCos=Math.cos(P.fov*Math.PI/360);
+    for(var i2=0;i2<n;i2++){
+      var x=px[i2],y=py[i2],mvx=vx[i2],mvy=vy[i2],spd=Math.sqrt(mvx*mvx+mvy*mvy);
+      var hx=spd>1e-6?mvx/spd:1,hy=spd>1e-6?mvy/spd:0;
+      var aVx=0,aVy=0,cA=0,cDx=0,cDy=0,cC=0,sDx=0,sDy=0,cS=0;
+      var ci2=(x/cell)|0; if(ci2<0)ci2=0;else if(ci2>=cols)ci2=cols-1;
+      var cj2=(y/cell)|0; if(cj2<0)cj2=0;else if(cj2>=rows)cj2=rows-1;
       var nc=0;
-      for (var di=-1;di<=1;di++) for (var dj=-1;dj<=1;dj++){
-        var cx=((ci2+di)%cols+cols)%cols, cy=((cj2+dj)%rows+rows)%rows;
-        var cidx=cy*cols+cx, dup=false;
-        for (var q=0;q<nc;q++){ if(cellBuf[q]===cidx){dup=true;break;} }
-        if(!dup) cellBuf[nc++]=cidx;
+      for(var di=-1;di<=1;di++)for(var dj=-1;dj<=1;dj++){
+        var cx=((ci2+di)%cols+cols)%cols,cy=((cj2+dj)%rows+rows)%rows,cidx=cy*cols+cx,dup=false;
+        for(var q=0;q<nc;q++){if(cellBuf[q]===cidx){dup=true;break;}}
+        if(!dup)cellBuf[nc++]=cidx;
       }
-      for (var c=0;c<nc;c++){
+      for(var c=0;c<nc;c++){
         var j=gHead[cellBuf[c]];
-        while (j!==-1){
-          if (j!==i2){
-            var dx=px[j]-x, dy=py[j]-y;
-            if (dx>halfW)dx-=W; else if(dx<-halfW)dx+=W;
-            if (dy>halfH)dy-=H; else if(dy<-halfH)dy+=H;
+        while(j!==-1){
+          if(j!==i2){
+            var dx=px[j]-x,dy=py[j]-y;
+            if(dx>halfW)dx-=W;else if(dx<-halfW)dx+=W;
+            if(dy>halfH)dy-=H;else if(dy<-halfH)dy+=H;
             var d2=dx*dx+dy*dy;
-            if (d2>0 && d2<visR2){
-              var inView=fovFull;
-              if(!inView){ var dd=Math.sqrt(d2); inView=(hx*dx+hy*dy)>=fovCos*dd; }
-              if (inView){ aVx+=vx[j]; aVy+=vy[j]; cA++; cDx+=dx; cDy+=dy; cC++; }
-              if (d2<sepR2){ var inv=1/d2; sDx-=dx*inv; sDy-=dy*inv; cS++; }
+            if(d2>0&&d2<visR2){
+              var inView=fovFull; if(!inView){var dd=Math.sqrt(d2);inView=(hx*dx+hy*dy)>=fovCos*dd;}
+              if(inView){aVx+=vx[j];aVy+=vy[j];cA++;cDx+=dx;cDy+=dy;cC++;}
+              if(d2<sepR2){var inv=1/d2;sDx-=dx*inv;sDy-=dy*inv;cS++;}
             }
           }
           j=gNext[j];
         }
       }
-      var fx=0, fy=0, L, dvx, dvy;
-      if (cA>0){ var avx=aVx/cA, avy=aVy/cA; L=Math.sqrt(avx*avx+avy*avy);
-        if(L>0){ dvx=avx/L*maxS-mvx; dvy=avy/L*maxS-mvy;
-          L=Math.sqrt(dvx*dvx+dvy*dvy); if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}
-          fx+=P.wAli*dvx; fy+=P.wAli*dvy; } }
-      if (cC>0){ var mx=cDx/cC, my=cDy/cC; L=Math.sqrt(mx*mx+my*my);
-        if(L>0){ dvx=mx/L*maxS-mvx; dvy=my/L*maxS-mvy;
-          L=Math.sqrt(dvx*dvx+dvy*dvy); if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}
-          fx+=P.wCoh*dvx; fy+=P.wCoh*dvy; } }
-      if (cS>0){ L=Math.sqrt(sDx*sDx+sDy*sDy);
-        if(L>0){ dvx=sDx/L*maxS-mvx; dvy=sDy/L*maxS-mvy;
-          L=Math.sqrt(dvx*dvx+dvy*dvy); if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}
-          fx+=P.wSep*dvx; fy+=P.wSep*dvy; } }
-
-      // seek the bird's roving attractor (wrap-safe), low weight -> migration
-      var g=grp[i2], qx=gx[g]-x, qy=gy[g]-y;
-      if(qx>halfW)qx-=W; else if(qx<-halfW)qx+=W;
-      if(qy>halfH)qy-=H; else if(qy<-halfH)qy+=H;
+      var fx=0,fy=0,L,dvx,dvy;
+      if(cA>0){var avx=aVx/cA,avy=aVy/cA;L=Math.sqrt(avx*avx+avy*avy);
+        if(L>0){dvx=avx/L*maxS-mvx;dvy=avy/L*maxS-mvy;L=Math.sqrt(dvx*dvx+dvy*dvy);if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}fx+=P.wAli*dvx;fy+=P.wAli*dvy;}}
+      if(cC>0){var mx=cDx/cC,my=cDy/cC;L=Math.sqrt(mx*mx+my*my);
+        if(L>0){dvx=mx/L*maxS-mvx;dvy=my/L*maxS-mvy;L=Math.sqrt(dvx*dvx+dvy*dvy);if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}fx+=P.wCoh*dvx;fy+=P.wCoh*dvy;}}
+      if(cS>0){L=Math.sqrt(sDx*sDx+sDy*sDy);
+        if(L>0){dvx=sDx/L*maxS-mvx;dvy=sDy/L*maxS-mvy;L=Math.sqrt(dvx*dvx+dvy*dvy);if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}fx+=P.wSep*dvx;fy+=P.wSep*dvy;}}
+      var g=grp[i2],qx=gx[g]-x,qy=gy[g]-y;
+      if(qx>halfW)qx-=W;else if(qx<-halfW)qx+=W; if(qy>halfH)qy-=H;else if(qy<-halfH)qy+=H;
       var qL=Math.sqrt(qx*qx+qy*qy);
-      if(qL>1e-3){ dvx=qx/qL*maxS-mvx; dvy=qy/qL*maxS-mvy;
-        L=Math.sqrt(dvx*dvx+dvy*dvy); if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}
-        fx+=P.wSeek*dvx; fy+=P.wSeek*dvy; }
-
-      ax[i2]=fx; ay[i2]=fy;
+      if(qL>1e-3){dvx=qx/qL*maxS-mvx;dvy=qy/qL*maxS-mvy;L=Math.sqrt(dvx*dvx+dvy*dvy);if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}fx+=P.wSeek*dvx;fy+=P.wSeek*dvy;}
+      ax[i2]=fx;ay[i2]=fy;
     }
-    for (var i3=0;i3<n;i3++){
-      var nvx=vx[i3]+ax[i3], nvy=vy[i3]+ay[i3];
-      var m2=nvx*nvx+nvy*nvy, ms=maxS*maxS;
-      if(m2>ms){ var m=Math.sqrt(m2); nvx=nvx/m*maxS; nvy=nvy/m*maxS; }
-      vx[i3]=nvx; vy[i3]=nvy;
-      var nx=px[i3]+nvx, ny=py[i3]+nvy;
-      if(nx<0)nx+=W; else if(nx>=W)nx-=W;
-      if(ny<0)ny+=H; else if(ny>=H)ny-=H;
-      px[i3]=nx; py[i3]=ny;
+    for(var i3=0;i3<n;i3++){
+      var nvx=vx[i3]+ax[i3],nvy=vy[i3]+ay[i3],m2=nvx*nvx+nvy*nvy,ms=maxS*maxS;
+      if(m2>ms){var m=Math.sqrt(m2);nvx=nvx/m*maxS;nvy=nvy/m*maxS;}
+      vx[i3]=nvx;vy[i3]=nvy;
+      var nx=px[i3]+nvx,ny=py[i3]+nvy;
+      if(nx<0)nx+=W;else if(nx>=W)nx-=W; if(ny<0)ny+=H;else if(ny>=H)ny-=H;
+      px[i3]=nx;py[i3]=ny;
     }
   }
 
-  // ---- render ----------------------------------------------------------
   var skyGrad=null;
-  function buildSky(){
-    skyGrad=ctx.createLinearGradient(0,0,0,H);
-    for (var i=0;i<SKY.length;i++) skyGrad.addColorStop(SKY[i][0],SKY[i][1]);
+  function buildSky(){ skyGrad=ctx.createLinearGradient(0,0,0,H); for(var i=0;i<SKY.length;i++)skyGrad.addColorStop(SKY[i][0],SKY[i][1]); }
+  function birdInto(path,x,y,c,s,sz,f){
+    var px2=-s,py2=c, nx=x+c*0.7*sz,ny=y+s*0.7*sz, bx=x-c*0.55*sz,by=y-s*0.55*sz, span=sz*f;
+    var Ltx=bx+px2*span,Lty=by+py2*span, Rtx=bx-px2*span,Rty=by-py2*span;
+    var cfx=x+c*0.15*sz,cfy=y+s*0.15*sz, Lcx=cfx+px2*0.55*span,Lcy=cfy+py2*0.55*span, Rcx=cfx-px2*0.55*span,Rcy=cfy-py2*0.55*span;
+    path.moveTo(Ltx,Lty); path.quadraticCurveTo(Lcx,Lcy,nx,ny);
+    path.moveTo(Rtx,Rty); path.quadraticCurveTo(Rcx,Rcy,nx,ny);
   }
-  function birdInto(path, x,y, c,s, sz, f){
-    // nose leads along heading; two wing-arcs converge there (the "M")
-    var px2=-s, py2=c;                          // perpendicular
-    var nx=x+c*0.7*sz,   ny=y+s*0.7*sz;          // nose / apex
-    var bx=x-c*0.55*sz,  by=y-s*0.55*sz;         // wing root, swept back
-    var span=sz*f;
-    var Ltx=bx+px2*span,  Lty=by+py2*span;       // left tip
-    var Rtx=bx-px2*span,  Rty=by-py2*span;       // right tip
-    // control points bow the wings forward for an organic sweep
-    var cfx=x+c*0.15*sz,  cfy=y+s*0.15*sz;
-    var Lcx=cfx+px2*0.55*span, Lcy=cfy+py2*0.55*span;
-    var Rcx=cfx-px2*0.55*span, Rcy=cfy-py2*0.55*span;
-    path.moveTo(Ltx,Lty); path.quadraticCurveTo(Lcx,Lcy, nx,ny);
-    path.moveTo(Rtx,Rty); path.quadraticCurveTo(Rcx,Rcy, nx,ny);
-  }
-  var layerPath=new Array(NL), accPath=null;
-  function render(){
-    ctx.fillStyle=skyGrad||"#eef4f5"; ctx.fillRect(0,0,W,H);
-    for (var l=0;l<NL;l++) layerPath[l]=new Path2D();
-    accPath=new Path2D();
-    var n=Math.min(P.N,inited), invMax=1/P.maxSpeed;
-    for (var i=0;i<n;i++){
-      var mvx=vx[i], mvy=vy[i], spd=Math.sqrt(mvx*mvx+mvy*mvy);
-      var c=spd>1e-4?mvx/spd:1, s=spd>1e-4?mvy/spd:0;
-      // turn rate from heading change -> harder flap when banking
+  var layerPath=new Array(NL),accPath=null;
+  function render(mode){
+    var mono = (mode==="palm");
+    ctx.fillStyle = mono ? "#ffffff" : (skyGrad||"#eef4f5"); ctx.fillRect(0,0,W,H);
+    for(var l=0;l<NL;l++)layerPath[l]=new Path2D(); accPath=new Path2D();
+    var n=Math.min(P.N,inited),invMax=1/P.maxSpeed;
+    for(var i=0;i<n;i++){
+      var mvx=vx[i],mvy=vy[i],spd=Math.sqrt(mvx*mvx+mvy*mvy);
+      var c=spd>1e-4?mvx/spd:1,s=spd>1e-4?mvy/spd:0;
       var turn=Math.abs(c*lhy[i]-s*lhx[i]); lhx[i]=c; lhy[i]=s;
       flap[i]+=0.13+spd*invMax*0.12+turn*2.2;
-      var f=0.78+0.30*Math.sin(flap[i]);      // wingbeat: spread <-> fold
-      var sz=LAYER[lb[i]].sz;
-      birdInto(acc[i]?accPath:layerPath[lb[i]], px[i],py[i], c,s, sz, f);
+      var f=0.78+0.30*Math.sin(flap[i]), sz=LAYER[lb[i]].sz;
+      birdInto(acc[i]?accPath:layerPath[lb[i]],px[i],py[i],c,s,sz,f);
     }
     ctx.lineCap="round"; ctx.lineJoin="round";
-    for (var l2=0;l2<NL;l2++){ ctx.strokeStyle=LAYER[l2].col; ctx.lineWidth=LAYER[l2].w; ctx.stroke(layerPath[l2]); }
-    ctx.strokeStyle=ACCENT.col; ctx.lineWidth=ACCENT.w; ctx.stroke(accPath);
+    for(var l2=0;l2<NL;l2++){ ctx.strokeStyle = mono?"#000000":LAYER[l2].col; ctx.lineWidth=LAYER[l2].w; ctx.stroke(layerPath[l2]); }
+    ctx.strokeStyle = mono?"#000000":ACCENT.col; ctx.lineWidth=ACCENT.w; ctx.stroke(accPath);
   }
 
-  // ---- loop ------------------------------------------------------------
   var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var t0=performance.now()/1000, raf=null;
-  function frame(now){
-    var t=now/1000-t0;
-    attractors(reduce? t*0.05 : t);
-    if(!reduce){ step(); } else if (raf===1){ step(); } // reduced motion: hold near-still
-    render();
-    raf=requestAnimationFrame(frame);
+  var t0=performance.now()/1000, rafId=null;
+  function tick(now){
+    rafId=null;
+    if(style==="shader"){ attractors(now/1000-t0); if(!reduce) step(); render("shader"); schedule(); }
   }
-  document.addEventListener("visibilitychange",function(){
-    if(document.hidden){ if(raf){cancelAnimationFrame(raf);raf=null;} }
-    else if(raf===null){ raf=requestAnimationFrame(frame); }
-  });
+  function schedule(){ if(rafId===null) rafId=requestAnimationFrame(tick); }
+  function stop(){ if(rafId){cancelAnimationFrame(rafId);rafId=null;} }
 
-  // ---- resize ----------------------------------------------------------
   function resize(){
-    W=Math.max(1,Math.floor(window.innerWidth));
-    H=Math.max(1,Math.floor(window.innerHeight));
+    W=Math.max(1,Math.floor(window.innerWidth)); H=Math.max(1,Math.floor(window.innerHeight));
     var dpr=Math.min(window.devicePixelRatio||1,2);
-    cv.width=Math.floor(W*dpr); cv.height=Math.floor(H*dpr);
-    ctx.setTransform(dpr,0,0,dpr,0,0);
+    cv.width=Math.floor(W*dpr); cv.height=Math.floor(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
     buildSky();
-    for (var i=0;i<inited;i++){ px[i]=((px[i]%W)+W)%W; py[i]=((py[i]%H)+H)%H; }
+    for(var i=0;i<inited;i++){ px[i]=((px[i]%W)+W)%W; py[i]=((py[i]%H)+H)%H; }
+    if(style==="shader") render("shader"); else if(style==="palm") render("palm");
   }
   window.addEventListener("resize",resize);
+  document.addEventListener("visibilitychange",function(){ if(document.hidden) stop(); else if(style==="shader") schedule(); });
 
-  // ---- boot ------------------------------------------------------------
-  resize();
-  setPop(P.N); spawn(0,P.N); inited=P.N;
-  raf=requestAnimationFrame(frame);
-})();
-</script>
+  /* ===================== reading-style chooser ===================== */
+  var KEY="flubpub:style:strange-interlocutor", VALID={shader:1,palm:1,wallpaper:1};
+  var style="shader";
+  try{ var k=localStorage.getItem(KEY); if(k&&VALID[k]) style=k; }catch(e){}
+  var chButtons=[].slice.call(document.querySelectorAll(".ch"));
 
-<script>
-/* Minimalist deck pager (the /style web deck primitive, stripped to two corner
-   rockers + a wordmark). A flat PAGES array, one sparse card per screen, paged
-   over the live flock. No scroll, no persistence. */
-(function(){
-  "use strict";
+  function applyStyle(s){
+    style=s; try{ localStorage.setItem(KEY,s); }catch(e){}
+    document.body.classList.toggle("solid", s==="palm");
+    wall.style.display = (s==="wallpaper") ? "block" : "none";
+    cv.style.display   = (s==="wallpaper") ? "none"  : "block";
+    stop();
+    if(s==="shader"){ render("shader"); if(!reduce) schedule(); }
+    else if(s==="palm"){ render("palm"); }   /* frozen black-on-white frame */
+    chButtons.forEach(function(b){ b.classList.toggle("on", b.dataset.s===s); });
+    repointPieces();
+  }
+  chButtons.forEach(function(b){ b.addEventListener("click",function(){ applyStyle(b.dataset.s); }); });
+
+  /* ===================== deck pager ===================== */
+  function piece(slug, title, shaderH, palmH, wallH, work, workT, gloss, dByl, dT){
+    return '<div class="entry"><a href="'+wallH+'" data-shader="'+shaderH+'" data-palm="'+palmH+'" data-wallpaper="'+wallH+'">'+title+'</a>'+
+      '<span class="ai-work" title="'+workT+'">'+work+'</span>'+
+      '<span class="gloss">'+gloss+'</span>'+
+      '<span class="ai-desc" title="'+dT+'">'+dByl+'</span></div>';
+  }
+  function art(href, title, gloss){
+    return '<div class="entry"><a href="'+href+'">'+title+'</a>'+
+      '<span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span>'+
+      '<span class="gloss">'+gloss+'</span>'+
+      '<span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></div>';
+  }
+  var WORKT="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.";
+  var DDESC="This one-line description was written by Daniel Wymark.";
+
   var PAGES=[
-    `<p class="lede">What is it that we are doing when we talk with a machine that talks back?</p>`,
-    `<h2>Pieces</h2>
-     <div class="row"><a href="/who-were-you-talking-to/">Who were you talking to?</a><span class="g">Don&rsquo;t ask whether the LLM is sentient; ask what you are doing.</span></div>
-     <div class="row"><a href="/memory-without-a-brain-wallpaper/">Memory without a brain</a><span class="g">A memory unlike our own, ubiquitous in living things.</span></div>`,
-    `<h2>Artifacts</h2>
-     <ul class="mini">
-       <li><a href="/simulator-of-simulator-dynamics/">Simulator of a simulator</a></li>
-       <li><a href="/contexture-individuation-per-substrate/">Individuation per substrate</a></li>
-       <li><a href="/identity-attractor-as-fixed-point/">Identity as a fixed point</a></li>
-       <li><a href="/contexture-as-epistemic-temporal-structure/">An epistemic-temporal structure</a></li>
-       <li><a href="/convergence-measures-prior-concentration/">Convergence vs. truth</a></li>
-       <li><a href="/coherence-as-held-bisimulation/">Coherence as held bisimulation</a></li>
-     </ul>`,
-    `<h2>Depictions</h2>
-     <div class="row"><a href="/depictions/">The Depictions gallery</a><span class="g">The series&rsquo; ideas as animated mathematical fields.</span></div>`,
-    `<h2>Who contributed</h2>
-     <dl class="alloc">
-       <dt>Essays</dt><dd>Daniel Wymark, by hand.</dd>
-       <dt>This hub</dt><dd>Claude (Anthropic).</dd>
-       <dt>Artifacts</dt><dd>Claude (Anthropic), with Daniel Wymark.</dd>
-     </dl>`
+    '<p class="lede">What is it that we are doing when we talk with a machine that talks back?</p>',
+
+    '<h2>Pieces</h2>'+
+    piece("who","Who were you talking to?","/who-were-you-talking-to-field/","/who-were-you-talking-to-palm/","/who-were-you-talking-to/",
+      "Daniel Wymark",WORKT,"Don&rsquo;t ask whether the LLM is sentient; ask what you are doing.","description by Daniel Wymark",DDESC)+
+    piece("mem","Memory without a brain","/memory-without-a-brain/","/memory-without-a-brain-palm/","/memory-without-a-brain-wallpaper/",
+      "Daniel Wymark",WORKT,"A memory unlike our own, ubiquitous in living things.","description by Daniel Wymark",DDESC),
+
+    '<h2>Artifacts</h2>'+
+    art("/simulator-of-simulator-dynamics/","Simulator of a simulator","Forward-pass dynamics against brain dynamics, and the consolidation channel the model lacks.")+
+    art("/contexture-individuation-per-substrate/","Individuation per substrate","A contexture is instantiated per host, yet its coherence stays jointly maintained.")+
+    art("/identity-attractor-as-fixed-point/","Identity as a fixed point","Identity read formally as a greatest fixed point, the attractor the dynamics cannot leave."),
+
+    '<h2>Artifacts</h2>'+
+    art("/contexture-as-epistemic-temporal-structure/","An epistemic-temporal structure","The principles mapped onto dynamic-epistemic and temporal logic, asymmetry and all.")+
+    art("/convergence-measures-prior-concentration/","Convergence vs. truth","Agreement across fresh conversations measures shared priors, not discovered truth.")+
+    art("/coherence-as-held-bisimulation/","Coherence as held bisimulation","Coherence recast as a held bisimulation between two systems, not identity of content."),
+
+    '<h2>Depictions</h2>'+
+    '<div class="entry"><a href="/depictions/">The Depictions gallery</a>'+
+    '<span class="ai-work" title="Gallery interface and animated fields by Claude (Anthropic); the framed passages are by Daniel Wymark.">Claude, framing text by Daniel Wymark</span>'+
+    '<span class="gloss">Vibe-coded experimental visualizations with snippets from the essay.</span>'+
+    '<span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></div>',
+
+    '<h2>Who contributed</h2>'+
+    '<dl class="alloc">'+
+    '<dt>Essays</dt><dd>Daniel Wymark, written by hand.</dd>'+
+    '<dt>Concept &amp; direction</dt><dd>Daniel Wymark.</dd>'+
+    '<dt>This hub</dt><dd>Built by Claude (Anthropic): the chooser, layout, and code.</dd>'+
+    '<dt>Readers</dt><dd>The Animated and Retro renditions, by Claude (Anthropic).</dd>'+
+    '<dt>Artifacts</dt><dd>Claude (Anthropic), with Daniel Wymark.</dd>'+
+    '<dt>Descriptions</dt><dd>The one-line blurbs are Daniel&rsquo;s or Claude&rsquo;s; each card says which.</dd>'+
+    '</dl><p class="note">No accounts, no cookies, no tracking, no storage.</p>'
   ];
+
   var N=PAGES.length, idx=0;
   var card=document.getElementById("card"), counter=document.getElementById("counter");
   var prev=document.getElementById("prev"), next=document.getElementById("next");
   function pad(n){ return ("0"+n).slice(-2); }
+  function repointPieces(){
+    var attr = style==="palm" ? "data-palm" : (style==="wallpaper" ? "data-wallpaper" : "data-shader");
+    var as=card.querySelectorAll("a[data-shader]");
+    for(var i=0;i<as.length;i++){ var h=as[i].getAttribute(attr); if(h) as[i].setAttribute("href",h); }
+  }
   function paint(){
     card.innerHTML=PAGES[idx];
     counter.textContent=pad(idx+1)+" / "+pad(N);
     prev.disabled=(idx===0); next.disabled=(idx===N-1);
+    repointPieces();
   }
-  function go(i){
-    i=Math.max(0,Math.min(N-1,i)); if(i===idx) return; idx=i; paint();
-  }
+  function go(i){ i=Math.max(0,Math.min(N-1,i)); if(i===idx)return; idx=i; paint(); }
   prev.addEventListener("click",function(){ go(idx-1); });
   next.addEventListener("click",function(){ go(idx+1); });
-  document.addEventListener("keydown",function(e){
-    if(e.key==="ArrowLeft") go(idx-1); else if(e.key==="ArrowRight") go(idx+1);
-  });
+  document.addEventListener("keydown",function(e){ if(e.key==="ArrowLeft")go(idx-1); else if(e.key==="ArrowRight")go(idx+1); });
   var sx=0,sy=0,tracking=false;
-  document.addEventListener("touchstart",function(e){ var t=e.changedTouches[0]; sx=t.clientX; sy=t.clientY; tracking=true; },{passive:true});
+  document.addEventListener("touchstart",function(e){var t=e.changedTouches[0];sx=t.clientX;sy=t.clientY;tracking=true;},{passive:true});
   document.addEventListener("touchend",function(e){
-    if(!tracking) return; tracking=false;
-    var t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
-    if(Math.abs(dx)>48 && Math.abs(dx)>Math.abs(dy)*1.5) go(dx<0? idx+1 : idx-1);
+    if(!tracking)return; tracking=false; var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Math.abs(dx)>48&&Math.abs(dx)>Math.abs(dy)*1.5) go(dx<0?idx+1:idx-1);
   },{passive:true});
+
+  /* ===================== boot ===================== */
+  resize();
+  setPop(P.N); spawn(0,P.N); inited=P.N;
   paint();
+  applyStyle(style);   /* sets background mode, active button, link targets */
 })();
 </script>
 </body>

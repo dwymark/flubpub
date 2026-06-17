@@ -19,6 +19,7 @@
 
   /* backgrounds: the animated/paused flock, or the static bird wallpaper */
   #sky{position:fixed;inset:0;display:block;width:100%;height:100%;z-index:0;pointer-events:none}
+  #retro{position:fixed;inset:0;display:none;width:100%;height:100%;z-index:0;pointer-events:none}
   #wall{position:fixed;inset:0;z-index:0;display:none;pointer-events:none;
     background-color:#eef4f5;background-repeat:repeat;background-size:200px 200px;
     background-image:url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSB0aWxpbmc6IGJpcmRzLXBpbndoZWVsCiAgICAgZ3JvdXA6IHA0CiAgICAgcGVyaW9kX3g6IDI1NiAgcGVyaW9kX3k6IDI1NgogICAgIGZ1bmRhbWVudGFsOiBxdWFydGVyLWNlbGwKICAgICBtb3RpZjogZmxvY2sgYmlyZCBnbHlwaCAodHdvIGNvbnZlcmdpbmcgYXJjcyksIGZyb20gc3RyYW5nZS1pbnRlcmxvY3V0b3IKICAgICB2ZXJpZmllZDogZmFsc2UgLS0+CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgdmlld0JveD0iMCAwIDI1NiAyNTYiPgogIDxyZWN0IHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiBmaWxsPSJ2YXIoLS10aWxpbmctYmcsICNlZWY0ZjUpIi8+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ2YXIoLS10aWxpbmctZmcsICMyZjdlODYpIiBzdHJva2Utd2lkdGg9IjIuNCIKICAgICBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIG9wYWNpdHk9InZhcigtLXRpbGluZy1vcGFjaXR5LCAwLjUpIj4KICAgIDxnIGlkPSJ1Ij48cGF0aCBkPSJNMTY1LjU4LDEzNS42MyBRMTgwLjUyLDExNi41OCAxOTEuOTcsOTUuNTEgTTE0Ny4wNCw3OC41NyBRMTcwLjMzLDg1LjIwIDE5MS45Nyw5NS41MSIvPjxwYXRoIGQ9Ik0xMzIuOTIsMTc2Ljc3IFExNDguMjgsMTg1LjY4IDE2NC43NSwxOTEuODQgTTE3Mi40NywxNTcuNDggUTE3MC4wMywxNzUuMDcgMTY0Ljc1LDE5MS44NCIvPjwvZz4KICAgIDx1c2UgaHJlZj0iI3UiIHRyYW5zZm9ybT0icm90YXRlKDAsMTI4LDEyOCkiLz48dXNlIGhyZWY9IiN1IiB0cmFuc2Zvcm09InJvdGF0ZSg5MCwxMjgsMTI4KSIvPjx1c2UgaHJlZj0iI3UiIHRyYW5zZm9ybT0icm90YXRlKDE4MCwxMjgsMTI4KSIvPjx1c2UgaHJlZj0iI3UiIHRyYW5zZm9ybT0icm90YXRlKDI3MCwxMjgsMTI4KSIvPgogIDwvZz4KPC9zdmc+")}
@@ -35,6 +36,11 @@
     -webkit-user-select:none;user-select:none;pointer-events:auto}
   .ch:active{transform:translate(3px,3px);box-shadow:none}
   .ch.on{background:var(--ink);color:var(--paper);box-shadow:none;transform:translate(3px,3px)}
+  /* compact (phone) layout: the centred card grows wide enough to collide with a
+     tall corner stack, so lay the chooser as a short horizontal row under the
+     wordmark; the card's vertical centring then clears it with room to spare. */
+  body:not(.roomy) .chooser{flex-direction:row;top:50px;right:14px;gap:6px}
+  body:not(.roomy) .ch{font-size:9px;letter-spacing:.08em;padding:6px 9px;min-width:0}
 
   .deck{position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;
     padding:13vh 7vw;pointer-events:none}
@@ -82,6 +88,7 @@
 </head>
 <body>
   <canvas id="sky"></canvas>
+  <canvas id="retro"></canvas>
   <div id="wall"></div>
 
   <div class="wordmark">Strange Interlocutor</div>
@@ -103,7 +110,12 @@
   "use strict";
 
   /* ===================== flock simulation (core from BOIDS) ===================== */
-  var P = { N:230, maxSpeed:1.5, wSep:1.5, wAli:1.05, wCoh:0.85, wSeek:0.5, vision:48, personal:15, fov:300 };
+  // two dynamics presets. Animated is unchanged; Retro is the requested params
+  // (low alignment, faster, looser) — a deliberately different flock behaviour.
+  var ANIM ={ N:230, maxSpeed:1.5, wSep:1.5,  wAli:1.05, wCoh:0.85, wSeek:0.5, vision:48, personal:15, fov:300, speed:1.0 };
+  var RETRO={ N:280, maxSpeed:2.6, wSep:1.0,  wAli:0.15, wCoh:0.50, wSeek:0.5, vision:56, personal:16, fov:300, speed:0.1 };
+  var P = {}; (function(s){ for(var k in s) P[k]=s[k]; })(ANIM);
+  function setParams(s){ for(var k in s) P[k]=s[k]; setPop(s.N); }
   var AGILITY=0.05, ACCENT_FRAC=0.05;
   var SKY=[[0.00,"#e6f0f3"],[0.55,"#eef6f6"],[1.00,"#f7fcfc"]];
   var LAYER=[{col:"#123f54",w:1.75,sz:6.8},{col:"#1d6473",w:1.50,sz:5.8},{col:"#357f88",w:1.30,sz:4.9},
@@ -120,6 +132,97 @@
 
   var cv=document.getElementById("sky"), ctx=cv.getContext("2d",{alpha:false});
   var wall=document.getElementById("wall");
+
+  /* ---- retro post-process (only what this mode needs: pixelate + ordered
+     dither + nearest-in-OKLab to a fixed grayscale ramp). Architecture lifted
+     from the updated BOIDS example: render the flock to an offscreen canvas in
+     colour, upload it as a texture, quantise in a fragment shader. ---- */
+  var RETRO_FX = { pixel:2, levels:2, dither:1 };
+  var GRAY = [[0,0,0],[34,34,34],[99,99,99],[174,174,174],[255,255,255]];
+  var retroCv=document.getElementById("retro");
+  var sim=document.createElement("canvas"), sctx=sim.getContext("2d",{alpha:false});
+  var glr=null, useGL=false;
+
+  function srgb2lin(c){ return c<=0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055,2.4); }
+  function rgb2oklab(r,g,b){
+    r=srgb2lin(r);g=srgb2lin(g);b=srgb2lin(b);
+    var l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b);
+    var m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b);
+    var s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+    return [0.2104542553*l+0.7936177850*m-0.0040720468*s,
+            1.9779984951*l-2.4285922050*m+0.4505937099*s,
+            0.0259040371*l+0.7827717662*m-0.8086757660*s];
+  }
+  var VS="attribute vec2 aPos;void main(){gl_Position=vec4(aPos,0.0,1.0);}";
+  var FS=[
+    "precision highp float;",
+    "uniform sampler2D uTex;uniform sampler2D uBayer;uniform vec2 uRes;",
+    "uniform float uPixel;uniform float uDither;uniform float uPalCount;",
+    "uniform vec3 uPalRGB[8];uniform vec3 uPalLab[8];",
+    "float s2l(float c){return c<=0.04045?c/12.92:pow((c+0.055)/1.055,2.4);}",
+    "vec3 oklab(vec3 c){c=clamp(c,0.0,1.0);float r=s2l(c.r),g=s2l(c.g),b=s2l(c.b);",
+    " float l=pow(0.4122214708*r+0.5363325363*g+0.0514459929*b,1.0/3.0);",
+    " float m=pow(0.2119034982*r+0.6806995451*g+0.1073969566*b,1.0/3.0);",
+    " float s=pow(0.0883024619*r+0.2817188376*g+0.6299787005*b,1.0/3.0);",
+    " return vec3(0.2104542553*l+0.7936177850*m-0.0040720468*s,1.9779984951*l-2.4285922050*m+0.4505937099*s,0.0259040371*l+0.7827717662*m-0.8086757660*s);}",
+    "void main(){",
+    " vec2 frag=gl_FragCoord.xy;float blk=max(uPixel,1.0);vec3 col;",
+    " if(blk>1.5){vec2 base=floor(frag/blk)*blk;float stp=blk*0.25;float bestLum=2.0;col=vec3(1.0);",
+    "  for(int i=0;i<4;i++){for(int j=0;j<4;j++){vec2 sp=base+(vec2(float(i),float(j))+0.5)*stp;",
+    "   vec3 t=texture2D(uTex,sp/uRes).rgb;float lum=dot(t,vec3(0.299,0.587,0.114));",
+    "   if(lum<bestLum){bestLum=lum;col=t;}}}}",
+    " else { col=texture2D(uTex,(floor(frag)+0.5)/uRes).rgb; }",
+    " if(uDither>0.0001){vec2 bi=mod(floor(frag/blk),8.0);float thr=texture2D(uBayer,(bi+0.5)/8.0).r-0.5;col+=thr*(uDither*0.18);}",
+    " col=clamp(col,0.0,1.0);",
+    " vec3 lab=oklab(col);float best=1.0e9;vec3 bestc=uPalRGB[0];",
+    " for(int i=0;i<8;i++){ if(float(i)>=uPalCount) break; vec3 d=lab-uPalLab[i];float dist=dot(d,d); if(dist<best){best=dist;bestc=uPalRGB[i];} }",
+    " gl_FragColor=vec4(bestc,1.0);}"
+  ].join("\n");
+  function compile(gl,t,src){ var s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){ console.warn(gl.getShaderInfoLog(s)); return null; } return s; }
+  function initGL(){
+    var gl=retroCv.getContext("webgl",{antialias:false,alpha:false,depth:false,preserveDrawingBuffer:false});
+    if(!gl) return false;
+    var vs=compile(gl,gl.VERTEX_SHADER,VS), fs=compile(gl,gl.FRAGMENT_SHADER,FS); if(!vs||!fs) return false;
+    var prog=gl.createProgram(); gl.attachShader(prog,vs); gl.attachShader(prog,fs); gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){ console.warn(gl.getProgramInfoLog(prog)); return false; }
+    gl.useProgram(prog); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    var buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    var loc=gl.getAttribLocation(prog,"aPos");
+    var tex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    var M=[0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,
+           3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21];
+    var bdat=new Uint8Array(64); for(var i=0;i<64;i++) bdat[i]=Math.round(255*(M[i]+0.5)/64);
+    var bayer=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,bayer);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,8,8,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,bdat);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    function U(n){ return gl.getUniformLocation(prog,n); }
+    glr={ gl:gl, prog:prog, buf:buf, loc:loc, tex:tex, bayer:bayer, dpr:1, u:{
+      tex:U("uTex"), bayer:U("uBayer"), res:U("uRes"), pixel:U("uPixel"), dither:U("uDither"),
+      palCount:U("uPalCount"), palRGB:U("uPalRGB[0]"), palLab:U("uPalLab[0]") } };
+    // bake the grayscale palette once
+    var rgb=new Float32Array(24), lab=new Float32Array(24);
+    for(var p=0;p<GRAY.length;p++){ var c=GRAY[p],r=c[0]/255,g=c[1]/255,bl=c[2]/255;
+      rgb[p*3]=r;rgb[p*3+1]=g;rgb[p*3+2]=bl; var L=rgb2oklab(r,g,bl); lab[p*3]=L[0];lab[p*3+1]=L[1];lab[p*3+2]=L[2]; }
+    gl.uniform3fv(glr.u.palRGB,rgb); gl.uniform3fv(glr.u.palLab,lab); gl.uniform1f(glr.u.palCount,GRAY.length);
+    return true;
+  }
+  function present(){
+    var gl=glr.gl; gl.viewport(0,0,retroCv.width,retroCv.height); gl.useProgram(glr.prog);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,glr.tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,sim); gl.uniform1i(glr.u.tex,0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,glr.bayer); gl.uniform1i(glr.u.bayer,1);
+    gl.uniform2f(glr.u.res,retroCv.width,retroCv.height);
+    gl.uniform1f(glr.u.pixel, RETRO_FX.pixel*glr.dpr);
+    gl.uniform1f(glr.u.dither, RETRO_FX.dither);
+    gl.bindBuffer(gl.ARRAY_BUFFER,glr.buf); gl.enableVertexAttribArray(glr.loc);
+    gl.vertexAttribPointer(glr.loc,2,gl.FLOAT,false,0,0);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
 
   function spawn(a,n){
     for(var i=a;i<n;i++){
@@ -139,7 +242,8 @@
   }
 
   var cellBuf=new Int32Array(9);
-  function step(){
+  function step(dt){
+    dt = dt || 1;
     var n=P.N; if(n<1)return;
     var visR=P.vision,sepR=P.personal,cell=Math.max(visR,sepR,1);
     var cols=Math.max(1,Math.ceil(W/cell)),rows=Math.max(1,Math.ceil(H/cell)),ncells=cols*rows;
@@ -195,10 +299,10 @@
       ax[i2]=fx;ay[i2]=fy;
     }
     for(var i3=0;i3<n;i3++){
-      var nvx=vx[i3]+ax[i3],nvy=vy[i3]+ay[i3],m2=nvx*nvx+nvy*nvy,ms=maxS*maxS;
+      var nvx=vx[i3]+ax[i3]*dt,nvy=vy[i3]+ay[i3]*dt,m2=nvx*nvx+nvy*nvy,ms=maxS*maxS;
       if(m2>ms){var m=Math.sqrt(m2);nvx=nvx/m*maxS;nvy=nvy/m*maxS;}
       vx[i3]=nvx;vy[i3]=nvy;
-      var nx=px[i3]+nvx,ny=py[i3]+nvy;
+      var nx=px[i3]+nvx*dt,ny=py[i3]+nvy*dt;
       if(nx<0)nx+=W;else if(nx>=W)nx-=W; if(ny<0)ny+=H;else if(ny>=H)ny-=H;
       px[i3]=nx;py[i3]=ny;
     }
@@ -213,41 +317,67 @@
     path.moveTo(Ltx,Lty); path.quadraticCurveTo(Lcx,Lcy,nx,ny);
     path.moveTo(Rtx,Rty); path.quadraticCurveTo(Rcx,Rcy,nx,ny);
   }
-  var layerPath=new Array(NL),accPath=null;
-  function render(mode){
-    var mono = (mode==="palm");
-    ctx.fillStyle = mono ? "#ffffff" : (skyGrad||"#eef4f5"); ctx.fillRect(0,0,W,H);
-    for(var l=0;l<NL;l++)layerPath[l]=new Path2D(); accPath=new Path2D();
-    var n=Math.min(P.N,inited),invMax=1/P.maxSpeed;
+  var NB=24, headCols=[];
+  for(var hb=0;hb<NB;hb++) headCols.push("hsl("+Math.round(hb/NB*360)+",62%,50%)");
+  var layerPath=new Array(NL), accPath=null, huePath=new Array(NB);
+  function renderFlock(tctx, scheme){
+    var retro = (scheme==="retro");
+    tctx.fillStyle = retro ? "#fbfbf9" : (skyGrad||"#eef4f5"); tctx.fillRect(0,0,W,H);
+    if(retro){ for(var h=0;h<NB;h++) huePath[h]=new Path2D(); }
+    else { for(var l=0;l<NL;l++) layerPath[l]=new Path2D(); accPath=new Path2D(); }
+    var n=Math.min(P.N,inited), invMax=1/P.maxSpeed;
     for(var i=0;i<n;i++){
       var mvx=vx[i],mvy=vy[i],spd=Math.sqrt(mvx*mvx+mvy*mvy);
-      var c=spd>1e-4?mvx/spd:1,s=spd>1e-4?mvy/spd:0;
+      var c=spd>1e-4?mvx/spd:1, s=spd>1e-4?mvy/spd:0;
       var turn=Math.abs(c*lhy[i]-s*lhx[i]); lhx[i]=c; lhy[i]=s;
-      flap[i]+=0.13+spd*invMax*0.12+turn*2.2;
+      flap[i]+=(0.13+spd*invMax*0.12+turn*2.2)*P.speed;
       var f=0.78+0.30*Math.sin(flap[i]), sz=LAYER[lb[i]].sz;
-      birdInto(acc[i]?accPath:layerPath[lb[i]],px[i],py[i],c,s,sz,f);
+      if(retro){
+        var ang=Math.atan2(s,c), hbk=((ang+Math.PI)/(Math.PI*2)*NB)|0; if(hbk<0)hbk=0; else if(hbk>=NB)hbk=NB-1;
+        birdInto(huePath[hbk], px[i],py[i], c,s, sz, f);
+      } else {
+        birdInto(acc[i]?accPath:layerPath[lb[i]], px[i],py[i], c,s, sz, f);
+      }
     }
-    ctx.lineCap="round"; ctx.lineJoin="round";
-    for(var l2=0;l2<NL;l2++){ ctx.strokeStyle = mono?"#000000":LAYER[l2].col; ctx.lineWidth=LAYER[l2].w; ctx.stroke(layerPath[l2]); }
-    ctx.strokeStyle = mono?"#000000":ACCENT.col; ctx.lineWidth=ACCENT.w; ctx.stroke(accPath);
+    tctx.lineCap="round"; tctx.lineJoin="round";
+    if(retro){
+      tctx.lineWidth=1.5;
+      for(var h2=0;h2<NB;h2++){ tctx.strokeStyle=headCols[h2]; tctx.stroke(huePath[h2]); }
+    } else {
+      for(var l2=0;l2<NL;l2++){ tctx.strokeStyle=LAYER[l2].col; tctx.lineWidth=LAYER[l2].w; tctx.stroke(layerPath[l2]); }
+      tctx.strokeStyle=ACCENT.col; tctx.lineWidth=ACCENT.w; tctx.stroke(accPath);
+    }
+  }
+  // draw the current mode's flock to its target (and post-process for retro)
+  function paintFlock(){
+    if(style==="palm"){
+      if(useGL){ renderFlock(sctx,"retro"); present(); }
+      else renderFlock(ctx,"retro");   // fallback: heading-hued flock, no post-process
+    } else renderFlock(ctx,"anim");
   }
 
   var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var t0=performance.now()/1000, rafId=null;
+  var t0=performance.now()/1000, rafId=null, lastNow=0, retroT=0;
   function tick(now){
     rafId=null;
-    if(style==="shader"){ attractors(now/1000-t0); if(!reduce) step(); render("shader"); schedule(); }
+    if(style==="wallpaper") return;       // Plain is a static wallpaper, no loop
+    var t;
+    if(style==="palm"){ if(lastNow) retroT += (now-lastNow)/1000*P.speed; lastNow=now; t=retroT; }
+    else { lastNow=now; t=now/1000-t0; }
+    attractors(t); if(!reduce) step(P.speed); paintFlock(); schedule();
   }
   function schedule(){ if(rafId===null) rafId=requestAnimationFrame(tick); }
   function stop(){ if(rafId){cancelAnimationFrame(rafId);rafId=null;} }
 
   function resize(){
     W=Math.max(1,Math.floor(window.innerWidth)); H=Math.max(1,Math.floor(window.innerHeight));
-    var dpr=Math.min(window.devicePixelRatio||1,2);
-    cv.width=Math.floor(W*dpr); cv.height=Math.floor(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    var dpr=Math.min(window.devicePixelRatio||1,2), pw=Math.floor(W*dpr), ph=Math.floor(H*dpr);
+    cv.width=pw; cv.height=ph; ctx.setTransform(dpr,0,0,dpr,0,0);
+    sim.width=pw; sim.height=ph; sctx.setTransform(dpr,0,0,dpr,0,0);
+    if(useGL){ retroCv.width=pw; retroCv.height=ph; glr.dpr=dpr; }
     buildSky();
     for(var i=0;i<inited;i++){ px[i]=((px[i]%W)+W)%W; py[i]=((py[i]%H)+H)%H; }
-    if(style==="shader") render("shader"); else if(style==="palm") render("palm");
+    if(style!=="wallpaper") paintFlock();
     // re-evaluate the paging scheme; rebuild + reclamp if it flipped
     if(typeof PAGES!=="undefined"){
       var r=roomyNow();
@@ -256,7 +386,7 @@
     }
   }
   window.addEventListener("resize",resize);
-  document.addEventListener("visibilitychange",function(){ if(document.hidden) stop(); else if(style==="shader") schedule(); });
+  document.addEventListener("visibilitychange",function(){ if(document.hidden) stop(); else if(style!=="wallpaper") schedule(); });
 
   /* ===================== reading-style chooser ===================== */
   var KEY="flubpub:style:strange-interlocutor", VALID={shader:1,palm:1,wallpaper:1};
@@ -267,11 +397,13 @@
   function applyStyle(s){
     style=s; try{ localStorage.setItem(KEY,s); }catch(e){}
     document.body.classList.toggle("solid", s==="palm");
-    wall.style.display = (s==="wallpaper") ? "block" : "none";
-    cv.style.display   = (s==="wallpaper") ? "none"  : "block";
+    if(s==="shader") setParams(ANIM); else if(s==="palm") setParams(RETRO);
+    lastNow=0;   // avoid a time gap leaking into the slowed retro clock
+    cv.style.display      = (s==="shader" || (s==="palm" && !useGL)) ? "block" : "none";
+    retroCv.style.display = (s==="palm" && useGL) ? "block" : "none";
+    wall.style.display    = (s==="wallpaper") ? "block" : "none";
     stop();
-    if(s==="shader"){ render("shader"); if(!reduce) schedule(); }
-    else if(s==="palm"){ render("palm"); }   /* frozen black-on-white frame */
+    if(s!=="wallpaper"){ paintFlock(); if(!reduce) schedule(); }
     chButtons.forEach(function(b){ b.classList.toggle("on", b.dataset.s===s); });
     repointPieces();
   }
@@ -364,10 +496,11 @@
   },{passive:true});
 
   /* ===================== boot ===================== */
+  useGL=initGL();
+  spawn(0,280); inited=280;        // spawn enough for either preset
   resize();
-  setPop(P.N); spawn(0,P.N); inited=P.N;
   paint();
-  applyStyle(style);   /* sets background mode, active button, link targets */
+  applyStyle(style);   /* sets dynamics, background, active button, link targets */
 })();
 </script>
 </body>

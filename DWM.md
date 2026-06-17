@@ -88,7 +88,7 @@ reader across the series. The default style is `wallpaper`.
 
 Each essay has three renditions, one published page per rendition:
 
-| Piece | shader | palm ("Monochrome PDA") | wallpaper (default) |
+| Piece | shader ("Animated") | palm ("Retro") | wallpaper ("Simple", default) |
 |---|---|---|---|
 | who-were-you-talking-to | `who-were-you-talking-to-field` | `who-were-you-talking-to-palm` | `who-were-you-talking-to` |
 | memory-without-a-brain | `memory-without-a-brain` | `memory-without-a-brain-palm` | `memory-without-a-brain-wallpaper` |

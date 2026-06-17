@@ -113,8 +113,9 @@ drifting contour shader (the field rendition's fragment shader, throttled and
 DPR-capped) behind a floating text island. The `renditions.json` blurbs now ride
 as each option's `aria-label`. Every piece tile and every artifact / depictions
 link carries its one-line description plus two authorship marks — `.ai-work`
-(who authored the thing) and `.ai-desc` (description written by Claude) — taken
-by hand from each page's `description` frontmatter. **These mirror
+(who authored the thing) and `.ai-desc` (who wrote the one-line description,
+Daniel or Claude) — taken by hand from each page's canonical `description`
+(the markdown frontmatter, or `content/dwm/_pages.yaml` for html-article pages). **These mirror
 `renditions.json` and the per-page descriptions by hand; edit both or they
 drift** — nothing wires one to the other. The hub's scripts are progressive
 enhancement: read the collection key, mark the active style, reskin the hub,

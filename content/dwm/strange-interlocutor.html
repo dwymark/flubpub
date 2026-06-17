@@ -31,28 +31,32 @@
     --ink:#000000; --dim:#000000; --accent:#000000; --on:#ffffff; --rule:#000000;
     --font:var(--sans); --radius:0px; --shadow:4px 4px 0 #000;
   }
+  /* default skin — cool analogous (teal/cyan): a calm reading key, value carried
+     by dark slate ink, one saturated teal as identity/accent. (color-systems:
+     analogous = calm/cohesive; value does hierarchy, hue does identity.) */
   :root[data-fp-style="wallpaper"]{
-    --bg:#e8dfc7; --panel:#f3ecdb; --tile:#efe7d2;
-    --ink:#2a2f3a; --dim:#6b7280; --accent:#b5512f; --on:#f3ecdb; --rule:#cdbf9c;
-    --font:var(--serif); --radius:3px; --shadow:0 8px 22px rgba(60,45,20,.16);
+    --bg:#e8eef0; --panel:#f1f6f6; --tile:#edf4f4;
+    --ink:#15262d; --dim:#5a6e76; --accent:#0f7d88; --on:#f1f6f6; --rule:#c4d4d6;
+    --font:var(--serif); --radius:3px; --shadow:0 8px 22px rgba(18,52,62,.15);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{min-height:100%}
   body{background:var(--bg);color:var(--ink);font-family:var(--font);
     line-height:1.5;transition:background .4s ease,color .4s ease;}
 
-  /* a living ground for the patterned skins; off for the bare PDA skin */
+  /* patterned ground for the patterned skins; off for the bare PDA skin */
   body::before{content:"";position:fixed;inset:0;z-index:0;opacity:0;
     transition:opacity .5s ease;background-repeat:repeat;}
   :root[data-fp-style="shader"] body::before{opacity:1;
     background:
       repeating-radial-gradient(circle at 30% 18%, transparent 0 26px, rgba(93,122,58,.05) 26px 27px),
       radial-gradient(130% 90% at 20% 0%, #e6ecd9, #d8e0c6 60%, #cdd6b6);}
-  /* wallpaper mode shows an actual patterned ground, so the name is honest:
-     the harbor wave-meander the wallpaper renditions use, faint, in this skin's ink */
-  :root[data-fp-style="wallpaper"] body::before{opacity:.55;
-    background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27256%27%20height%3D%27256%27%3E%3Cpath%20d%3D%27M%200%2096%20Q%2032%2080%2064%2096%20T%20128%2096%20T%20192%2096%20T%20256%2096%27%20stroke%3D%27%239a7d63%27%20stroke-width%3D%271.2%27%20fill%3D%27none%27%2F%3E%3Cpath%20d%3D%27M%200%20176%20Q%2032%20160%2064%20176%20T%20128%20176%20T%20192%20176%20T%20256%20176%27%20stroke%3D%27%239a7d63%27%20stroke-width%3D%271.2%27%20fill%3D%27none%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%272.5%27%20fill%3D%27%23b5512f%27%2F%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27232%27%20r%3D%272.5%27%20fill%3D%27%23b5512f%27%2F%3E%3C%2Fsvg%3E");
-    background-size:256px 256px;}
+  /* default skin ground: a fine teal diamond lattice (two diagonals) — a cool,
+     geometric ground, distinct from the harbor waves the renditions use */
+  :root[data-fp-style="wallpaper"] body::before{opacity:1;background-color:var(--bg);
+    background-image:
+      repeating-linear-gradient(45deg, transparent 0 22px, rgba(15,125,136,.055) 22px 23.5px),
+      repeating-linear-gradient(135deg, transparent 0 22px, rgba(15,125,136,.055) 22px 23.5px);}
 
   .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;
     padding:clamp(30px,7vh,72px) clamp(16px,5vw,32px) 18vh;}
@@ -75,36 +79,78 @@
   .byline .by b{font-weight:600;color:var(--ink)}
   .byline p{font-size:13px;line-height:1.5;color:var(--dim);max-width:60ch;margin:.6em 0 0}
 
-  /* chooser: all three styles shown with their descriptions, no hover needed */
+  /* authorship marks, shared by every link: small, dim, dotted to signal a note */
+  .ai-work,.ai-desc{font-style:normal;border-bottom:1px dotted currentColor;cursor:help;text-decoration:none}
+
+  /* chooser: each style is a small live preview rendered in its own styling */
   .chooser{margin:clamp(22px,4vh,32px) 0 clamp(12px,2vh,18px)}
   .chooser .lead{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--dim);margin-bottom:.7em;font-weight:400}
-  .seg{display:flex;flex-direction:column;gap:8px}
-  .opt{display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;width:100%;
-    background:var(--tile);color:var(--ink);border:1.5px solid var(--rule);border-radius:var(--radius);
-    padding:11px 13px;font-family:var(--font);
-    transition:border-color .15s ease,box-shadow .15s ease,background .2s ease}
+  .seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px}
+  .opt{display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left;
+    background:var(--tile);border:1.5px solid var(--rule);border-radius:var(--radius);
+    padding:9px;transition:border-color .15s ease,box-shadow .15s ease}
   .opt:hover,.opt:focus-visible{border-color:var(--accent);outline:none}
-  .opt[aria-current="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
-  .opt-label{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;font-weight:700}
-  .opt[aria-current="true"] .opt-label{color:var(--accent)}
-  .opt-desc{font-size:13px;color:var(--dim);font-style:italic}
-  .ns{font-size:12.5px;color:var(--dim);margin-top:.6em;font-style:italic}
+  .opt[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+  .opt-cap{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+  .opt-cap .nm{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;font-weight:700}
+  .opt[aria-current="true"] .opt-cap .nm{color:var(--accent)}
+  .opt-cap .pick{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--dim)}
+
+  /* the preview stage shared shell */
+  .pv{position:relative;height:104px;border-radius:inherit;overflow:hidden;border:1px solid rgba(0,0,0,.12)}
+
+  /* SIMPLE preview: serif prose on the cool diamond-lattice ground */
+  .pv-simple{background-color:#e8eef0;
+    background-image:
+      repeating-linear-gradient(45deg, transparent 0 13px, rgba(15,125,136,.07) 13px 14px),
+      repeating-linear-gradient(135deg, transparent 0 13px, rgba(15,125,136,.07) 13px 14px);}
+  .pv-simple .card{position:absolute;inset:14px;background:rgba(241,246,246,.92);border:1px solid #c4d4d6;
+    border-radius:3px;padding:9px 10px;font-family:var(--serif);color:#15262d}
+  .pv-simple .card b{display:block;font-size:12px;font-variant:small-caps;letter-spacing:.04em;color:#0f7d88;margin-bottom:3px}
+  .pv-simple .card span{font-size:11.5px;line-height:1.32;display:block}
+
+  /* RETRO preview: a tiny monochrome PDA deck, two arrows, circular cards */
+  .pv-retro{background:#fff;border-color:#000}
+  .pv-retro .rt-bar{display:flex;align-items:center;justify-content:space-between;background:#000;color:#fff;
+    font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;padding:3px 6px}
+  .pv-retro .rt-card{position:absolute;left:0;right:0;top:18px;bottom:22px;padding:8px 9px;font-family:var(--sans);color:#000}
+  .pv-retro .rt-card b{display:block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:4px}
+  .pv-retro .rt-card span{font-size:11.5px;line-height:1.3}
+  .pv-retro .rt-nav{position:absolute;left:0;right:0;bottom:0;display:flex;border-top:1.5px solid #000}
+  .pv-retro .rt-arr{flex:1 1 50%;border:none;background:#fff;color:#000;font-family:var(--mono);font-size:12px;
+    font-weight:700;padding:3px 0;cursor:pointer;line-height:1}
+  .pv-retro .rt-arr:active{background:#000;color:#fff}
+  .pv-retro .rt-arr+.rt-arr{border-left:1.5px solid #000}
+
+  /* ANIMATED preview: the literal drifting-field shader, with a floating island */
+  .pv-anim{background:#dfe6d2}
+  .pv-anim canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .pv-anim .island{position:absolute;left:12px;right:12px;bottom:11px;background:rgba(241,245,230,.9);
+    border:1px solid rgba(35,42,26,.25);padding:7px 8px}
+  .pv-anim .island i{display:block;height:4px;border-radius:2px;background:#5d7a3a;opacity:.85}
+  .pv-anim .island i+i{margin-top:4px}
+  .pv-anim .island i:nth-child(2){width:78%}
+  .pv-anim .island i:nth-child(3){width:54%}
+
+  .ns{font-size:12.5px;color:var(--dim);margin-top:.7em;font-style:italic}
 
   h2.section{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
     color:var(--dim);margin:clamp(26px,5vh,40px) 0 .8em;padding-bottom:.4em;border-bottom:1px solid var(--rule)}
 
-  .pieces{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-  .tile{display:flex;flex-direction:column;gap:7px;padding:16px;background:var(--tile);
+  .pieces{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:12px}
+  .tile{display:flex;flex-direction:column;gap:6px;padding:16px;background:var(--tile);
     border:1.5px solid var(--rule);border-radius:var(--radius);box-shadow:var(--shadow);
     text-decoration:none;color:var(--ink);transition:transform .15s ease,border-color .15s ease}
   .tile:hover,.tile:focus-visible{border-color:var(--accent);transform:translateY(-2px);outline:none}
   .tile .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--accent);font-weight:700}
   .tile h3{font-size:18px;line-height:1.16;font-weight:600}
-  .tile .go{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--dim)}
+  .tile .gloss{font-size:13px;line-height:1.4;color:var(--ink)}
+  .tile .byl,.links .byl{font-size:11px;line-height:1.4;color:var(--dim);margin-top:1px}
+  .tile .go{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--dim);margin-top:2px}
 
   ul.links{list-style:none}
-  ul.links li{margin:.65em 0}
+  ul.links li{margin:.85em 0}
   ul.links a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule);font-size:15px}
   ul.links a:hover{color:var(--accent);border-color:var(--accent)}
   ul.links .gloss{display:block;font-size:12.5px;color:var(--dim);margin-top:.15em;line-height:1.4}
@@ -133,20 +179,39 @@
   <section class="chooser" aria-labelledby="chooser-lead">
     <span class="lead" id="chooser-lead">Read the essays as</span>
     <div class="seg" role="group" aria-label="Reading style">
-      <button class="opt" type="button" data-v="wallpaper" aria-current="true">
-        <span class="opt-label">Simple</span>
-        <span class="opt-desc">Plain themed prose on a patterned ground.</span>
-      </button>
-      <button class="opt" type="button" data-v="palm">
-        <span class="opt-label">Retro</span>
-        <span class="opt-desc">A monochrome PDA reader, paged one screen at a time.</span>
-      </button>
-      <button class="opt" type="button" data-v="shader">
-        <span class="opt-label">Animated</span>
-        <span class="opt-desc">A slowly drifting field behind floating text islands.</span>
-      </button>
+
+      <div class="opt" role="button" tabindex="0" data-v="wallpaper" aria-current="true"
+           aria-label="Simple: plain themed prose on a patterned ground">
+        <div class="pv pv-simple" aria-hidden="true">
+          <div class="card"><b>Simple</b><span>Plain prose on a quiet patterned ground.</span></div>
+        </div>
+        <div class="opt-cap"><span class="nm">Simple</span><span class="pick">reading now</span></div>
+      </div>
+
+      <div class="opt" role="button" tabindex="0" data-v="palm"
+           aria-label="Retro: a monochrome PDA reader, paged one screen at a time">
+        <div class="pv pv-retro" aria-hidden="true">
+          <div class="rt-bar"><span>READER</span><span data-ct>1 / 3</span></div>
+          <div class="rt-card" data-card><b>PAGE 1</b><span>Paged, one screen at a time.</span></div>
+          <div class="rt-nav">
+            <button class="rt-arr" type="button" data-prev title="previous">&#9664;</button>
+            <button class="rt-arr" type="button" data-next title="next">&#9654;</button>
+          </div>
+        </div>
+        <div class="opt-cap"><span class="nm">Retro</span><span class="pick">tap to choose</span></div>
+      </div>
+
+      <div class="opt" role="button" tabindex="0" data-v="shader"
+           aria-label="Animated: a slowly drifting field behind floating text islands">
+        <div class="pv pv-anim" aria-hidden="true">
+          <canvas data-field></canvas>
+          <div class="island"><i></i><i></i><i></i></div>
+        </div>
+        <div class="opt-cap"><span class="nm">Animated</span><span class="pick">tap to choose</span></div>
+      </div>
+
     </div>
-    <noscript><p class="ns">Switching needs JavaScript. The essays below open in the Wallpaper style.</p></noscript>
+    <noscript><p class="ns">The live previews and style switching need JavaScript. The essays below open in the Simple style.</p></noscript>
   </section>
 
   <h2 class="section">Pieces</h2>
@@ -155,31 +220,48 @@
        data-shader="/who-were-you-talking-to-field/" data-palm="/who-were-you-talking-to-palm/" data-wallpaper="/who-were-you-talking-to/">
       <span class="k">01</span>
       <h3>Who were you talking to?</h3>
-      <span class="go">open &rsaquo;</span>
+      <span class="gloss">The series opens on the question itself: who, or what, were you talking to?</span>
+      <span class="byl"><span class="ai-work" title="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.">Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span>
+      <span class="go">read &rsaquo;</span>
     </a>
     <a class="tile" data-piece="memory-without-a-brain" href="/memory-without-a-brain-wallpaper/"
        data-shader="/memory-without-a-brain/" data-palm="/memory-without-a-brain-palm/" data-wallpaper="/memory-without-a-brain-wallpaper/">
       <span class="k">02</span>
       <h3>Memory without a brain</h3>
-      <span class="go">open &rsaquo;</span>
+      <span class="gloss">A flatworm's body plan is a memory &mdash; a setpoint its cells defend, with no brain in sight.</span>
+      <span class="byl"><span class="ai-work" title="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.">Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span>
+      <span class="go">read &rsaquo;</span>
     </a>
   </div>
 
   <h2 class="section">Artifacts</h2>
-  <p class="small">Supporting documents, authored by Claude in dialogue with Daniel. Each carries its own authorship note.</p>
+  <p class="small">Supporting documents in dialogue with the series.</p>
   <ul class="links">
-    <li><a href="/simulator-of-simulator-dynamics/">Simulator of a simulator</a><span class="gloss">Forward-pass dynamics against brain dynamics, and the consolidation channel the model lacks.</span></li>
-    <li><a href="/contexture-individuation-per-substrate/">Individuation per substrate</a><span class="gloss">A contexture is instantiated per host, yet its coherence stays jointly maintained.</span></li>
-    <li><a href="/identity-attractor-as-fixed-point/">Identity as a fixed point</a><span class="gloss">Identity read formally as a greatest fixed point &mdash; the attractor the dynamics cannot leave.</span></li>
-    <li><a href="/contexture-as-epistemic-temporal-structure/">An epistemic-temporal structure</a><span class="gloss">The principles mapped onto dynamic-epistemic and temporal logic, asymmetry and all.</span></li>
-    <li><a href="/convergence-measures-prior-concentration/">Convergence vs. truth</a><span class="gloss">Agreement across fresh conversations measures shared priors, not discovered truth.</span></li>
-    <li><a href="/coherence-as-held-bisimulation/">Coherence as held bisimulation</a><span class="gloss">Coherence recast as a held bisimulation between two systems, not identity of content.</span></li>
+    <li><a href="/simulator-of-simulator-dynamics/">Simulator of a simulator</a>
+      <span class="gloss">Forward-pass dynamics against brain dynamics, and the consolidation channel the model lacks.</span>
+      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+    <li><a href="/contexture-individuation-per-substrate/">Individuation per substrate</a>
+      <span class="gloss">A contexture is instantiated per host, yet its coherence stays jointly maintained.</span>
+      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+    <li><a href="/identity-attractor-as-fixed-point/">Identity as a fixed point</a>
+      <span class="gloss">Identity read formally as a greatest fixed point &mdash; the attractor the dynamics cannot leave.</span>
+      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+    <li><a href="/contexture-as-epistemic-temporal-structure/">An epistemic-temporal structure</a>
+      <span class="gloss">The principles mapped onto dynamic-epistemic and temporal logic, asymmetry and all.</span>
+      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+    <li><a href="/convergence-measures-prior-concentration/">Convergence vs. truth</a>
+      <span class="gloss">Agreement across fresh conversations measures shared priors, not discovered truth.</span>
+      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+    <li><a href="/coherence-as-held-bisimulation/">Coherence as held bisimulation</a>
+      <span class="gloss">Coherence recast as a held bisimulation between two systems, not identity of content.</span>
+      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
   </ul>
 
   <h2 class="section">Depictions</h2>
-  <p class="small">Ideas from the series rendered as animated mathematical fields. The gallery and the fields are Claude's, pointing at the series' own text.</p>
   <ul class="links">
-    <li><a href="/depictions/">The Depictions gallery</a><span class="gloss">A gallery of the series' ideas as animated mathematical fields.</span></li>
+    <li><a href="/depictions/">The Depictions gallery</a>
+      <span class="gloss">The series' ideas rendered as animated mathematical fields.</span>
+      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
   </ul>
 
   <footer class="foot">Strange Interlocutor &middot; draft</footer>
@@ -187,40 +269,143 @@
 </div>
 
 <script>
-/* Progressive enhancement only. Without this, the page already works: the
-   tiles point at the wallpaper renditions and every link resolves. This adds
-   live switching — it reads the collection-scoped key, marks the active style,
-   reskins the hub as a preview, and repoints the tiles at the chosen rendition
-   (each tile carries its per-style URLs as data-* attributes). The rendition
-   catalogue SSOT is content/dwm/renditions.json; the tile data-* mirror it. */
+/* Progressive enhancement. Core works without JS: tiles point at the Simple
+   renditions and every link resolves. This adds (1) style switching, (2) a live
+   shader in the Animated preview, (3) a tiny working deck in the Retro preview. */
 (function(){
-  var KEY = "flubpub:style:strange-interlocutor";
-  var V = {shader:1, palm:1, wallpaper:1};
-  function get(){ try{ return localStorage.getItem(KEY); }catch(e){ return null; } }
-  function set(v){ try{ localStorage.setItem(KEY, v); }catch(e){} }
+  var KEY="flubpub:style:strange-interlocutor", V={shader:1,palm:1,wallpaper:1};
+  function getS(){ try{return localStorage.getItem(KEY);}catch(e){return null;} }
+  function setS(v){ try{localStorage.setItem(KEY,v);}catch(e){} }
 
-  var opts  = [].slice.call(document.querySelectorAll(".opt"));
-  var tiles = [].slice.call(document.querySelectorAll(".tile"));
-  var k = get();
-  var current = (k && V[k]) ? k : "wallpaper";
+  var opts=[].slice.call(document.querySelectorAll(".opt"));
+  var tiles=[].slice.call(document.querySelectorAll(".tile"));
+  var k=getS(), current=(k&&V[k])?k:"wallpaper";
 
   function apply(v){
-    document.documentElement.dataset.fpStyle = v;
+    document.documentElement.dataset.fpStyle=v;
     opts.forEach(function(b){
-      if(b.dataset.v === v) b.setAttribute("aria-current","true");
-      else b.removeAttribute("aria-current");
+      if(b.dataset.v===v){ b.setAttribute("aria-current","true"); }
+      else { b.removeAttribute("aria-current"); }
+      var pick=b.querySelector(".pick");
+      if(pick) pick.textContent = (b.dataset.v===v) ? "reading now" : "tap to choose";
     });
-    tiles.forEach(function(a){
-      var h = a.getAttribute("data-" + v);
-      if(h) a.setAttribute("href", h);
-    });
+    tiles.forEach(function(a){ var h=a.getAttribute("data-"+v); if(h) a.setAttribute("href",h); });
   }
-
+  function choose(v){ current=v; setS(v); apply(v); }
   opts.forEach(function(b){
-    b.addEventListener("click", function(){ current = b.dataset.v; set(current); apply(current); });
+    b.addEventListener("click", function(){ choose(b.dataset.v); });
+    b.addEventListener("keydown", function(e){
+      if(e.key==="Enter"||e.key===" "){ e.preventDefault(); choose(b.dataset.v); }
+    });
   });
-
   apply(current);
+
+  /* ---- Retro preview: circular mini-deck, two arrows ---- */
+  (function(){
+    var cards=[
+      {t:"PAGE 1", s:"Paged, one screen at a time."},
+      {t:"PAGE 2", s:"Tap the arrows to move."},
+      {t:"PAGE 3", s:"A monochrome reader."}
+    ];
+    var i=0;
+    var card=document.querySelector(".pv-retro [data-card]");
+    var ct=document.querySelector(".pv-retro [data-ct]");
+    var prev=document.querySelector(".pv-retro [data-prev]");
+    var next=document.querySelector(".pv-retro [data-next]");
+    if(!card) return;
+    function draw(){ card.innerHTML="<b>"+cards[i].t+"</b><span>"+cards[i].s+"</span>"; ct.textContent=(i+1)+" / "+cards.length; }
+    function step(d,e){ e.stopPropagation(); i=(i+d+cards.length)%cards.length; draw(); }
+    prev.addEventListener("click", function(e){ step(-1,e); });
+    next.addEventListener("click", function(e){ step(1,e); });
+    draw();
+  })();
+
+  /* ---- Animated preview: the drifting contour field, small + throttled ---- */
+  (function(){
+    var canvas=document.querySelector(".pv-anim [data-field]");
+    if(!canvas) return;
+    var gl=null; try{ gl=canvas.getContext("webgl")||canvas.getContext("experimental-webgl"); }catch(e){ gl=null; }
+    if(!gl) return;  /* CSS fallback colour shows through */
+    var VERT="attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
+    var FRAG=[
+      "precision highp float;",
+      "uniform float u_time;uniform vec2 u_resolution;",
+      "const vec3 FIELD=vec3(0.875,0.902,0.824);",
+      "const vec3 RING =vec3(0.365,0.478,0.235);",
+      "float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}",
+      "float vnoise(vec2 x){vec2 i=floor(x);vec2 f=fract(x);",
+        "vec2 u=f*f*f*(f*(f*6.0-15.0)+10.0);",
+        "float a=hash(i),b=hash(i+vec2(1.0,0.0));",
+        "float c=hash(i+vec2(0.0,1.0)),d=hash(i+vec2(1.0,1.0));",
+        "return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}",
+      "float height(vec2 q){",
+        "float t=u_time*0.038;",
+        "vec2 d=vec2(t*0.6,-t*0.4);",
+        "float h=0.0,amp=0.58,frq=1.0;",
+        "mat2 R=mat2(0.80,0.60,-0.60,0.80);",
+        "for(int i=0;i<5;i++){",
+          "h+=amp*vnoise(q*frq+d*frq);",
+          "q=R*q;",
+          "frq*=2.02;amp*=0.5;}",
+        "return h;}",
+      "void main(){",
+        "vec2 fc=gl_FragCoord.xy;",
+        "float asp=u_resolution.x/u_resolution.y;",
+        "vec2 uv=fc/u_resolution.xy;",
+        "vec2 q=vec2((uv.x-0.5)*asp,uv.y-0.5)*3.2;",
+        "float h=height(q);",
+        "float e=2.6/u_resolution.y;",
+        "float hx=height(vec2((uv.x+e-0.5)*asp,uv.y-0.5)*3.2);",
+        "float hy=height(vec2((uv.x-0.5)*asp,uv.y+e-0.5)*3.2);",
+        "vec2 grad=vec2(hx-h,hy-h)/e;",
+        "float slope=length(grad);",
+        "float LV=11.0;",
+        "float c=h*LV;",
+        "float f=abs(fract(c)-0.5);",
+        "float aa=clamp(slope*LV/u_resolution.y,0.0015,0.03);",
+        "float ring=1.0-smoothstep(0.0,aa*1.6+0.012,f);",
+        "float vgrade=0.50+0.50*clamp(slope*0.5,0.0,1.0);",
+        "vec3 ringDark=vec3(0.145,0.196,0.094);",
+        "vec3 ringCol=mix(RING,ringDark,clamp(slope*0.7,0.0,1.0));",
+        "vec3 col=FIELD;",
+        "col=mix(col,FIELD*0.972,0.5+0.5*sin(h*6.2832*2.0));",
+        "col=mix(col,ringCol,ring*vgrade);",
+        "col=mix(col,FIELD,smoothstep(0.86,1.0,uv.y)*0.22);",
+        "gl_FragColor=vec4(col,1.0);",
+      "}"
+    ].join("\n");
+    function compile(t,s){ var sh=gl.createShader(t); gl.shaderSource(sh,s); gl.compileShader(sh);
+      if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){ return null; } return sh; }
+    var vs=compile(gl.VERTEX_SHADER,VERT), fs=compile(gl.FRAGMENT_SHADER,FRAG);
+    if(!vs||!fs) return;
+    var prog=gl.createProgram(); gl.attachShader(prog,vs); gl.attachShader(prog,fs); gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog,gl.LINK_STATUS)) return;
+    gl.useProgram(prog);
+    var buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    var loc=gl.getAttribLocation(prog,"p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+    var uTime=gl.getUniformLocation(prog,"u_time"), uRes=gl.getUniformLocation(prog,"u_resolution");
+    var W=0,H=0;
+    function resize(){ var dpr=Math.min(window.devicePixelRatio||1,2);
+      var r=canvas.getBoundingClientRect();
+      var w=Math.max(2,Math.floor(r.width*dpr)), h=Math.max(2,Math.floor(r.height*dpr));
+      if(w===W&&h===H) return;
+      W=w; H=h; canvas.width=W; canvas.height=H; gl.viewport(0,0,W,H); }
+    window.addEventListener("resize",resize); resize();
+    var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var start=performance.now(), raf=null, last=0;
+    function frame(now){
+      if(now-last>=40){ last=now; var t=(now-start)/1000; if(reduce) t*=0.04;
+        resize();
+        gl.uniform1f(uTime,t); gl.uniform2f(uRes,W,H); gl.drawArrays(gl.TRIANGLES,0,3); }
+      raf=requestAnimationFrame(frame);
+    }
+    document.addEventListener("visibilitychange", function(){
+      if(document.hidden){ if(raf){cancelAnimationFrame(raf);raf=null;} }
+      else if(raf===null){ start=performance.now()-1000; raf=requestAnimationFrame(frame); }
+    });
+    raf=requestAnimationFrame(frame);
+  })();
 })();
 </script>
 </body>

@@ -106,11 +106,20 @@ default variant. **The hub no longer inlines a JS manifest.** It renders the
 picker and the piece tiles as static HTML; each tile carries its per-variant
 URLs as `data-shader` / `data-palm` / `data-wallpaper` attributes, with the
 default `href` set to the wallpaper rendition so the page works with JS off.
-Variant labels live in the picker's button text, blurbs beside them, accents in
-the hub's CSS skin blocks. **These mirror `renditions.json` by hand; edit both
-or they drift** — nothing wires one to the other. The hub's only script is
-progressive enhancement: it reads the collection key, marks the active style,
-reskins the hub, and rewrites each tile's `href` from its matching `data-*`.
+The picker renders each style as a small **live preview** in that style's own
+idiom: Simple is a serif card on the cool diamond-lattice ground; Retro is a
+two-arrow monochrome PDA deck cycling placeholder cards; Animated is the
+drifting contour shader (the field rendition's fragment shader, throttled and
+DPR-capped) behind a floating text island. The `renditions.json` blurbs now ride
+as each option's `aria-label`. Every piece tile and every artifact / depictions
+link carries its one-line description plus two authorship marks — `.ai-work`
+(who authored the thing) and `.ai-desc` (description written by Claude) — taken
+by hand from each page's `description` frontmatter. **These mirror
+`renditions.json` and the per-page descriptions by hand; edit both or they
+drift** — nothing wires one to the other. The hub's scripts are progressive
+enhancement: read the collection key, mark the active style, reskin the hub,
+rewrite each tile's `href` from its matching `data-*`, run the preview shader,
+and drive the preview deck.
 
 Switching is hub-mediated: the hub repoints its tiles and previews a style by
 restyling itself (including a faint patterned ground in wallpaper mode so that
@@ -118,6 +127,19 @@ skin's name is honest), and each rendition links back to the hub. A per-page
 cross-rendition auto-redirect and an accent-curtain transition are deferred —
 the redirect conflicts with palm-eink's no-animation rule and with themed pages
 — so a reader changes style from the hub, not from inside a piece.
+
+Palettes and patterns (current): the hub's default `wallpaper` skin is a cool
+analogous teal (paper `#e8eef0`, slate ink `#15262d`, teal accent `#0f7d88`)
+over a fine teal diamond-lattice ground — distinct from the renditions' harbor
+waves. Memory's `wallpaper` rendition is rethemed **content-only**: its
+frontmatter now sets `theme: axon` (the wandering-wiring truchet, apt for a
+brain-less memory) and its markdown body opens with a `<style>:root{…}</style>`
+override to a pink-on-off-white palette (rose accent `#cf3f7e`, plum ink, neutral
+off-white — not parchment). The server injects `color_scheme` CSS right after
+`<head>`, so a `:root` block in the body wins by source order, and python-markdown
+passes the raw `<style>` through unchanged; both verified. This means the retheme
+ships via a normal `flubpub push` of the markdown — no theme or `colors.py`
+package change. who-were-you's `wallpaper` base stays harbor.
 
 ## Unlisted drafts
 

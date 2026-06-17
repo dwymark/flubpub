@@ -1,10 +1,23 @@
 ---
 title: Memory without a brain
 slug: memory-without-a-brain-wallpaper
-theme: harbor
+theme: axon
 tags:
 - draft
 ---
+<style>:root{
+  /* content-only retheme: pink accent on a neutral off-white (not parchment),
+     over axon's neural wiring. Overrides the server-injected palette by source
+     order. Pink/plum is analogous (calm), value carried by the dark plum ink. */
+  --bg:#f6f3f4; --fg:#241a26; --heading:#1b1020;
+  --accent:#cf3f7e; --link:#b22e68; --link-visited:#7a4f86;
+  --border:#e7d8df; --rule:#e7d8df;
+  --code-bg:#f0e6ea; --code-fg:#241a26;
+  --card-bg:rgba(253,251,252,.95); --ink-light:#6f5d68;
+  --pattern-fg:#d9aec6; --pattern-accent:#cf3f7e;
+  --pattern-opacity:.5; --pattern-stroke:1.5;
+}</style>
+
 # Memory without a brain
 
 Who are we but our memories and our dispositions? Memory is a key part of who we are. Naturally, this suggests that memory always *belongs to someone*. This is only a sliver of the truth. Memory is absolutely everywhere, once you know how to recognise it.

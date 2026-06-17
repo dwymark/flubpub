@@ -19,6 +19,7 @@
     --serif:"Iowan Old Style",Palatino,Georgia,"Times New Roman",serif;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --gen:"Courier New",Courier,ui-monospace,monospace;   /* marker for unattributed generated text */
   }
   /* three skins, echoing the three renditions */
   :root[data-fp-style="shader"]{
@@ -62,25 +63,35 @@
     padding:clamp(30px,7vh,72px) clamp(16px,5vw,32px) 18vh;}
 
   header.masthead{margin-bottom:clamp(20px,4vh,34px)}
-  .masthead .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.24em;
-    text-transform:uppercase;color:var(--accent);}
-  .masthead h1{font-size:clamp(30px,8vw,50px);line-height:1.04;font-weight:600;margin:.25em 0 .3em;letter-spacing:-.01em}
-  .masthead p.lede{font-size:clamp(15px,4vw,17px);color:var(--ink);max-width:54ch}
+  .masthead h1{font-size:clamp(30px,8vw,50px);line-height:1.04;font-weight:600;margin:0 0 .3em;letter-spacing:-.01em}
+  .masthead p.lede{font-size:clamp(16px,4.4vw,19px);color:var(--ink);max-width:50ch;margin-bottom:.2em}
 
-  /* authorship byline: collapsed it reads like a plain "written by" line under
-     the title; it opens in place to the fuller note. No JS — native <details>. */
-  .byline{margin:.85em 0 0}
-  .byline summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:.5em;flex-wrap:wrap}
-  .byline summary::-webkit-details-marker{display:none}
-  .byline summary::after{content:"\203A";font-family:var(--mono);color:var(--accent);
-    transition:transform .2s ease;display:inline-block}
-  .byline[open] summary::after{transform:rotate(90deg)}
-  .byline .by{font-size:13px;color:var(--dim)}
-  .byline .by b{font-weight:600;color:var(--ink)}
-  .byline p{font-size:13px;line-height:1.5;color:var(--dim);max-width:60ch;margin:.6em 0 0}
+  /* placeholder marker for unattributed, Claude-generated copy: a monospace face,
+     deliberately unlike the serif body, flagging text Daniel may rewrite later. */
+  .gen{font-family:var(--gen);font-weight:400;letter-spacing:0}
 
-  /* authorship marks, shared by every link: small, dim, dotted to signal a note */
-  .ai-work,.ai-desc{font-style:normal;border-bottom:1px dotted currentColor;cursor:help;text-decoration:none}
+  /* contributors disclosure: a plain credit plus a clear trigger; opens in place
+     to a glanceable who-did-what. No JS — native <details>. */
+  .contrib{margin:1em 0 0}
+  .contrib > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:.6em;flex-wrap:wrap;
+    font-size:13px;color:var(--dim)}
+  .contrib > summary::-webkit-details-marker{display:none}
+  .contrib .credit b{font-weight:600;color:var(--ink)}
+  .contrib .trig{display:inline-flex;align-items:center;gap:.4em;color:var(--accent);font-weight:600;
+    border:1px solid var(--accent);border-radius:var(--radius);padding:2px 9px;white-space:nowrap}
+  .contrib .trig::before{content:"\25B8";display:inline-block;transition:transform .2s ease}
+  .contrib[open] .trig::before{transform:rotate(90deg)}
+  .contrib .panel{margin:.85em 0 0;border-left:2px solid var(--accent);padding-left:13px}
+  .contrib dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:13px;line-height:1.4}
+  .contrib dt{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--dim);padding-top:2px;white-space:nowrap}
+  .contrib dd{margin:0;color:var(--ink)}
+  .contrib .note{margin:.7em 0 0;font-size:11.5px;color:var(--dim)}
+
+  /* authorship marks, standard across the site: author byline under the title
+     (left), description byline under the description (right). No underline. */
+  .ai-work{display:block;font-style:normal;font-size:11.5px;color:var(--dim);margin-top:2px}
+  .ai-desc{display:block;font-style:normal;font-size:11px;color:var(--dim);text-align:right;margin-top:2px}
 
   /* chooser: each style is a small live preview rendered in its own styling */
   .chooser{margin:clamp(22px,4vh,32px) 0 clamp(12px,2vh,18px)}
@@ -146,8 +157,6 @@
   .tile .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--accent);font-weight:700}
   .tile h3{font-size:18px;line-height:1.16;font-weight:600}
   .tile .gloss{font-size:13px;line-height:1.4;color:var(--ink)}
-  .tile .byl,.links .byl{font-size:11px;line-height:1.4;color:var(--dim);margin-top:1px}
-  .tile .go{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--dim);margin-top:2px}
 
   ul.links{list-style:none}
   ul.links li{margin:.85em 0}
@@ -155,24 +164,31 @@
   ul.links a:hover{color:var(--accent);border-color:var(--accent)}
   ul.links .gloss{display:block;font-size:12.5px;color:var(--dim);margin-top:.15em;line-height:1.4}
   .small{font-size:12.5px;color:var(--dim);margin-top:.4em}
-
-  footer.foot{margin-top:clamp(28px,6vh,46px);font-family:var(--mono);font-size:10.5px;
-    letter-spacing:.06em;color:var(--dim)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header class="masthead">
-    <span class="kicker">A series</span>
     <h1>Strange Interlocutor</h1>
-    <p class="lede">What is it that we are doing when we talk with a machine that talks back?</p>
+    <p class="lede gen">What is it that we are doing when we talk with a machine that talks back?</p>
 
-    <details class="byline">
+    <details class="contrib">
       <summary>
-        <span class="by">Essays by <b>Daniel Wymark</b>, written by hand &middot; this hub built by Claude</span>
+        <span class="credit">Essays by <b>Daniel Wymark</b>.</span>
+        <span class="trig">Who contributed?</span>
       </summary>
-      <p>This hub &mdash; the style chooser and its framing &mdash; was built by Claude (Anthropic), directed by Daniel Wymark, who conceived the series. The essays are Daniel's. Each rendition and supporting piece carries its own fuller note.</p>
+      <div class="panel">
+        <dl>
+          <dt>Essays</dt><dd>Daniel Wymark, written by hand.</dd>
+          <dt>Concept &amp; direction</dt><dd>Daniel Wymark.</dd>
+          <dt>This hub</dt><dd>Built by Claude (Anthropic): the chooser, layout, and code.</dd>
+          <dt>Readers</dt><dd>The Animated and Retro renditions, by Claude (Anthropic).</dd>
+          <dt>Artifacts</dt><dd>Claude (Anthropic), with Daniel Wymark.</dd>
+          <dt>Descriptions</dt><dd>The one-line blurbs are Daniel's or Claude's; each card says which.</dd>
+        </dl>
+        <p class="note">No accounts, no cookies, no tracking, no storage.</p>
+      </div>
     </details>
   </header>
 
@@ -220,17 +236,17 @@
        data-shader="/who-were-you-talking-to-field/" data-palm="/who-were-you-talking-to-palm/" data-wallpaper="/who-were-you-talking-to/">
       <span class="k">01</span>
       <h3>Who were you talking to?</h3>
+      <span class="ai-work" title="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.">Daniel Wymark</span>
       <span class="gloss">Don&rsquo;t ask yourself whether the LLM is sentient. Ask yourself what you are doing when you talk with an LLM.</span>
-      <span class="byl"><span class="ai-work" title="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.">Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></span>
-      <span class="go">read &rsaquo;</span>
+      <span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span>
     </a>
     <a class="tile" data-piece="memory-without-a-brain" href="/memory-without-a-brain-wallpaper/"
        data-shader="/memory-without-a-brain/" data-palm="/memory-without-a-brain-palm/" data-wallpaper="/memory-without-a-brain-wallpaper/">
       <span class="k">02</span>
       <h3>Memory without a brain</h3>
+      <span class="ai-work" title="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.">Daniel Wymark</span>
       <span class="gloss">Memory is not only key to who we are, it is ubiquitous in living things. Here we meet a memory unlike our own.</span>
-      <span class="byl"><span class="ai-work" title="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.">Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></span>
-      <span class="go">read &rsaquo;</span>
+      <span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span>
     </a>
   </div>
 
@@ -238,33 +254,38 @@
   <p class="small">Supporting documents in dialogue with the series.</p>
   <ul class="links">
     <li><a href="/simulator-of-simulator-dynamics/">Simulator of a simulator</a>
+      <span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span>
       <span class="gloss">Forward-pass dynamics against brain dynamics, and the consolidation channel the model lacks.</span>
-      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+      <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></li>
     <li><a href="/contexture-individuation-per-substrate/">Individuation per substrate</a>
+      <span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span>
       <span class="gloss">A contexture is instantiated per host, yet its coherence stays jointly maintained.</span>
-      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+      <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></li>
     <li><a href="/identity-attractor-as-fixed-point/">Identity as a fixed point</a>
+      <span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span>
       <span class="gloss">Identity read formally as a greatest fixed point &mdash; the attractor the dynamics cannot leave.</span>
-      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+      <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></li>
     <li><a href="/contexture-as-epistemic-temporal-structure/">An epistemic-temporal structure</a>
+      <span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span>
       <span class="gloss">The principles mapped onto dynamic-epistemic and temporal logic, asymmetry and all.</span>
-      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+      <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></li>
     <li><a href="/convergence-measures-prior-concentration/">Convergence vs. truth</a>
+      <span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span>
       <span class="gloss">Agreement across fresh conversations measures shared priors, not discovered truth.</span>
-      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+      <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></li>
     <li><a href="/coherence-as-held-bisimulation/">Coherence as held bisimulation</a>
+      <span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span>
       <span class="gloss">Coherence recast as a held bisimulation between two systems, not identity of content.</span>
-      <span class="byl"><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></span></li>
+      <span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></li>
   </ul>
 
   <h2 class="section">Depictions</h2>
   <ul class="links">
     <li><a href="/depictions/">The Depictions gallery</a>
+      <span class="ai-work" title="Gallery interface and animated fields by Claude (Anthropic); the framed passages are by Daniel Wymark.">Claude, framing text by Daniel Wymark</span>
       <span class="gloss">Vibe-coded experimental visualizations with snippets from the essay.</span>
-      <span class="byl"><span class="ai-work" title="Gallery interface and animated fields by Claude (Anthropic); the framed passages are by Daniel Wymark.">Claude, framing text by Daniel Wymark</span> &middot; <span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></span></li>
+      <span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></li>
   </ul>
-
-  <footer class="foot">Strange Interlocutor &middot; draft</footer>
 
 </div>
 

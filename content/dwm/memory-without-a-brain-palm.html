@@ -163,22 +163,12 @@ const G = {FRONT:"FRONT", ESSAY:"ESSAY", NOTE:"NOTE"};
 const PAGES = [
   { g:G.FRONT, id:"—", title:"COVER", kind:"cover" },
 
-  { g:G.ESSAY, id:"1", title:"MEMORY IS EVERYWHERE", html:`
-    <p>Who are we but our memories and our dispositions? Memory is a key part of who we are. Naturally, this suggests that memory always <em>belongs to someone</em>. This is only a sliver of the truth. Memory is absolutely everywhere, once you know how to recognise it.</p>` },
-
-  { g:G.ESSAY, id:"2", title:"THE FLATWORM", html:`
-    <p>Michael Levin&rsquo;s planarian flatworm is the canonical example of a memory unlike our own. This flatworm is a strange little creature, equipped with a brain and a knack for regeneration. While a worm with a brain is already intriguing, it&rsquo;s really the tail where the interest is. Assuming you cut the head off first.</p>` },
-
-  { g:G.ESSAY, id:"3", title:"CUT FOR SCIENCE", html:`
-    <p>Cutting the planarian flatworm in half would be cruel. But if you do so for science, you see that being cut in half is not as bad for the worm as you might assume. The cells that make up the worm shimmer invisibly with a dynamic electrical pattern, its bioelectric field. The pattern is held remarkably steady. This is because the pattern is collectively defended against perturbation by the cells.</p>` },
-
-  { g:G.ESSAY, id:"4", title:"A MAP THROUGH FORM", html:`
-    <p>The genome provides the language that the bioelectric pattern speaks. The pattern held by the amputated tail influences the genes that its cells turn on as they get to work. The cells dutifully divide and specialize as necessary, until the tail has grown a head and the head has grown a tail. The pattern that the cells keep alive during calmer times acts as a map through morphological space, providing each cell with a clear local target to settle towards.</p>` },
-
-  { g:G.ESSAY, id:"5", title:"NO BRAIN, STILL WHOLE", html:`
-    <p>Notice that the brain is nowhere to be found. Yet the solitary tail grows into a fully-formed, healthy worm as if it had never been injured in the first place. If you measure the bioelectric signal flowing through the worm while it is growing back its head, the pattern ripples and drifts, with the pattern flowing outward into the growing flesh. Equilibrium is reached only when the pattern has converged on its defended form.</p>` },
-
-  { g:G.ESSAY, id:"6", title:"TWO HEADS", html:`
+  { g:G.ESSAY, id:"1", title:"MEMORY WITHOUT A BRAIN", html:`
+    <p>Who are we but our memories and our dispositions? Memory is a key part of who we are. Naturally, this suggests that memory always <em>belongs to someone</em>. This is only a sliver of the truth. Memory is absolutely everywhere, once you know how to recognise it.</p>
+    <p>Michael Levin&rsquo;s planarian flatworm is the canonical example of a memory unlike our own. This flatworm is a strange little creature, equipped with a brain and a knack for regeneration. While a worm with a brain is already intriguing, it&rsquo;s really the tail where the interest is. Assuming you cut the head off first.</p>
+    <p>Cutting the planarian flatworm in half would be cruel. But if you do so for science, you see that being cut in half is not as bad for the worm as you might assume. The cells that make up the worm shimmer invisibly with a dynamic electrical pattern, its bioelectric field. The pattern is held remarkably steady. This is because the pattern is collectively defended against perturbation by the cells.</p>
+    <p>The genome provides the language that the bioelectric pattern speaks. The pattern held by the amputated tail influences the genes that its cells turn on as they get to work. The cells dutifully divide and specialize as necessary, until the tail has grown a head and the head has grown a tail. The pattern that the cells keep alive during calmer times acts as a map through morphological space, providing each cell with a clear local target to settle towards.</p>
+    <p>Notice that the brain is nowhere to be found. Yet the solitary tail grows into a fully-formed, healthy worm as if it had never been injured in the first place. If you measure the bioelectric signal flowing through the worm while it is growing back its head, the pattern ripples and drifts, with the pattern flowing outward into the growing flesh. Equilibrium is reached only when the pattern has converged on its defended form.</p>
     <p>Stranger still, Levin&rsquo;s lab can reliably modify the held pattern. This involves manipulating the ion channels that cells use to maintain the bioelectric pattern. Cutting a population of pattern-modified worms gives rise to a regenerated population where about a quarter of the worms have two heads rather than a head and a tail. No gene was edited. And if you cut one of the double-headed worms in half again, however many times you like over the remainder of its lifespan, the amputated parts regenerate as double-headed worms. <em>This pattern is an unfamiliar kind of memory; a memory that belongs not to an individual someone but instead to a collective someone.</em></p>` },
 
   { g:G.NOTE, id:"i", title:"WHO WROTE THIS", kind:"colophon", html:`
@@ -206,7 +196,7 @@ function bodyFor(p){
       <h1>Memory<br>without a brain</h1>
       <div class="sub">&mdash; Strange Interlocutor &middot; Piece 1 &mdash;</div>
       <div class="status">PALM-EINK READER<br>WORKING DRAFT</div>
-      <div class="tag2">An essay, paged for reading.<br>Use PREV / NEXT, the arrows, or swipe.</div>
+      <div class="tag2">An essay, on one page.<br>Scroll to read; NEXT for who wrote it.</div>
     </div>`;
   }
   if(p.kind==="answer"){ return `<div class="answer-wrap"><div class="answer">${p.html}</div></div>`; }

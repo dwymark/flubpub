@@ -142,6 +142,16 @@ passes the raw `<style>` through unchanged; both verified. This means the rethem
 ships via a normal `flubpub push` of the markdown — no theme or `colors.py`
 package change. who-were-you's `wallpaper` base stays harbor.
 
+Conventions this round: an `.ai-work` author byline sits under each title (left)
+and an `.ai-desc` description byline under each blurb (right), no underline,
+standard across the hub. Unattributed Claude-generated copy (currently just the
+hub lede) gets the `.gen` class, a monospace placeholder face (`--gen`) that
+flags text Daniel may rewrite later. The masthead credit collapses to "Essays by
+Daniel Wymark." and opens a glanceable contributors disclosure (a who-did-what
+list, composed via the `/disclosure` skill). The palm readers now present the
+whole essay on one scrollable card (cover, essay, colophon) instead of
+paragraph-per-page; the deck is deliberately sparse, pending later build-out.
+
 ## Unlisted drafts
 
 The main index excludes pages by tag. `home.md`'s index filter carries

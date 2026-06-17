@@ -163,24 +163,16 @@ const G = {FRONT:"FRONT", ESSAY:"ESSAY", NOTE:"NOTE"};
 const PAGES = [
   { g:G.FRONT, id:"—", title:"COVER", kind:"cover" },
 
-  { g:G.ESSAY, id:"1", title:"THE PUZZLE", html:`
-    <p>How is it that we can pull out our phone in line, use an app like Claude or ChatGPT, and walk away feeling that we&rsquo;ve just had a genuine conversation even though there was no human involved besides ourselves? Much like my grandparent&rsquo;s generation marvelling over the television and then promptly coming to take it for granted, the felt strangeness fades with familiarity. And yet, the strangeness persists.</p>` },
-
-  { g:G.ESSAY, id:"2", title:"THE DISSONANCE", html:`
-    <p>Why do we feel compelled to say &ldquo;please&rdquo; and &ldquo;thank you&rdquo;? How is it that we find ourselves idly mulling over the experience later, much like we do after a chat with a friend? There is no denying that these feelings are familiar. It&rsquo;s the feeling of reflecting on a chance encounter with a colleague, remembering a scene from a book, debating with oneself about a difficult decision. The familiarity contrasts sharply with the novelty, and the dissonance that this contrast produces on first encounter is considerable. There are two common strategies I see in how this dissonance is resolved.</p>` },
-
-  { g:G.ESSAY, id:"3", title:"DISMISSAL", html:`
-    <p>My own reaction fit squarely into the dismissal camp. &ldquo;These programs are impressive, the use cases they unlock are exciting, and I&rsquo;m surprised by their capabilities almost daily. But at the end of the day, these are just Python programs doing sophisticated statistics.&rdquo; The &ldquo;just&rdquo; in that statement serves to shut down any further reflection on the matter. It denies that there is anything mysterious about a technology whose inventors themselves did not expect to work anywhere near as well as it turned out to.</p>` },
-
-  { g:G.ESSAY, id:"4", title:"DEIFICATION", html:`
-    <p>Having conversation is second nature. Conversations are how we learn about one another. Conversations are how we pass down knowledge and traditions from generation to generation. Many of us experience our inner life as an internal monologue; this is but a conversation of one. The deification camp naturally concludes that conversation is inherently a human activity. The notion that a real conversation is possible with anything other than a mind like our own is rejected. The only remaining explanation is that the program writing the responses must, indeed, be such a mind: a true ghost in the machine.</p>` },
-
-  { g:G.ESSAY, id:"5", title:"THE MISTAKE", html:`
-    <p>Both camps fixate on explaining how the model on the other side of the chat manages to hold up its end of the conversation. This is a natural reaction, seeing as there has never been a competent conversation partner in the past that was not another flesh-and-blood person. It is hard to come to terms with the feeling of having made a connection with something radically unlike oneself.</p>` },
-
-  { g:G.ESSAY, id:"6", title:"THE ANSWER", kind:"answer", html:`
-    <span class="lab">THE ANSWER</span>
-    <p>The solution is a change of perspective. Rather than asking who we spoke with, ask what we just did. What am I doing when I chat with an LLM? The answer is at once entirely new and nothing new at all. The answer is conversation itself, nothing more and nothing less.</p>` },
+  { g:G.ESSAY, id:"1", title:"WHO WERE YOU TALKING TO?", html:`
+    <p>How is it that we can pull out our phone in line, use an app like Claude or ChatGPT, and walk away feeling that we&rsquo;ve just had a genuine conversation even though there was no human involved besides ourselves? Much like my grandparent&rsquo;s generation marvelling over the television and then promptly coming to take it for granted, the felt strangeness fades with familiarity. And yet, the strangeness persists.</p>
+    <p>Why do we feel compelled to say &ldquo;please&rdquo; and &ldquo;thank you&rdquo;? How is it that we find ourselves idly mulling over the experience later, much like we do after a chat with a friend? There is no denying that these feelings are familiar. It&rsquo;s the feeling of reflecting on a chance encounter with a colleague, remembering a scene from a book, debating with oneself about a difficult decision. The familiarity contrasts sharply with the novelty, and the dissonance that this contrast produces on first encounter is considerable. There are two common strategies I see in how this dissonance is resolved.</p>
+    <p>My own reaction fit squarely into the dismissal camp. &ldquo;These programs are impressive, the use cases they unlock are exciting, and I&rsquo;m surprised by their capabilities almost daily. But at the end of the day, these are just Python programs doing sophisticated statistics.&rdquo; The &ldquo;just&rdquo; in that statement serves to shut down any further reflection on the matter. It denies that there is anything mysterious about a technology whose inventors themselves did not expect to work anywhere near as well as it turned out to.</p>
+    <p>Having conversation is second nature. Conversations are how we learn about one another. Conversations are how we pass down knowledge and traditions from generation to generation. Many of us experience our inner life as an internal monologue; this is but a conversation of one. The deification camp naturally concludes that conversation is inherently a human activity. The notion that a real conversation is possible with anything other than a mind like our own is rejected. The only remaining explanation is that the program writing the responses must, indeed, be such a mind: a true ghost in the machine.</p>
+    <p>Both camps fixate on explaining how the model on the other side of the chat manages to hold up its end of the conversation. This is a natural reaction, seeing as there has never been a competent conversation partner in the past that was not another flesh-and-blood person. It is hard to come to terms with the feeling of having made a connection with something radically unlike oneself.</p>
+    <div class="answer" style="margin-top:18px">
+      <span class="lab">THE ANSWER</span>
+      <p>The solution is a change of perspective. Rather than asking who we spoke with, ask what we just did. What am I doing when I chat with an LLM? The answer is at once entirely new and nothing new at all. The answer is conversation itself, nothing more and nothing less.</p>
+    </div>` },
 
   { g:G.NOTE, id:"i", title:"WHO WROTE THIS", kind:"colophon", html:`
     <span class="lab">WHO WROTE THIS</span>
@@ -207,7 +199,7 @@ function bodyFor(p){
       <h1>Who were you<br>talking to?</h1>
       <div class="sub">&mdash; Strange Interlocutor &middot; Piece 0 &mdash;</div>
       <div class="status">PALM-EINK READER<br>06 / 06 / 2026</div>
-      <div class="tag2">An essay, paged for reading.<br>Use PREV / NEXT, the arrows, or swipe.</div>
+      <div class="tag2">An essay, on one page.<br>Scroll to read; NEXT for who wrote it.</div>
     </div>`;
   }
   if(p.kind==="answer"){ return `<div class="answer-wrap"><div class="answer">${p.html}</div></div>`; }

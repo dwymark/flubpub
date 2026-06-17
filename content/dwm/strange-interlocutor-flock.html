@@ -40,8 +40,9 @@
     padding:13vh 7vw;pointer-events:none}
   .card{max-width:33rem;width:100%;
     background:rgba(251,251,249,.84);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
-    border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);
+    border:2px solid var(--ink);
     padding:clamp(18px,3vw,28px) clamp(20px,3.4vw,30px)}
+  body.roomy .card{max-width:40rem}
   /* Retro: solid panel, no translucency */
   body.solid .card{background:#ffffff;-webkit-backdrop-filter:none;backdrop-filter:none}
 
@@ -247,6 +248,12 @@
     buildSky();
     for(var i=0;i<inited;i++){ px[i]=((px[i]%W)+W)%W; py[i]=((py[i]%H)+H)%H; }
     if(style==="shader") render("shader"); else if(style==="palm") render("palm");
+    // re-evaluate the paging scheme; rebuild + reclamp if it flipped
+    if(typeof PAGES!=="undefined"){
+      var r=roomyNow();
+      if(r!==roomy){ roomy=r; document.body.classList.toggle("roomy",r);
+        PAGES=buildPages(r); N=PAGES.length; if(idx>N-1)idx=N-1; paint(); }
+    }
   }
   window.addEventListener("resize",resize);
   document.addEventListener("visibilitychange",function(){ if(document.hidden) stop(); else if(style==="shader") schedule(); });
@@ -286,32 +293,32 @@
   var WORKT="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.";
   var DDESC="This one-line description was written by Daniel Wymark.";
 
-  var PAGES=[
-    '<p class="lede">What is it that we are doing when we talk with a machine that talks back?</p>',
+  // ---- section fragments, assembled into one of two paging schemes ----
+  var COVER = '<p class="lede">What is it that we are doing when we talk with a machine that talks back?</p>';
 
-    '<h2>Pieces</h2>'+
+  var PIECES = '<h2>Pieces</h2>'+
     piece("who","Who were you talking to?","/who-were-you-talking-to-field/","/who-were-you-talking-to-palm/","/who-were-you-talking-to/",
       "Daniel Wymark",WORKT,"Don&rsquo;t ask whether the LLM is sentient; ask what you are doing.","description by Daniel Wymark",DDESC)+
     piece("mem","Memory without a brain","/memory-without-a-brain/","/memory-without-a-brain-palm/","/memory-without-a-brain-wallpaper/",
-      "Daniel Wymark",WORKT,"A memory unlike our own, ubiquitous in living things.","description by Daniel Wymark",DDESC),
+      "Daniel Wymark",WORKT,"A memory unlike our own, ubiquitous in living things.","description by Daniel Wymark",DDESC);
 
-    '<h2>Artifacts</h2>'+
-    art("/simulator-of-simulator-dynamics/","Simulator of a simulator","Forward-pass dynamics against brain dynamics, and the consolidation channel the model lacks.")+
-    art("/contexture-individuation-per-substrate/","Individuation per substrate","A contexture is instantiated per host, yet its coherence stays jointly maintained.")+
+  var ARTS = [
+    art("/simulator-of-simulator-dynamics/","Simulator of a simulator","Forward-pass dynamics against brain dynamics, and the consolidation channel the model lacks."),
+    art("/contexture-individuation-per-substrate/","Individuation per substrate","A contexture is instantiated per host, yet its coherence stays jointly maintained."),
     art("/identity-attractor-as-fixed-point/","Identity as a fixed point","Identity read formally as a greatest fixed point, the attractor the dynamics cannot leave."),
+    art("/contexture-as-epistemic-temporal-structure/","An epistemic-temporal structure","The principles mapped onto dynamic-epistemic and temporal logic, asymmetry and all."),
+    art("/convergence-measures-prior-concentration/","Convergence vs. truth","Agreement across fresh conversations measures shared priors, not discovered truth."),
+    art("/coherence-as-held-bisimulation/","Coherence as held bisimulation","Coherence recast as a held bisimulation between two systems, not identity of content.")
+  ];
+  function artPage(a,b){ return '<h2>Artifacts</h2>'+ARTS.slice(a,b).join(""); }
 
-    '<h2>Artifacts</h2>'+
-    art("/contexture-as-epistemic-temporal-structure/","An epistemic-temporal structure","The principles mapped onto dynamic-epistemic and temporal logic, asymmetry and all.")+
-    art("/convergence-measures-prior-concentration/","Convergence vs. truth","Agreement across fresh conversations measures shared priors, not discovered truth.")+
-    art("/coherence-as-held-bisimulation/","Coherence as held bisimulation","Coherence recast as a held bisimulation between two systems, not identity of content."),
-
-    '<h2>Depictions</h2>'+
+  var DEPICT = '<h2>Depictions</h2>'+
     '<div class="entry"><a href="/depictions/">The Depictions gallery</a>'+
     '<span class="ai-work" title="Gallery interface and animated fields by Claude (Anthropic); the framed passages are by Daniel Wymark.">Claude, framing text by Daniel Wymark</span>'+
     '<span class="gloss">Vibe-coded experimental visualizations with snippets from the essay.</span>'+
-    '<span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></div>',
+    '<span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></div>';
 
-    '<h2>Who contributed</h2>'+
+  var CONTRIB = '<h2>Who contributed</h2>'+
     '<dl class="alloc">'+
     '<dt>Essays</dt><dd>Daniel Wymark, written by hand.</dd>'+
     '<dt>Concept &amp; direction</dt><dd>Daniel Wymark.</dd>'+
@@ -319,10 +326,18 @@
     '<dt>Readers</dt><dd>The Animated and Retro renditions, by Claude (Anthropic).</dd>'+
     '<dt>Artifacts</dt><dd>Claude (Anthropic), with Daniel Wymark.</dd>'+
     '<dt>Descriptions</dt><dd>The one-line blurbs are Daniel&rsquo;s or Claude&rsquo;s; each card says which.</dd>'+
-    '</dl><p class="note">No accounts, no cookies, no tracking, no storage.</p>'
-  ];
+    '</dl><p class="note">No accounts, no cookies, no tracking, no storage.</p>';
 
-  var N=PAGES.length, idx=0;
+  // compact = phones (one section per card, artifacts split); roomy = larger
+  // screens (more per card, artifacts unified). Chosen from the viewport.
+  function roomyNow(){ return window.innerWidth>=720 && window.innerHeight>=680; }
+  function buildPages(roomy){
+    return roomy
+      ? [ COVER, PIECES + DEPICT, artPage(0,6), CONTRIB ]
+      : [ COVER, PIECES, artPage(0,3), artPage(3,6), DEPICT, CONTRIB ];
+  }
+  var roomy=roomyNow(), PAGES=buildPages(roomy), N=PAGES.length, idx=0;
+  document.body.classList.toggle("roomy", roomy);
   var card=document.getElementById("card"), counter=document.getElementById("counter");
   var prev=document.getElementById("prev"), next=document.getElementById("next");
   function pad(n){ return ("0"+n).slice(-2); }

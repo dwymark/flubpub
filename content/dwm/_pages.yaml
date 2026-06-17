@@ -123,6 +123,11 @@ strange-interlocutor:
   - draft
   - strange-interlocutor
   title: Strange Interlocutor
+strange-interlocutor-flock:
+  tags:
+  - draft
+  - strange-interlocutor
+  title: Strange Interlocutor (flock)
 tightening-corridor:
   tags:
   - draft

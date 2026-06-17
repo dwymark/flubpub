@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Strange Interlocutor</title>
+<style>
+  :root{
+    --ink:#15262d; --dim:#5a6e76; --accent:#0f7d88;
+    --serif:"Iowan Old Style",Palatino,Georgia,"Times New Roman",serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --gen:"Courier New",Courier,ui-monospace,monospace;
+    --paper:#fbfbf9;
+    --halo:0 1px 10px rgba(238,244,245,.94),0 0 3px rgba(238,244,245,.9);
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:#eef4f5;overflow:hidden;font-family:var(--serif);color:var(--ink)}
+
+  /* backgrounds: the animated/paused flock, or the static bird wallpaper */
+  #sky{position:fixed;inset:0;display:block;width:100%;height:100%;z-index:0;pointer-events:none}
+  #retro{position:fixed;inset:0;display:none;width:100%;height:100%;z-index:0;pointer-events:none}
+  #wall{position:fixed;inset:0;z-index:0;display:none;pointer-events:none;
+    background-color:#eef4f5;background-repeat:repeat;background-size:200px 200px;
+    background-image:url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSB0aWxpbmc6IGJpcmRzLXBpbndoZWVsCiAgICAgZ3JvdXA6IHA0CiAgICAgcGVyaW9kX3g6IDI1NiAgcGVyaW9kX3k6IDI1NgogICAgIGZ1bmRhbWVudGFsOiBxdWFydGVyLWNlbGwKICAgICBtb3RpZjogZmxvY2sgYmlyZCBnbHlwaCAodHdvIGNvbnZlcmdpbmcgYXJjcyksIGZyb20gc3RyYW5nZS1pbnRlcmxvY3V0b3IKICAgICB2ZXJpZmllZDogZmFsc2UgLS0+CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgdmlld0JveD0iMCAwIDI1NiAyNTYiPgogIDxyZWN0IHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiBmaWxsPSJ2YXIoLS10aWxpbmctYmcsICNlZWY0ZjUpIi8+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ2YXIoLS10aWxpbmctZmcsICMyZjdlODYpIiBzdHJva2Utd2lkdGg9IjIuNCIKICAgICBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIG9wYWNpdHk9InZhcigtLXRpbGluZy1vcGFjaXR5LCAwLjUpIj4KICAgIDxnIGlkPSJ1Ij48cGF0aCBkPSJNMTY1LjU4LDEzNS42MyBRMTgwLjUyLDExNi41OCAxOTEuOTcsOTUuNTEgTTE0Ny4wNCw3OC41NyBRMTcwLjMzLDg1LjIwIDE5MS45Nyw5NS41MSIvPjxwYXRoIGQ9Ik0xMzIuOTIsMTc2Ljc3IFExNDguMjgsMTg1LjY4IDE2NC43NSwxOTEuODQgTTE3Mi40NywxNTcuNDggUTE3MC4wMywxNzUuMDcgMTY0Ljc1LDE5MS44NCIvPjwvZz4KICAgIDx1c2UgaHJlZj0iI3UiIHRyYW5zZm9ybT0icm90YXRlKDAsMTI4LDEyOCkiLz48dXNlIGhyZWY9IiN1IiB0cmFuc2Zvcm09InJvdGF0ZSg5MCwxMjgsMTI4KSIvPjx1c2UgaHJlZj0iI3UiIHRyYW5zZm9ybT0icm90YXRlKDE4MCwxMjgsMTI4KSIvPjx1c2UgaHJlZj0iI3UiIHRyYW5zZm9ybT0icm90YXRlKDI3MCwxMjgsMTI4KSIvPgogIDwvZz4KPC9zdmc+")}
+
+  .wordmark{position:fixed;top:18px;left:20px;z-index:3;font-family:var(--serif);font-weight:600;
+    font-size:clamp(17px,2.4vw,22px);letter-spacing:-.01em;color:var(--ink);
+    text-shadow:var(--halo);pointer-events:none}
+
+  /* reading-style chooser: radio semantics, vertical column, upper-right, 80% chrome */
+  .chooser{position:fixed;top:16px;right:16px;z-index:3;display:flex;flex-direction:column;gap:8px}
+  .ch{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    background:var(--paper);color:var(--ink);border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);
+    padding:7px 12px;cursor:pointer;text-align:center;min-width:94px;
+    -webkit-user-select:none;user-select:none;pointer-events:auto}
+  .ch:active{transform:translate(3px,3px);box-shadow:none}
+  .ch.on{background:var(--ink);color:var(--paper);box-shadow:none;transform:translate(3px,3px)}
+  /* compact (phone) layout: the centred card grows wide enough to collide with a
+     tall corner stack, so lay the chooser as a short horizontal row under the
+     wordmark; the card's vertical centring then clears it with room to spare. */
+  body:not(.roomy) .chooser{flex-direction:row;top:50px;right:14px;gap:6px}
+  body:not(.roomy) .ch{font-size:9px;letter-spacing:.08em;padding:6px 9px;min-width:0}
+
+  .deck{position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;
+    padding:13vh 7vw;pointer-events:none}
+  .card{max-width:33rem;width:100%;
+    background:rgba(251,251,249,.84);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    border:2px solid var(--ink);
+    padding:clamp(18px,3vw,28px) clamp(20px,3.4vw,30px)}
+  body.roomy .card{max-width:40rem}
+  /* Retro: solid panel, no translucency */
+  body.solid .card{background:#ffffff;-webkit-backdrop-filter:none;backdrop-filter:none}
+
+  .card h2,#content .sheet h2{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 .9em}
+  .card .lede{font-family:var(--gen);font-size:clamp(20px,4.4vw,34px);line-height:1.22;color:var(--ink);margin:0}
+
+  /* one entry: title, author byline (left), gloss, description byline (right) */
+  .entry{margin:0 0 1em}
+  .entry:last-child{margin-bottom:0}
+  .entry a{font-family:var(--serif);font-size:clamp(18px,2.5vw,21px);color:var(--ink);
+    text-decoration:none;border-bottom:1px solid var(--accent);pointer-events:auto}
+  .ai-work{display:block;font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.04em;
+    color:var(--dim);margin-top:3px}
+  .gloss{display:block;font-family:var(--serif);font-size:14px;line-height:1.38;color:var(--ink);margin-top:3px}
+  .ai-desc{display:block;font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;
+    color:var(--dim);text-align:right;margin-top:2px}
+
+  .alloc{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+  .alloc dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--dim);padding-top:3px;white-space:nowrap}
+  .alloc dd{margin:0;font-family:var(--serif);font-size:14px;line-height:1.34;color:var(--ink)}
+  .note{margin:.8em 0 0;font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;color:var(--dim)}
+
+  .counter{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:3;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--dim);
+    text-shadow:var(--halo);pointer-events:none}
+  .nav button{position:fixed;bottom:18px;z-index:3;font-family:var(--mono);font-size:12px;
+    letter-spacing:.12em;text-transform:uppercase;background:var(--paper);color:var(--ink);
+    border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:9px 14px;cursor:pointer;
+    -webkit-user-select:none;user-select:none;pointer-events:auto}
+  .nav button:active{transform:translate(3px,3px);box-shadow:none;background:var(--ink);color:var(--paper)}
+  .nav button:disabled{box-shadow:none;border-style:dotted;color:#9bb0b3;cursor:default;transform:none;background:var(--paper)}
+  .nav .prev{left:18px}
+  .nav .next{right:18px}
+  /* ---- #content is the canonical content (single source of truth). With JS it
+     is the deck's source and stays hidden. Without JS it renders as a stacked
+     reading column over the static flock, mirroring the reduced-motion look. ---- */
+  #nojsbg{position:fixed;inset:0;z-index:0;display:none;
+    background:#eef4f5 center center / cover no-repeat;background-image:url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wAARCAScAvgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AIaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/2Q==")}
+  #content{display:block;max-width:38rem;margin:0 auto;padding:7vh 7vw 12vh;position:relative;z-index:1}
+  #nojsbg{display:block}
+  body{overflow:auto}
+  #content .sheet{background:rgba(251,251,249,.84);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    border:2px solid var(--ink);padding:22px 22px 24px;margin:0 0 20px}
+  #content .nojs-head{margin:0 0 22px}
+  #content .wm{font-family:var(--serif);font-weight:600;font-size:clamp(26px,7vw,40px);
+    letter-spacing:-.01em;color:var(--ink);text-shadow:var(--halo)}
+  #content .nojs-head .lede{font-family:var(--gen);font-size:clamp(15px,3.4vw,19px);color:var(--ink);
+    margin-top:.6em;text-shadow:var(--halo)}
+  #content .small{font-family:var(--serif);font-size:13px;color:var(--dim);margin:-.3em 0 .9em}
+  .nojs-note{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--dim);
+    text-align:center;margin:4px 0 0;text-shadow:var(--halo)}
+  /* no-JS theme switcher: links styled like the chooser buttons; current depressed */
+  #content .tlinks{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  #content .tl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    text-decoration:none;background:var(--paper);color:var(--ink);border:2px solid var(--ink);
+    box-shadow:3px 3px 0 var(--ink);padding:8px 13px;display:inline-block}
+  #content .tl.on{background:var(--ink);color:var(--paper);box-shadow:none;transform:translate(3px,3px)}
+</style>
+</head>
+<body>
+
+  <!-- Canonical content, generated from content.jsonl. With JS the deck reads these
+       sections and pages them; without JS they stack as a reading column over the
+       static flock. The theme links below the lede switch variants without JS. -->
+  <div id="nojsbg"></div>
+  <div id="content">
+    <header class="nojs-head">
+      <div class="wm">Strange Interlocutor</div>
+      <p class="lede" data-lede>What is it that we are doing when we talk with a machine that talks back?</p>
+      <nav class="tlinks" aria-label="Reading style">
+<a class="tl" href="/strange-interlocutor/">Animated</a><span class="tl on" aria-current="true">Retro</span><a class="tl" href="/strange-interlocutor-plain/">Plain</a></nav>
+    </header>
+
+    <section class="sheet" data-sec="pieces">
+      <h2>Pieces</h2>
+<div class="entry"><a href="/who-were-you-talking-to-palm/" data-shader="/who-were-you-talking-to-field/" data-palm="/who-were-you-talking-to-palm/" data-wallpaper="/who-were-you-talking-to/">Who were you talking to?</a><span class="ai-work" title="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.">Daniel Wymark</span><span class="gloss">Don&rsquo;t ask yourself whether the LLM is sentient. Ask yourself what you are doing when you talk with an LLM.</span><span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></div>
+<div class="entry"><a href="/memory-without-a-brain-palm/" data-shader="/memory-without-a-brain/" data-palm="/memory-without-a-brain-palm/" data-wallpaper="/memory-without-a-brain-wallpaper/">Memory without a brain</a><span class="ai-work" title="Written by Daniel Wymark; planned in dialogue with an LLM, prose by hand.">Daniel Wymark</span><span class="gloss">Memory is not only key to who we are, it is ubiquitous in living things. Here we meet a memory unlike our own.</span><span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></div>
+</section>
+
+    <section class="sheet" data-sec="artifacts">
+      <h2>Artifacts</h2>
+      <p class="small">Supporting documents in dialogue with the series.</p>
+<div class="entry"><a href="/simulator-of-simulator-dynamics/">Simulator of a simulator</a><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span><span class="gloss">Forward-pass dynamics against brain dynamics, and the consolidation channel the model lacks.</span><span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></div>
+<div class="entry"><a href="/contexture-individuation-per-substrate/">Individuation per substrate</a><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span><span class="gloss">A contexture is instantiated per host, yet its coherence stays jointly maintained.</span><span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></div>
+<div class="entry"><a href="/identity-attractor-as-fixed-point/">Identity as a fixed point</a><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span><span class="gloss">Identity read formally as a greatest fixed point &mdash; the attractor the dynamics cannot leave.</span><span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></div>
+<div class="entry"><a href="/contexture-as-epistemic-temporal-structure/">An epistemic-temporal structure</a><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span><span class="gloss">The principles mapped onto dynamic-epistemic and temporal logic, asymmetry and all.</span><span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></div>
+<div class="entry"><a href="/convergence-measures-prior-concentration/">Convergence vs. truth</a><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span><span class="gloss">Agreement across fresh conversations measures shared priors, not discovered truth.</span><span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></div>
+<div class="entry"><a href="/coherence-as-held-bisimulation/">Coherence as held bisimulation</a><span class="ai-work" title="Authored by Claude (Anthropic) in dialogue with Daniel Wymark.">Claude, with Daniel Wymark</span><span class="gloss">Coherence recast as a held bisimulation between two systems, not identity of content.</span><span class="ai-desc" title="This one-line description was written by Claude (Anthropic).">description by Claude</span></div>
+</section>
+
+    <section class="sheet" data-sec="depictions">
+      <h2>Depictions</h2>
+<div class="entry"><a href="/depictions/">The Depictions gallery</a><span class="ai-work" title="Gallery interface and animated fields by Claude (Anthropic); the framed passages are by Daniel Wymark.">Claude, framing text by Daniel Wymark</span><span class="gloss">Vibe-coded experimental visualizations with snippets from the essay.</span><span class="ai-desc" title="This one-line description was written by Daniel Wymark.">description by Daniel Wymark</span></div>
+</section>
+
+    <section class="sheet" data-sec="contrib">
+      <h2>Who contributed</h2>
+      <dl class="alloc">
+<dt>Essays</dt><dd>Daniel Wymark, written by hand.</dd>
+<dt>Concept &amp; direction</dt><dd>Daniel Wymark.</dd>
+<dt>This hub</dt><dd>Built by Claude (Anthropic): the chooser, layout, and code.</dd>
+<dt>Readers</dt><dd>The Animated and Retro renditions, by Claude (Anthropic).</dd>
+<dt>Artifacts</dt><dd>Claude (Anthropic), with Daniel Wymark.</dd>
+<dt>Descriptions</dt><dd>The one-line blurbs are Daniel&rsquo;s or Claude&rsquo;s; each card says which.</dd>
+</dl>
+      <p class="note">No accounts, no cookies, no tracking, no storage.</p>
+    </section>
+
+    <p class="nojs-note">Without JavaScript: the Retro variant. Essays open in that style.</p>
+  </div>
+
+</body>
+</html>

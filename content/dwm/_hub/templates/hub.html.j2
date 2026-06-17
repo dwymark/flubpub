@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{% if js_hub %}<script>document.documentElement.classList.add("js");</script>{% endif %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Strange Interlocutor</title>
+<style>
+  :root{
+    --ink:#15262d; --dim:#5a6e76; --accent:#0f7d88;
+    --serif:"Iowan Old Style",Palatino,Georgia,"Times New Roman",serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --gen:"Courier New",Courier,ui-monospace,monospace;
+    --paper:#fbfbf9;
+    --halo:0 1px 10px rgba(238,244,245,.94),0 0 3px rgba(238,244,245,.9);
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:#eef4f5;overflow:hidden;font-family:var(--serif);color:var(--ink)}
+
+  /* backgrounds: the animated/paused flock, or the static bird wallpaper */
+  #sky{position:fixed;inset:0;display:block;width:100%;height:100%;z-index:0;pointer-events:none}
+  #retro{position:fixed;inset:0;display:none;width:100%;height:100%;z-index:0;pointer-events:none}
+  #wall{position:fixed;inset:0;z-index:0;display:none;pointer-events:none;
+    background-color:#eef4f5;background-repeat:repeat;background-size:200px 200px;
+    background-image:url("{{ wallpaper_uri }}")}
+
+  .wordmark{position:fixed;top:18px;left:20px;z-index:3;font-family:var(--serif);font-weight:600;
+    font-size:clamp(17px,2.4vw,22px);letter-spacing:-.01em;color:var(--ink);
+    text-shadow:var(--halo);pointer-events:none}
+
+  /* reading-style chooser: radio semantics, vertical column, upper-right, 80% chrome */
+  .chooser{position:fixed;top:16px;right:16px;z-index:3;display:flex;flex-direction:column;gap:8px}
+  .ch{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    background:var(--paper);color:var(--ink);border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);
+    padding:7px 12px;cursor:pointer;text-align:center;min-width:94px;
+    -webkit-user-select:none;user-select:none;pointer-events:auto}
+  .ch:active{transform:translate(3px,3px);box-shadow:none}
+  .ch.on{background:var(--ink);color:var(--paper);box-shadow:none;transform:translate(3px,3px)}
+  /* compact (phone) layout: the centred card grows wide enough to collide with a
+     tall corner stack, so lay the chooser as a short horizontal row under the
+     wordmark; the card's vertical centring then clears it with room to spare. */
+  body:not(.roomy) .chooser{flex-direction:row;top:50px;right:14px;gap:6px}
+  body:not(.roomy) .ch{font-size:9px;letter-spacing:.08em;padding:6px 9px;min-width:0}
+
+  .deck{position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;
+    padding:13vh 7vw;pointer-events:none}
+  .card{max-width:33rem;width:100%;
+    background:rgba(251,251,249,.84);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    border:2px solid var(--ink);
+    padding:clamp(18px,3vw,28px) clamp(20px,3.4vw,30px)}
+  body.roomy .card{max-width:40rem}
+  /* Retro: solid panel, no translucency */
+  body.solid .card{background:#ffffff;-webkit-backdrop-filter:none;backdrop-filter:none}
+
+  .card h2,#content .sheet h2{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 .9em}
+  .card .lede{font-family:var(--gen);font-size:clamp(20px,4.4vw,34px);line-height:1.22;color:var(--ink);margin:0}
+
+  /* one entry: title, author byline (left), gloss, description byline (right) */
+  .entry{margin:0 0 1em}
+  .entry:last-child{margin-bottom:0}
+  .entry a{font-family:var(--serif);font-size:clamp(18px,2.5vw,21px);color:var(--ink);
+    text-decoration:none;border-bottom:1px solid var(--accent);pointer-events:auto}
+  .ai-work{display:block;font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.04em;
+    color:var(--dim);margin-top:3px}
+  .gloss{display:block;font-family:var(--serif);font-size:14px;line-height:1.38;color:var(--ink);margin-top:3px}
+  .ai-desc{display:block;font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;
+    color:var(--dim);text-align:right;margin-top:2px}
+
+  .alloc{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+  .alloc dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--dim);padding-top:3px;white-space:nowrap}
+  .alloc dd{margin:0;font-family:var(--serif);font-size:14px;line-height:1.34;color:var(--ink)}
+  .note{margin:.8em 0 0;font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;color:var(--dim)}
+
+  .counter{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:3;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--dim);
+    text-shadow:var(--halo);pointer-events:none}
+  .nav button{position:fixed;bottom:18px;z-index:3;font-family:var(--mono);font-size:12px;
+    letter-spacing:.12em;text-transform:uppercase;background:var(--paper);color:var(--ink);
+    border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:9px 14px;cursor:pointer;
+    -webkit-user-select:none;user-select:none;pointer-events:auto}
+  .nav button:active{transform:translate(3px,3px);box-shadow:none;background:var(--ink);color:var(--paper)}
+  .nav button:disabled{box-shadow:none;border-style:dotted;color:#9bb0b3;cursor:default;transform:none;background:var(--paper)}
+  .nav .prev{left:18px}
+  .nav .next{right:18px}
+  /* ---- #content is the canonical content (single source of truth). With JS it
+     is the deck's source and stays hidden. Without JS it renders as a stacked
+     reading column over the static flock, mirroring the reduced-motion look. ---- */
+  #nojsbg{position:fixed;inset:0;z-index:0;display:none;
+    {{ bg_decl }}}
+{% if js_hub %}
+  #content{display:none}
+  html:not(.js) #content{display:block;max-width:38rem;margin:0 auto;padding:7vh 7vw 12vh;position:relative;z-index:1}
+  html:not(.js) #nojsbg{display:block}
+  html:not(.js) body{overflow:auto}
+  html:not(.js) #sky,html:not(.js) #retro,html:not(.js) #wall,html:not(.js) .wordmark,
+  html:not(.js) .chooser,html:not(.js) .counter,html:not(.js) .nav,html:not(.js) .deck{display:none!important}
+{% else %}
+  #content{display:block;max-width:38rem;margin:0 auto;padding:7vh 7vw 12vh;position:relative;z-index:1}
+  #nojsbg{display:block}
+  body{overflow:auto}
+{% endif %}
+  #content .sheet{background:rgba(251,251,249,.84);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    border:2px solid var(--ink);padding:22px 22px 24px;margin:0 0 20px}
+  #content .nojs-head{margin:0 0 22px}
+  #content .wm{font-family:var(--serif);font-weight:600;font-size:clamp(26px,7vw,40px);
+    letter-spacing:-.01em;color:var(--ink);text-shadow:var(--halo)}
+  #content .nojs-head .lede{font-family:var(--gen);font-size:clamp(15px,3.4vw,19px);color:var(--ink);
+    margin-top:.6em;text-shadow:var(--halo)}
+  #content .small{font-family:var(--serif);font-size:13px;color:var(--dim);margin:-.3em 0 .9em}
+  .nojs-note{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--dim);
+    text-align:center;margin:4px 0 0;text-shadow:var(--halo)}
+  /* no-JS theme switcher: links styled like the chooser buttons; current depressed */
+  #content .tlinks{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  #content .tl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    text-decoration:none;background:var(--paper);color:var(--ink);border:2px solid var(--ink);
+    box-shadow:3px 3px 0 var(--ink);padding:8px 13px;display:inline-block}
+  #content .tl.on{background:var(--ink);color:var(--paper);box-shadow:none;transform:translate(3px,3px)}
+</style>
+</head>
+<body>
+{% if js_hub %}
+  <canvas id="sky"></canvas>
+  <canvas id="retro"></canvas>
+  <div id="wall"></div>
+
+  <div class="wordmark">{{ meta.title }}</div>
+  <div class="chooser">
+  {% for t in themes %}<button class="ch" data-s="{{ t.key }}" type="button">{{ t.label }}</button>
+  {% endfor %}</div>
+
+  <div class="deck"><div class="card" id="card"></div></div>
+  <div class="counter" id="counter">01 / 06</div>
+  <div class="nav">
+    <button class="prev" id="prev" type="button">&#9664; Prev</button>
+    <button class="next" id="next" type="button">Next &#9654;</button>
+  </div>
+{% endif %}
+
+  <!-- Canonical content, generated from content.jsonl. With JS the deck reads these
+       sections and pages them; without JS they stack as a reading column over the
+       static flock. The theme links below the lede switch variants without JS. -->
+  <div id="nojsbg"></div>
+  <div id="content">
+    <header class="nojs-head">
+      <div class="wm">{{ meta.title }}</div>
+      <p class="lede" data-lede>{{ meta.lede }}</p>
+      <nav class="tlinks" aria-label="Reading style">
+        {% for t in themes %}{% if t.key == theme.key %}<span class="tl on" aria-current="true">{{ t.label }}</span>{% else %}<a class="tl" href="/{{ t.slug }}/">{{ t.label }}</a>{% endif %}
+        {% endfor %}</nav>
+    </header>
+
+    <section class="sheet" data-sec="pieces">
+      <h2>Pieces</h2>
+      {% for p in pieces %}<div class="entry"><a href="{{ p[theme.rendition] }}" data-shader="{{ p.shader }}" data-palm="{{ p.palm }}" data-wallpaper="{{ p.wallpaper }}">{{ p.title }}</a><span class="ai-work" title="{{ p.author_title }}">{{ p.author }}</span><span class="gloss">{{ p.gloss }}</span><span class="ai-desc" title="{{ p.desc_title }}">{{ p.desc }}</span></div>
+      {% endfor %}</section>
+
+    <section class="sheet" data-sec="artifacts">
+      <h2>Artifacts</h2>
+      <p class="small">{{ artifacts_meta.subtitle }}</p>
+      {% for a in artifacts %}<div class="entry"><a href="{{ a.href }}">{{ a.title }}</a><span class="ai-work" title="{{ a.author_title }}">{{ a.author }}</span><span class="gloss">{{ a.gloss }}</span><span class="ai-desc" title="{{ a.desc_title }}">{{ a.desc }}</span></div>
+      {% endfor %}</section>
+
+    <section class="sheet" data-sec="depictions">
+      <h2>Depictions</h2>
+      {% for d in depictions %}<div class="entry"><a href="{{ d.href }}">{{ d.title }}</a><span class="ai-work" title="{{ d.author_title }}">{{ d.author }}</span><span class="gloss">{{ d.gloss }}</span><span class="ai-desc" title="{{ d.desc_title }}">{{ d.desc }}</span></div>
+      {% endfor %}</section>
+
+    <section class="sheet" data-sec="contrib">
+      <h2>Who contributed</h2>
+      <dl class="alloc">
+        {% for c in contrib %}<dt>{{ c.dt }}</dt><dd>{{ c.dd }}</dd>
+        {% endfor %}</dl>
+      <p class="note">{{ note }}</p>
+    </section>
+
+    <p class="nojs-note">Without JavaScript: the {{ theme.label }} variant. Essays open in that style.</p>
+  </div>
+
+{% if js_hub %}
+<script>
+(function(){
+  "use strict";
+
+  /* ===================== flock simulation (core from BOIDS) ===================== */
+  // two dynamics presets. Animated is unchanged; Retro is the requested params
+  // (low alignment, faster, looser) — a deliberately different flock behaviour.
+  var ANIM ={ N:230, maxSpeed:1.5, wSep:1.5,  wAli:1.05, wCoh:0.85, wSeek:0.5, vision:48, personal:15, fov:300, speed:1.0 };
+  var RETRO={ N:280, maxSpeed:2.6, wSep:1.0,  wAli:0.15, wCoh:0.50, wSeek:0.5, vision:56, personal:16, fov:300, speed:0.1 };
+  var P = {}; (function(s){ for(var k in s) P[k]=s[k]; })(ANIM);
+  function setParams(s){ for(var k in s) P[k]=s[k]; setPop(s.N); }
+  var AGILITY=0.05, ACCENT_FRAC=0.05;
+  var SKY=[[0.00,"#e6f0f3"],[0.55,"#eef6f6"],[1.00,"#f7fcfc"]];
+  var LAYER=[{col:"#123f54",w:1.75,sz:6.8},{col:"#1d6473",w:1.50,sz:5.8},{col:"#357f88",w:1.30,sz:4.9},
+             {col:"#6aa1a8",w:1.10,sz:4.1},{col:"#a6c7cc",w:0.95,sz:3.5}];
+  var NL=LAYER.length, ACCENT={col:"#ef6a3a",w:1.6};
+
+  var CAP=2600;
+  var px=new Float32Array(CAP),py=new Float32Array(CAP),vx=new Float32Array(CAP),vy=new Float32Array(CAP);
+  var ax=new Float32Array(CAP),ay=new Float32Array(CAP),zz=new Float32Array(CAP);
+  var lb=new Int8Array(CAP),acc=new Uint8Array(CAP),grp=new Uint8Array(CAP);
+  var flap=new Float32Array(CAP),lhx=new Float32Array(CAP),lhy=new Float32Array(CAP);
+  var inited=0,W=1,H=1;
+  var gHead=new Int32Array(1),gNext=new Int32Array(CAP);
+
+  var cv=document.getElementById("sky"), ctx=cv.getContext("2d",{alpha:false});
+  var wall=document.getElementById("wall");
+
+  /* ---- retro post-process (only what this mode needs: pixelate + ordered
+     dither + nearest-in-OKLab to a fixed grayscale ramp). Architecture lifted
+     from the updated BOIDS example: render the flock to an offscreen canvas in
+     colour, upload it as a texture, quantise in a fragment shader. ---- */
+  var RETRO_FX = { pixel:2, levels:2, dither:1 };
+  var GRAY = [[0,0,0],[34,34,34],[99,99,99],[174,174,174],[255,255,255]];
+  var retroCv=document.getElementById("retro");
+  var sim=document.createElement("canvas"), sctx=sim.getContext("2d",{alpha:false});
+  var glr=null, useGL=false;
+
+  function srgb2lin(c){ return c<=0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055,2.4); }
+  function rgb2oklab(r,g,b){
+    r=srgb2lin(r);g=srgb2lin(g);b=srgb2lin(b);
+    var l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b);
+    var m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b);
+    var s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+    return [0.2104542553*l+0.7936177850*m-0.0040720468*s,
+            1.9779984951*l-2.4285922050*m+0.4505937099*s,
+            0.0259040371*l+0.7827717662*m-0.8086757660*s];
+  }
+  var VS="attribute vec2 aPos;void main(){gl_Position=vec4(aPos,0.0,1.0);}";
+  var FS=[
+    "precision highp float;",
+    "uniform sampler2D uTex;uniform sampler2D uBayer;uniform vec2 uRes;",
+    "uniform float uPixel;uniform float uDither;uniform float uPalCount;",
+    "uniform vec3 uPalRGB[8];uniform vec3 uPalLab[8];",
+    "float s2l(float c){return c<=0.04045?c/12.92:pow((c+0.055)/1.055,2.4);}",
+    "vec3 oklab(vec3 c){c=clamp(c,0.0,1.0);float r=s2l(c.r),g=s2l(c.g),b=s2l(c.b);",
+    " float l=pow(0.4122214708*r+0.5363325363*g+0.0514459929*b,1.0/3.0);",
+    " float m=pow(0.2119034982*r+0.6806995451*g+0.1073969566*b,1.0/3.0);",
+    " float s=pow(0.0883024619*r+0.2817188376*g+0.6299787005*b,1.0/3.0);",
+    " return vec3(0.2104542553*l+0.7936177850*m-0.0040720468*s,1.9779984951*l-2.4285922050*m+0.4505937099*s,0.0259040371*l+0.7827717662*m-0.8086757660*s);}",
+    "void main(){",
+    " vec2 frag=gl_FragCoord.xy;float blk=max(uPixel,1.0);vec3 col;",
+    " if(blk>1.5){vec2 base=floor(frag/blk)*blk;float stp=blk*0.25;float bestLum=2.0;col=vec3(1.0);",
+    "  for(int i=0;i<4;i++){for(int j=0;j<4;j++){vec2 sp=base+(vec2(float(i),float(j))+0.5)*stp;",
+    "   vec3 t=texture2D(uTex,sp/uRes).rgb;float lum=dot(t,vec3(0.299,0.587,0.114));",
+    "   if(lum<bestLum){bestLum=lum;col=t;}}}}",
+    " else { col=texture2D(uTex,(floor(frag)+0.5)/uRes).rgb; }",
+    " if(uDither>0.0001){vec2 bi=mod(floor(frag/blk),8.0);float thr=texture2D(uBayer,(bi+0.5)/8.0).r-0.5;col+=thr*(uDither*0.18);}",
+    " col=clamp(col,0.0,1.0);",
+    " vec3 lab=oklab(col);float best=1.0e9;vec3 bestc=uPalRGB[0];",
+    " for(int i=0;i<8;i++){ if(float(i)>=uPalCount) break; vec3 d=lab-uPalLab[i];float dist=dot(d,d); if(dist<best){best=dist;bestc=uPalRGB[i];} }",
+    " gl_FragColor=vec4(bestc,1.0);}"
+  ].join("\n");
+  function compile(gl,t,src){ var s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){ console.warn(gl.getShaderInfoLog(s)); return null; } return s; }
+  function initGL(){
+    var gl=retroCv.getContext("webgl",{antialias:false,alpha:false,depth:false,preserveDrawingBuffer:false});
+    if(!gl) return false;
+    var vs=compile(gl,gl.VERTEX_SHADER,VS), fs=compile(gl,gl.FRAGMENT_SHADER,FS); if(!vs||!fs) return false;
+    var prog=gl.createProgram(); gl.attachShader(prog,vs); gl.attachShader(prog,fs); gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){ console.warn(gl.getProgramInfoLog(prog)); return false; }
+    gl.useProgram(prog); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    var buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    var loc=gl.getAttribLocation(prog,"aPos");
+    var tex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    var M=[0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,
+           3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21];
+    var bdat=new Uint8Array(64); for(var i=0;i<64;i++) bdat[i]=Math.round(255*(M[i]+0.5)/64);
+    var bayer=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,bayer);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,8,8,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,bdat);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    function U(n){ return gl.getUniformLocation(prog,n); }
+    glr={ gl:gl, prog:prog, buf:buf, loc:loc, tex:tex, bayer:bayer, dpr:1, u:{
+      tex:U("uTex"), bayer:U("uBayer"), res:U("uRes"), pixel:U("uPixel"), dither:U("uDither"),
+      palCount:U("uPalCount"), palRGB:U("uPalRGB[0]"), palLab:U("uPalLab[0]") } };
+    // bake the grayscale palette once
+    var rgb=new Float32Array(24), lab=new Float32Array(24);
+    for(var p=0;p<GRAY.length;p++){ var c=GRAY[p],r=c[0]/255,g=c[1]/255,bl=c[2]/255;
+      rgb[p*3]=r;rgb[p*3+1]=g;rgb[p*3+2]=bl; var L=rgb2oklab(r,g,bl); lab[p*3]=L[0];lab[p*3+1]=L[1];lab[p*3+2]=L[2]; }
+    gl.uniform3fv(glr.u.palRGB,rgb); gl.uniform3fv(glr.u.palLab,lab); gl.uniform1f(glr.u.palCount,GRAY.length);
+    return true;
+  }
+  function present(){
+    var gl=glr.gl; gl.viewport(0,0,retroCv.width,retroCv.height); gl.useProgram(glr.prog);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,glr.tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,sim); gl.uniform1i(glr.u.tex,0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,glr.bayer); gl.uniform1i(glr.u.bayer,1);
+    gl.uniform2f(glr.u.res,retroCv.width,retroCv.height);
+    gl.uniform1f(glr.u.pixel, RETRO_FX.pixel*glr.dpr);
+    gl.uniform1f(glr.u.dither, RETRO_FX.dither);
+    gl.bindBuffer(gl.ARRAY_BUFFER,glr.buf); gl.enableVertexAttribArray(glr.loc);
+    gl.vertexAttribPointer(glr.loc,2,gl.FLOAT,false,0,0);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+
+  function spawn(a,n){
+    for(var i=a;i<n;i++){
+      px[i]=Math.random()*W; py[i]=Math.random()*H;
+      var ang=Math.random()*Math.PI*2, sp=P.maxSpeed*(0.6+Math.random()*0.4);
+      vx[i]=Math.cos(ang)*sp; vy[i]=Math.sin(ang)*sp; lhx[i]=Math.cos(ang); lhy[i]=Math.sin(ang);
+      var z=Math.random(); zz[i]=z; var bk=(z*NL)|0; if(bk>=NL)bk=NL-1; lb[i]=bk;
+      acc[i]=Math.random()<ACCENT_FRAC?1:0; grp[i]=Math.random()<0.5?0:1; flap[i]=Math.random()*Math.PI*2;
+    }
+  }
+  function setPop(n){ n=Math.max(1,Math.min(CAP,n|0)); if(n>inited){spawn(inited,n);inited=n;} P.N=n; }
+
+  var gx=[0,0],gy=[0,0];
+  function attractors(t){
+    gx[0]=W*(0.5+0.40*Math.sin(t*0.061)); gy[0]=H*(0.5+0.34*Math.sin(t*0.083+1.1));
+    gx[1]=W*(0.5+0.42*Math.sin(t*0.047+2.3)); gy[1]=H*(0.5+0.30*Math.sin(t*0.072+4.0));
+  }
+
+  var cellBuf=new Int32Array(9);
+  function step(dt){
+    dt = dt || 1;
+    var n=P.N; if(n<1)return;
+    var visR=P.vision,sepR=P.personal,cell=Math.max(visR,sepR,1);
+    var cols=Math.max(1,Math.ceil(W/cell)),rows=Math.max(1,Math.ceil(H/cell)),ncells=cols*rows;
+    if(gHead.length<ncells)gHead=new Int32Array(ncells);
+    for(var k=0;k<ncells;k++)gHead[k]=-1;
+    for(var i=0;i<n;i++){
+      var ci=(px[i]/cell)|0; if(ci<0)ci=0;else if(ci>=cols)ci=cols-1;
+      var cj=(py[i]/cell)|0; if(cj<0)cj=0;else if(cj>=rows)cj=rows-1;
+      var idx=cj*cols+ci; gNext[i]=gHead[idx]; gHead[idx]=i;
+    }
+    var halfW=W*0.5,halfH=H*0.5,visR2=visR*visR,sepR2=sepR*sepR,maxS=P.maxSpeed,maxF=maxS*AGILITY;
+    var fovFull=P.fov>=359.5,fovCos=Math.cos(P.fov*Math.PI/360);
+    for(var i2=0;i2<n;i2++){
+      var x=px[i2],y=py[i2],mvx=vx[i2],mvy=vy[i2],spd=Math.sqrt(mvx*mvx+mvy*mvy);
+      var hx=spd>1e-6?mvx/spd:1,hy=spd>1e-6?mvy/spd:0;
+      var aVx=0,aVy=0,cA=0,cDx=0,cDy=0,cC=0,sDx=0,sDy=0,cS=0;
+      var ci2=(x/cell)|0; if(ci2<0)ci2=0;else if(ci2>=cols)ci2=cols-1;
+      var cj2=(y/cell)|0; if(cj2<0)cj2=0;else if(cj2>=rows)cj2=rows-1;
+      var nc=0;
+      for(var di=-1;di<=1;di++)for(var dj=-1;dj<=1;dj++){
+        var cx=((ci2+di)%cols+cols)%cols,cy=((cj2+dj)%rows+rows)%rows,cidx=cy*cols+cx,dup=false;
+        for(var q=0;q<nc;q++){if(cellBuf[q]===cidx){dup=true;break;}}
+        if(!dup)cellBuf[nc++]=cidx;
+      }
+      for(var c=0;c<nc;c++){
+        var j=gHead[cellBuf[c]];
+        while(j!==-1){
+          if(j!==i2){
+            var dx=px[j]-x,dy=py[j]-y;
+            if(dx>halfW)dx-=W;else if(dx<-halfW)dx+=W;
+            if(dy>halfH)dy-=H;else if(dy<-halfH)dy+=H;
+            var d2=dx*dx+dy*dy;
+            if(d2>0&&d2<visR2){
+              var inView=fovFull; if(!inView){var dd=Math.sqrt(d2);inView=(hx*dx+hy*dy)>=fovCos*dd;}
+              if(inView){aVx+=vx[j];aVy+=vy[j];cA++;cDx+=dx;cDy+=dy;cC++;}
+              if(d2<sepR2){var inv=1/d2;sDx-=dx*inv;sDy-=dy*inv;cS++;}
+            }
+          }
+          j=gNext[j];
+        }
+      }
+      var fx=0,fy=0,L,dvx,dvy;
+      if(cA>0){var avx=aVx/cA,avy=aVy/cA;L=Math.sqrt(avx*avx+avy*avy);
+        if(L>0){dvx=avx/L*maxS-mvx;dvy=avy/L*maxS-mvy;L=Math.sqrt(dvx*dvx+dvy*dvy);if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}fx+=P.wAli*dvx;fy+=P.wAli*dvy;}}
+      if(cC>0){var mx=cDx/cC,my=cDy/cC;L=Math.sqrt(mx*mx+my*my);
+        if(L>0){dvx=mx/L*maxS-mvx;dvy=my/L*maxS-mvy;L=Math.sqrt(dvx*dvx+dvy*dvy);if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}fx+=P.wCoh*dvx;fy+=P.wCoh*dvy;}}
+      if(cS>0){L=Math.sqrt(sDx*sDx+sDy*sDy);
+        if(L>0){dvx=sDx/L*maxS-mvx;dvy=sDy/L*maxS-mvy;L=Math.sqrt(dvx*dvx+dvy*dvy);if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}fx+=P.wSep*dvx;fy+=P.wSep*dvy;}}
+      var g=grp[i2],qx=gx[g]-x,qy=gy[g]-y;
+      if(qx>halfW)qx-=W;else if(qx<-halfW)qx+=W; if(qy>halfH)qy-=H;else if(qy<-halfH)qy+=H;
+      var qL=Math.sqrt(qx*qx+qy*qy);
+      if(qL>1e-3){dvx=qx/qL*maxS-mvx;dvy=qy/qL*maxS-mvy;L=Math.sqrt(dvx*dvx+dvy*dvy);if(L>maxF){dvx=dvx/L*maxF;dvy=dvy/L*maxF;}fx+=P.wSeek*dvx;fy+=P.wSeek*dvy;}
+      ax[i2]=fx;ay[i2]=fy;
+    }
+    for(var i3=0;i3<n;i3++){
+      var nvx=vx[i3]+ax[i3]*dt,nvy=vy[i3]+ay[i3]*dt,m2=nvx*nvx+nvy*nvy,ms=maxS*maxS;
+      if(m2>ms){var m=Math.sqrt(m2);nvx=nvx/m*maxS;nvy=nvy/m*maxS;}
+      vx[i3]=nvx;vy[i3]=nvy;
+      var nx=px[i3]+nvx*dt,ny=py[i3]+nvy*dt;
+      if(nx<0)nx+=W;else if(nx>=W)nx-=W; if(ny<0)ny+=H;else if(ny>=H)ny-=H;
+      px[i3]=nx;py[i3]=ny;
+    }
+  }
+
+  var skyGrad=null;
+  function buildSky(){ skyGrad=ctx.createLinearGradient(0,0,0,H); for(var i=0;i<SKY.length;i++)skyGrad.addColorStop(SKY[i][0],SKY[i][1]); }
+  function birdInto(path,x,y,c,s,sz,f){
+    var px2=-s,py2=c, nx=x+c*0.7*sz,ny=y+s*0.7*sz, bx=x-c*0.55*sz,by=y-s*0.55*sz, span=sz*f;
+    var Ltx=bx+px2*span,Lty=by+py2*span, Rtx=bx-px2*span,Rty=by-py2*span;
+    var cfx=x+c*0.15*sz,cfy=y+s*0.15*sz, Lcx=cfx+px2*0.55*span,Lcy=cfy+py2*0.55*span, Rcx=cfx-px2*0.55*span,Rcy=cfy-py2*0.55*span;
+    path.moveTo(Ltx,Lty); path.quadraticCurveTo(Lcx,Lcy,nx,ny);
+    path.moveTo(Rtx,Rty); path.quadraticCurveTo(Rcx,Rcy,nx,ny);
+  }
+  var NB=24, headCols=[];
+  for(var hb=0;hb<NB;hb++) headCols.push("hsl("+Math.round(hb/NB*360)+",62%,50%)");
+  var layerPath=new Array(NL), accPath=null, huePath=new Array(NB);
+  function renderFlock(tctx, scheme){
+    var retro = (scheme==="retro");
+    tctx.fillStyle = retro ? "#fbfbf9" : (skyGrad||"#eef4f5"); tctx.fillRect(0,0,W,H);
+    if(retro){ for(var h=0;h<NB;h++) huePath[h]=new Path2D(); }
+    else { for(var l=0;l<NL;l++) layerPath[l]=new Path2D(); accPath=new Path2D(); }
+    var n=Math.min(P.N,inited), invMax=1/P.maxSpeed;
+    for(var i=0;i<n;i++){
+      var mvx=vx[i],mvy=vy[i],spd=Math.sqrt(mvx*mvx+mvy*mvy);
+      var c=spd>1e-4?mvx/spd:1, s=spd>1e-4?mvy/spd:0;
+      var turn=Math.abs(c*lhy[i]-s*lhx[i]); lhx[i]=c; lhy[i]=s;
+      flap[i]+=(0.13+spd*invMax*0.12+turn*2.2)*P.speed;
+      var f=0.78+0.30*Math.sin(flap[i]), sz=LAYER[lb[i]].sz;
+      if(retro){
+        var ang=Math.atan2(s,c), hbk=((ang+Math.PI)/(Math.PI*2)*NB)|0; if(hbk<0)hbk=0; else if(hbk>=NB)hbk=NB-1;
+        birdInto(huePath[hbk], px[i],py[i], c,s, sz, f);
+      } else {
+        birdInto(acc[i]?accPath:layerPath[lb[i]], px[i],py[i], c,s, sz, f);
+      }
+    }
+    tctx.lineCap="round"; tctx.lineJoin="round";
+    if(retro){
+      tctx.lineWidth=1.5;
+      for(var h2=0;h2<NB;h2++){ tctx.strokeStyle=headCols[h2]; tctx.stroke(huePath[h2]); }
+    } else {
+      for(var l2=0;l2<NL;l2++){ tctx.strokeStyle=LAYER[l2].col; tctx.lineWidth=LAYER[l2].w; tctx.stroke(layerPath[l2]); }
+      tctx.strokeStyle=ACCENT.col; tctx.lineWidth=ACCENT.w; tctx.stroke(accPath);
+    }
+  }
+  // draw the current mode's flock to its target (and post-process for retro)
+  function paintFlock(){
+    if(style==="palm"){
+      if(useGL){ renderFlock(sctx,"retro"); present(); }
+      else renderFlock(ctx,"retro");   // fallback: heading-hued flock, no post-process
+    } else renderFlock(ctx,"anim");
+  }
+
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var t0=performance.now()/1000, rafId=null, lastNow=0, retroT=0;
+  function tick(now){
+    rafId=null;
+    if(style==="wallpaper") return;       // Plain is a static wallpaper, no loop
+    var t;
+    if(style==="palm"){ if(lastNow) retroT += (now-lastNow)/1000*P.speed; lastNow=now; t=retroT; }
+    else { lastNow=now; t=now/1000-t0; }
+    attractors(t); if(!reduce) step(P.speed); paintFlock(); schedule();
+  }
+  function schedule(){ if(rafId===null) rafId=requestAnimationFrame(tick); }
+  function stop(){ if(rafId){cancelAnimationFrame(rafId);rafId=null;} }
+
+  // pre-roll the simulation into a natural flock formation (no rendering), so
+  // the first painted frame — and any static fallback — shows a real flock
+  // rather than the spawn scatter. Cheap; runs once.
+  function settle(steps){ for(var k=0;k<steps;k++){ attractors(k*0.05); step(1); } }
+  // animate only when it will actually be seen and is supported. Reduced-motion
+  // and a missing WebGL (retro needs the shader) fall back to a static frame.
+  function shouldLoop(){
+    if(reduce) return false;
+    if(style==="wallpaper") return false;
+    if(style==="palm" && !useGL) return false;
+    return true;
+  }
+
+  function resize(){
+    W=Math.max(1,Math.floor(window.innerWidth)); H=Math.max(1,Math.floor(window.innerHeight));
+    var dpr=Math.min(window.devicePixelRatio||1,2), pw=Math.floor(W*dpr), ph=Math.floor(H*dpr);
+    cv.width=pw; cv.height=ph; ctx.setTransform(dpr,0,0,dpr,0,0);
+    sim.width=pw; sim.height=ph; sctx.setTransform(dpr,0,0,dpr,0,0);
+    if(useGL){ retroCv.width=pw; retroCv.height=ph; glr.dpr=dpr; }
+    buildSky();
+    for(var i=0;i<inited;i++){ px[i]=((px[i]%W)+W)%W; py[i]=((py[i]%H)+H)%H; }
+    if(style!=="wallpaper") paintFlock();
+    // re-evaluate the paging scheme; rebuild + reclamp if it flipped
+    if(typeof PAGES!=="undefined"){
+      var r=roomyNow();
+      if(r!==roomy){ roomy=r; document.body.classList.toggle("roomy",r);
+        PAGES=buildPages(r); N=PAGES.length; if(idx>N-1)idx=N-1; paint(); }
+    }
+  }
+  window.addEventListener("resize",resize);
+  document.addEventListener("visibilitychange",function(){ if(document.hidden) stop(); else if(shouldLoop()) schedule(); });
+
+  /* ===================== reading-style chooser ===================== */
+  var KEY="flubpub:style:strange-interlocutor", VALID={shader:1,palm:1,wallpaper:1};
+  var style="shader";
+  try{ var k=localStorage.getItem(KEY); if(k&&VALID[k]) style=k; }catch(e){}
+  var chButtons=[].slice.call(document.querySelectorAll(".ch"));
+
+  function applyStyle(s){
+    style=s; try{ localStorage.setItem(KEY,s); }catch(e){}
+    document.body.classList.toggle("solid", s==="palm");
+    if(s==="shader") setParams(ANIM); else if(s==="palm") setParams(RETRO);
+    lastNow=0;   // avoid a time gap leaking into the slowed retro clock
+    cv.style.display      = (s==="shader" || (s==="palm" && !useGL)) ? "block" : "none";
+    retroCv.style.display = (s==="palm" && useGL) ? "block" : "none";
+    wall.style.display    = (s==="wallpaper") ? "block" : "none";
+    stop();
+    if(s!=="wallpaper"){ paintFlock(); if(shouldLoop()) schedule(); }
+    chButtons.forEach(function(b){ b.classList.toggle("on", b.dataset.s===s); });
+    repointPieces();
+  }
+  chButtons.forEach(function(b){ b.addEventListener("click",function(){ applyStyle(b.dataset.s); }); });
+
+  /* ===================== deck pager ===================== */
+  // Content is authored once in #content (the DOM SSOT, also the no-JS view).
+  // The deck reads its sections here and composes them into paged cards.
+  var _C=document.getElementById("content");
+  function _frag(sel){ var n=_C.querySelector(sel); return n?n.innerHTML:""; }
+  function _entries(sec){ return [].map.call(_C.querySelectorAll('[data-sec="'+sec+'"] .entry'), function(e){ return e.outerHTML; }); }
+
+  var COVER  = '<p class="lede">'+_frag('[data-lede]')+'</p>';
+  var PIECES = _frag('[data-sec="pieces"]');
+  var ART_SUB = (function(){ var s=_C.querySelector('[data-sec="artifacts"] .small'); return s?s.outerHTML:''; })();
+  var ART_ENTRIES = _entries("artifacts");
+  function artPage(a,b){ return '<h2>Artifacts</h2>'+(a===0?ART_SUB:'')+ART_ENTRIES.slice(a,b).join(""); }
+  var DEPICT = _frag('[data-sec="depictions"]');
+  var CONTRIB = _frag('[data-sec="contrib"]');
+
+  // compact = phones (one section per card, artifacts split); roomy = larger
+  // screens (more per card, artifacts unified). Chosen from the viewport.
+  function roomyNow(){ return window.innerWidth>=720 && window.innerHeight>=680; }
+  function buildPages(roomy){
+    return roomy
+      ? [ COVER, PIECES + DEPICT, artPage(0,6), CONTRIB ]
+      : [ COVER, PIECES, artPage(0,3), artPage(3,6), DEPICT, CONTRIB ];
+  }
+  var roomy=roomyNow(), PAGES=buildPages(roomy), N=PAGES.length, idx=0;
+  document.body.classList.toggle("roomy", roomy);
+  var card=document.getElementById("card"), counter=document.getElementById("counter");
+  var prev=document.getElementById("prev"), next=document.getElementById("next");
+  function pad(n){ return ("0"+n).slice(-2); }
+  function repointPieces(){
+    var attr = style==="palm" ? "data-palm" : (style==="wallpaper" ? "data-wallpaper" : "data-shader");
+    var as=card.querySelectorAll("a[data-shader]");
+    for(var i=0;i<as.length;i++){ var h=as[i].getAttribute(attr); if(h) as[i].setAttribute("href",h); }
+  }
+  function paint(){
+    card.innerHTML=PAGES[idx];
+    counter.textContent=pad(idx+1)+" / "+pad(N);
+    prev.disabled=(idx===0); next.disabled=(idx===N-1);
+    repointPieces();
+  }
+  function go(i){ i=Math.max(0,Math.min(N-1,i)); if(i===idx)return; idx=i; paint(); }
+  prev.addEventListener("click",function(){ go(idx-1); });
+  next.addEventListener("click",function(){ go(idx+1); });
+  document.addEventListener("keydown",function(e){ if(e.key==="ArrowLeft")go(idx-1); else if(e.key==="ArrowRight")go(idx+1); });
+  var sx=0,sy=0,tracking=false;
+  document.addEventListener("touchstart",function(e){var t=e.changedTouches[0];sx=t.clientX;sy=t.clientY;tracking=true;},{passive:true});
+  document.addEventListener("touchend",function(e){
+    if(!tracking)return; tracking=false; var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Math.abs(dx)>48&&Math.abs(dx)>Math.abs(dy)*1.5) go(dx<0?idx+1:idx-1);
+  },{passive:true});
+
+  /* ===================== boot ===================== */
+  useGL=initGL();
+  resize();                        // establish W,H before spawning
+  spawn(0,280); inited=280;        // scatter across the real viewport (not a 1x1 origin)
+  settle(160);                     // pre-roll into a flock formation
+  paint();
+  applyStyle(style);   /* sets dynamics, background, active button, link targets */
+})();
+</script>
+{% endif %}
+</body>
+</html>

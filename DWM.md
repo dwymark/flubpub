@@ -80,17 +80,17 @@ server strips before rendering — and differ in slug and in how they install.
 A topic index resolves its members from the live `pages.json`, so push the
 member pages before the index that lists them.
 
-## Strange Interlocutor style switcher
+## Strange Interlocutor hub
 
 `content/dwm/strange-interlocutor.html` is a **hub**, not a topic index: a
 self-contained `html_raw` page that lets a reader pick a reading style and opens
 the series essays in it. The choice is a collection-scoped `localStorage` key
 (`flubpub:style:strange-interlocutor`) the hub persists, so it follows the
-reader across the series. The default style is `wallpaper`.
+reader across the series. The default style is `shader` (Animated).
 
 Each essay has three renditions, one published page per rendition:
 
-| Piece | shader ("Animated") | palm ("Retro") | wallpaper ("Simple", default) |
+| Piece | shader ("Animated") | palm ("Retro") | wallpaper ("Plain") |
 |---|---|---|---|
 | who-were-you-talking-to | `who-were-you-talking-to-field` | `who-were-you-talking-to-palm` | `who-were-you-talking-to` |
 | memory-without-a-brain | `memory-without-a-brain` | `memory-without-a-brain-palm` | `memory-without-a-brain-wallpaper` |
@@ -100,57 +100,86 @@ themed essay (who-were-you's base is harbor-themed; memory's base slug is its
 `shader` rendition, the convergence page). The `palm` rendition key keeps slug
 suffix `-palm` whatever its display label.
 
-The catalogue is `content/dwm/renditions.json` (the SSOT): collection ->
-variants (label, accent, blurb) -> pieces -> per-variant published URL, plus the
-default variant. **The hub no longer inlines a JS manifest.** It renders the
-picker and the piece tiles as static HTML; each tile carries its per-variant
-URLs as `data-shader` / `data-palm` / `data-wallpaper` attributes, with the
-default `href` set to the wallpaper rendition so the page works with JS off.
-The picker renders each style as a small **live preview** in that style's own
-idiom: Simple is a serif card on the cool diamond-lattice ground; Retro is a
-two-arrow monochrome PDA deck cycling placeholder cards; Animated is the
-drifting contour shader (the field rendition's fragment shader, throttled and
-DPR-capped) behind a floating text island. The `renditions.json` blurbs now ride
-as each option's `aria-label`. Every piece tile and every artifact / depictions
-link carries its one-line description plus two authorship marks — `.ai-work`
-(who authored the thing) and `.ai-desc` (who wrote the one-line description,
-Daniel or Claude) — taken by hand from each page's canonical `description`
-(the markdown frontmatter, or `content/dwm/_pages.yaml` for html-article pages). **These mirror
-`renditions.json` and the per-page descriptions by hand; edit both or they
-drift** — nothing wires one to the other. The hub's scripts are progressive
-enhancement: read the collection key, mark the active style, reskin the hub,
-rewrite each tile's `href` from its matching `data-*`, run the preview shader,
-and drive the preview deck.
+### Build system (`_hub/`)
 
-Switching is hub-mediated: the hub repoints its tiles and previews a style by
-restyling itself (including a faint patterned ground in wallpaper mode so that
-skin's name is honest), and each rendition links back to the hub. A per-page
-cross-rendition auto-redirect and an accent-curtain transition are deferred —
-the redirect conflicts with palm-eink's no-animation rule and with themed pages
-— so a reader changes style from the hub, not from inside a piece.
+The hub is **generated**, not hand-edited. Full rundown in
+`content/dwm/_hub/README.md`; in brief, the maintenance surface is three files:
 
-Palettes and patterns (current): the hub's default `wallpaper` skin is a cool
-analogous teal (paper `#e8eef0`, slate ink `#15262d`, teal accent `#0f7d88`)
-over a fine teal diamond-lattice ground — distinct from the renditions' harbor
-waves. Memory's `wallpaper` rendition is rethemed **content-only**: its
-frontmatter now sets `theme: axon` (the wandering-wiring truchet, apt for a
-brain-less memory) and its markdown body opens with a `<style>:root{…}</style>`
-override to a pink-on-off-white palette (rose accent `#cf3f7e`, plum ink, neutral
-off-white — not parchment). The server injects `color_scheme` CSS right after
-`<head>`, so a `:root` block in the body wins by source order, and python-markdown
-passes the raw `<style>` through unchanged; both verified. This means the retheme
-ships via a normal `flubpub push` of the markdown — no theme or `colors.py`
-package change. who-were-you's `wallpaper` base stays harbor.
+- `_hub/content.jsonl` — the canonical content (lede, the two pieces with full
+  glosses and per-rendition slugs, the six artifacts, the depictions link, the
+  contributor allocation, the three theme definitions). One JSON object per line.
+- `_hub/templates/hub.html.j2` — one Jinja template for every variant. The CSS
+  and the flock/shader/deck JS live here verbatim with their comments;
+  `{% if js_hub %}` gates the canvas, chooser, deck, and script; the content
+  loops fill `#content`, which is both the deck's source and the no-JS column.
+- `_hub/build.py` — wiring plus the three baked backgrounds in `_hub/assets/`.
 
-Conventions this round: an `.ai-work` author byline sits under each title (left)
-and an `.ai-desc` description byline under each blurb (right), no underline,
-standard across the hub. Unattributed Claude-generated copy (currently just the
-hub lede) gets the `.gen` class, a monospace placeholder face (`--gen`) that
-flags text Daniel may rewrite later. The masthead credit collapses to "Essays by
-Daniel Wymark." and opens a glanceable contributors disclosure (a who-did-what
-list, composed via the `/disclosure` skill). The palm readers now present the
-whole essay on one scrollable card (cover, essay, colophon) instead of
-paragraph-per-page; the deck is deliberately sparse, pending later build-out.
+Regenerate after any edit:
+
+```bash
+python3 content/dwm/_hub/build.py
+```
+
+It writes three self-contained pages into `content/dwm/`:
+
+| output | variant | role |
+|---|---|---|
+| `strange-interlocutor.html` | JS hub | deck + live chooser; with JS off, falls back to the Animated stacked column |
+| `strange-interlocutor-retro.html` | static Retro | no-JS reading column over the gray-dithered flock |
+| `strange-interlocutor-plain.html` | static Plain | no-JS reading column over the bird wallpaper |
+
+The no-JS experience is split across the three: each carries a row of theme
+links under the lede (styled like the JS chooser, current one depressed) that
+navigate between the static variants, so a reader without JS can switch style by
+page. The variants differ only in data — background, depressed link, essay
+rendition — so the template stays shared. The roomy paged layout of the JS deck
+is unchanged. `_hub/` is metadata (leading underscore), so per-file `push` never
+deploys it.
+
+The hub content lives once in a `#content` block: the JS deck reads its sections
+and pages them, and without JS the same block is the reading column. Edit
+`content.jsonl` and rebuild; both views follow.
+
+Earlier the hub was a cards page driven by `content/dwm/renditions.json` with a
+live-style-preview picker. That file is no longer wired to the hub (the content
+SSOT is now `_hub/content.jsonl`); the previous hub markup is in git history if
+the preview cards are ever wanted again.
+
+### Deploy
+
+Three `html_raw` pages, all unlisted (`draft` + `strange-interlocutor` in
+`_pages.yaml`). Deploy each:
+
+```bash
+uv run flubpub --site dwm push content/dwm/strange-interlocutor.html
+uv run flubpub --site dwm push content/dwm/strange-interlocutor-retro.html
+uv run flubpub --site dwm push content/dwm/strange-interlocutor-plain.html
+```
+
+The hub's existing slug already carries its title and tags, so its `push` merges
+losslessly. The two new pages have entries in `_pages.yaml`; `uv run flubpub
+--site dwm sync` deploys all three from `content/` + `_pages.yaml` in one shot,
+or pass `--title`/`--tags` on the new pages' first `push`.
+
+### Renditions and rethemes
+
+Bylines are standard across the hub: an `.ai-work` author mark sits under each
+title and an `.ai-desc` description mark under each blurb. Unattributed
+Claude-generated copy (currently just the lede) uses the `.gen` monospace face
+(`--gen`) that flags text Daniel may rewrite. The contributor allocation rides
+in a "Who contributed" section (essays, concept, hub, readers, artifacts,
+descriptions) with a no-tracking note.
+
+Memory's `wallpaper` rendition is rethemed **content-only**: its frontmatter
+sets `theme: axon` (the wandering-wiring truchet, apt for a brain-less memory)
+and its markdown body opens with a `<style>:root{…}</style>` override to a
+pink-on-off-white palette (rose accent `#cf3f7e`, plum ink, neutral off-white).
+The server injects `color_scheme` CSS right after `<head>`, so a `:root` block
+in the body wins by source order, and python-markdown passes the raw `<style>`
+through unchanged. The retheme ships via a normal `flubpub push` of the markdown
+— no theme or `colors.py` package change. who-were-you's `wallpaper` base stays
+harbor. The palm readers present the whole essay on one scrollable card (cover,
+essay, colophon).
 
 ## Unlisted drafts
 

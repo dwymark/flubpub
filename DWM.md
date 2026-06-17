@@ -100,11 +100,19 @@ suffix `-palm` whatever its display label.
 
 The catalogue is `content/dwm/renditions.json` (the SSOT): collection ->
 variants (label, accent, blurb) -> pieces -> per-variant published URL, plus the
-default variant. **The hub inlines a copy as `FP_MANIFEST`; edit both or they
-drift** — nothing wires one to the other.
+default variant. **The hub no longer inlines a JS manifest.** It renders the
+picker and the piece tiles as static HTML; each tile carries its per-variant
+URLs as `data-shader` / `data-palm` / `data-wallpaper` attributes, with the
+default `href` set to the wallpaper rendition so the page works with JS off.
+Variant labels live in the picker's button text, blurbs beside them, accents in
+the hub's CSS skin blocks. **These mirror `renditions.json` by hand; edit both
+or they drift** — nothing wires one to the other. The hub's only script is
+progressive enhancement: it reads the collection key, marks the active style,
+reskins the hub, and rewrites each tile's `href` from its matching `data-*`.
 
 Switching is hub-mediated: the hub repoints its tiles and previews a style by
-restyling itself, and each rendition links back to the hub. A per-page
+restyling itself (including a faint patterned ground in wallpaper mode so that
+skin's name is honest), and each rendition links back to the hub. A per-page
 cross-rendition auto-redirect and an accent-curtain transition are deferred —
 the redirect conflicts with palm-eink's no-animation rule and with themed pages
 — so a reader changes style from the hub, not from inside a piece.

@@ -40,12 +40,19 @@
   html,body{min-height:100%}
   body{background:var(--bg);color:var(--ink);font-family:var(--font);
     line-height:1.5;transition:background .4s ease,color .4s ease;}
-  /* a faint living ground for the shader skin only */
-  body::before{content:"";position:fixed;inset:0;z-index:0;opacity:0;transition:opacity .5s ease;
+
+  /* a living ground for the patterned skins; off for the bare PDA skin */
+  body::before{content:"";position:fixed;inset:0;z-index:0;opacity:0;
+    transition:opacity .5s ease;background-repeat:repeat;}
+  :root[data-fp-style="shader"] body::before{opacity:1;
     background:
       repeating-radial-gradient(circle at 30% 18%, transparent 0 26px, rgba(93,122,58,.05) 26px 27px),
       radial-gradient(130% 90% at 20% 0%, #e6ecd9, #d8e0c6 60%, #cdd6b6);}
-  :root[data-fp-style="shader"] body::before{opacity:1}
+  /* wallpaper mode shows an actual patterned ground, so the name is honest:
+     the harbor wave-meander the wallpaper renditions use, faint, in this skin's ink */
+  :root[data-fp-style="wallpaper"] body::before{opacity:.55;
+    background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27256%27%20height%3D%27256%27%3E%3Cpath%20d%3D%27M%200%2096%20Q%2032%2080%2064%2096%20T%20128%2096%20T%20192%2096%20T%20256%2096%27%20stroke%3D%27%239a7d63%27%20stroke-width%3D%271.2%27%20fill%3D%27none%27%2F%3E%3Cpath%20d%3D%27M%200%20176%20Q%2032%20160%2064%20176%20T%20128%20176%20T%20192%20176%20T%20256%20176%27%20stroke%3D%27%239a7d63%27%20stroke-width%3D%271.2%27%20fill%3D%27none%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%272.5%27%20fill%3D%27%23b5512f%27%2F%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27232%27%20r%3D%272.5%27%20fill%3D%27%23b5512f%27%2F%3E%3C%2Fsvg%3E");
+    background-size:256px 256px;}
 
   .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;
     padding:clamp(30px,7vh,72px) clamp(16px,5vw,32px) 18vh;}
@@ -53,27 +60,36 @@
   header.masthead{margin-bottom:clamp(20px,4vh,34px)}
   .masthead .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.24em;
     text-transform:uppercase;color:var(--accent);}
-  .masthead h1{font-size:clamp(30px,8vw,50px);line-height:1.04;font-weight:600;margin:.25em 0 .35em;letter-spacing:-.01em}
+  .masthead h1{font-size:clamp(30px,8vw,50px);line-height:1.04;font-weight:600;margin:.25em 0 .3em;letter-spacing:-.01em}
   .masthead p.lede{font-size:clamp(15px,4vw,17px);color:var(--ink);max-width:54ch}
 
-  /* disclosure */
-  .disc{margin:clamp(16px,3vh,24px) 0;border:1px solid var(--rule);border-radius:var(--radius);
-    background:var(--panel);padding:13px 15px;}
-  .disc h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--accent);margin-bottom:.5em;font-weight:700}
-  .disc p{font-size:13.5px;line-height:1.5;color:var(--ink)}
+  /* authorship byline: collapsed it reads like a plain "written by" line under
+     the title; it opens in place to the fuller note. No JS — native <details>. */
+  .byline{margin:.85em 0 0}
+  .byline summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:.5em;flex-wrap:wrap}
+  .byline summary::-webkit-details-marker{display:none}
+  .byline summary::after{content:"\203A";font-family:var(--mono);color:var(--accent);
+    transition:transform .2s ease;display:inline-block}
+  .byline[open] summary::after{transform:rotate(90deg)}
+  .byline .by{font-size:13px;color:var(--dim)}
+  .byline .by b{font-weight:600;color:var(--ink)}
+  .byline p{font-size:13px;line-height:1.5;color:var(--dim);max-width:60ch;margin:.6em 0 0}
 
-  /* chooser */
-  .chooser{margin:clamp(20px,4vh,30px) 0 clamp(12px,2vh,18px)}
+  /* chooser: all three styles shown with their descriptions, no hover needed */
+  .chooser{margin:clamp(22px,4vh,32px) 0 clamp(12px,2vh,18px)}
   .chooser .lead{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--dim);margin-bottom:.6em;display:block}
-  .seg{display:inline-flex;flex-wrap:wrap;border:1.5px solid var(--rule);border-radius:var(--radius);overflow:hidden}
-  .seg button{appearance:none;cursor:pointer;background:transparent;border:0;border-right:1.5px solid var(--rule);
-    color:var(--ink);font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
-    padding:.62em 1.05em;transition:background .2s ease,color .2s ease}
-  .seg button:last-child{border-right:0}
-  .seg button[aria-current="true"]{background:var(--accent);color:var(--on);font-weight:700}
-  .chooser .blurb{margin-top:.7em;font-size:13.5px;font-style:italic;color:var(--dim);min-height:1.3em}
+    color:var(--dim);margin-bottom:.7em;font-weight:400}
+  .seg{display:flex;flex-direction:column;gap:8px}
+  .opt{display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;width:100%;
+    background:var(--tile);color:var(--ink);border:1.5px solid var(--rule);border-radius:var(--radius);
+    padding:11px 13px;font-family:var(--font);
+    transition:border-color .15s ease,box-shadow .15s ease,background .2s ease}
+  .opt:hover,.opt:focus-visible{border-color:var(--accent);outline:none}
+  .opt[aria-current="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+  .opt-label{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;font-weight:700}
+  .opt[aria-current="true"] .opt-label{color:var(--accent)}
+  .opt-desc{font-size:13px;color:var(--dim);font-style:italic}
+  .ns{font-size:12.5px;color:var(--dim);margin-top:.6em;font-style:italic}
 
   h2.section{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
     color:var(--dim);margin:clamp(26px,5vh,40px) 0 .8em;padding-bottom:.4em;border-bottom:1px solid var(--rule)}
@@ -88,13 +104,14 @@
   .tile .go{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--dim)}
 
   ul.links{list-style:none}
-  ul.links li{margin:.35em 0;font-size:15px}
-  ul.links a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule)}
+  ul.links li{margin:.65em 0}
+  ul.links a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule);font-size:15px}
   ul.links a:hover{color:var(--accent);border-color:var(--accent)}
+  ul.links .gloss{display:block;font-size:12.5px;color:var(--dim);margin-top:.15em;line-height:1.4}
   .small{font-size:12.5px;color:var(--dim);margin-top:.4em}
 
   footer.foot{margin-top:clamp(28px,6vh,46px);font-family:var(--mono);font-size:10.5px;
-    letter-spacing:.06em;color:var(--dim);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    letter-spacing:.06em;color:var(--dim)}
 </style>
 </head>
 <body>
@@ -103,115 +120,107 @@
   <header class="masthead">
     <span class="kicker">A series</span>
     <h1>Strange Interlocutor</h1>
-    <p class="lede">What is it that we are doing when we talk with a machine that talks back? A short series of essays, with supporting pieces and a gallery of animated depictions.</p>
+    <p class="lede">What is it that we are doing when we talk with a machine that talks back?</p>
+
+    <details class="byline">
+      <summary>
+        <span class="by">Essays by <b>Daniel Wymark</b>, written by hand &middot; this hub built by Claude</span>
+      </summary>
+      <p>This hub &mdash; the style chooser and its framing &mdash; was built by Claude (Anthropic), directed by Daniel Wymark, who conceived the series. The essays are Daniel's. Each rendition and supporting piece carries its own fuller note.</p>
+    </details>
   </header>
 
-  <aside class="disc" role="region" aria-label="Authorship disclosure">
-    <h2>Who wrote this?</h2>
-    <p>This page &mdash; the style chooser and its framing &mdash; was built by Claude (Anthropic), directed by Daniel Wymark, who conceived the series. The essays are Daniel's, written by hand. Each rendition and supporting piece carries its own fuller note.</p>
-  </aside>
-
-  <div class="chooser">
-    <span class="lead">Read the essays as</span>
-    <div class="seg" id="seg" role="group" aria-label="Reading style"></div>
-    <p class="blurb" id="blurb"></p>
-  </div>
+  <section class="chooser" aria-labelledby="chooser-lead">
+    <span class="lead" id="chooser-lead">Read the essays as</span>
+    <div class="seg" role="group" aria-label="Reading style">
+      <button class="opt" type="button" data-v="shader">
+        <span class="opt-label">Shader</span>
+        <span class="opt-desc">A slowly drifting field behind floating text islands.</span>
+      </button>
+      <button class="opt" type="button" data-v="palm">
+        <span class="opt-label">Monochrome PDA</span>
+        <span class="opt-desc">A monochrome PDA reader, paged one screen at a time.</span>
+      </button>
+      <button class="opt" type="button" data-v="wallpaper" aria-current="true">
+        <span class="opt-label">Wallpaper</span>
+        <span class="opt-desc">Plain themed prose on a patterned ground.</span>
+      </button>
+    </div>
+    <noscript><p class="ns">Switching needs JavaScript. The essays below open in the Wallpaper style.</p></noscript>
+  </section>
 
   <h2 class="section">Pieces</h2>
-  <div class="pieces" id="pieces"></div>
+  <div class="pieces">
+    <a class="tile" data-piece="who-were-you-talking-to" href="/who-were-you-talking-to/"
+       data-shader="/who-were-you-talking-to-field/" data-palm="/who-were-you-talking-to-palm/" data-wallpaper="/who-were-you-talking-to/">
+      <span class="k">01</span>
+      <h3>Who were you talking to?</h3>
+      <span class="go">open &rsaquo;</span>
+    </a>
+    <a class="tile" data-piece="memory-without-a-brain" href="/memory-without-a-brain-wallpaper/"
+       data-shader="/memory-without-a-brain/" data-palm="/memory-without-a-brain-palm/" data-wallpaper="/memory-without-a-brain-wallpaper/">
+      <span class="k">02</span>
+      <h3>Memory without a brain</h3>
+      <span class="go">open &rsaquo;</span>
+    </a>
+  </div>
 
   <h2 class="section">Artifacts</h2>
-  <p class="small">Supporting documents authored by Claude in dialogue with Daniel. Each carries its own authorship note.</p>
+  <p class="small">Supporting documents, authored by Claude in dialogue with Daniel. Each carries its own authorship note.</p>
   <ul class="links">
-    <li><a href="/simulator-of-simulator-dynamics/">Simulator of a simulator</a></li>
-    <li><a href="/contexture-individuation-per-substrate/">Individuation per substrate</a></li>
-    <li><a href="/identity-attractor-as-fixed-point/">Identity as a fixed point</a></li>
-    <li><a href="/contexture-as-epistemic-temporal-structure/">An epistemic-temporal structure</a></li>
-    <li><a href="/convergence-measures-prior-concentration/">Convergence vs. truth</a></li>
-    <li><a href="/coherence-as-held-bisimulation/">Coherence as held bisimulation</a></li>
+    <li><a href="/simulator-of-simulator-dynamics/">Simulator of a simulator</a><span class="gloss">Forward-pass dynamics against brain dynamics, and the consolidation channel the model lacks.</span></li>
+    <li><a href="/contexture-individuation-per-substrate/">Individuation per substrate</a><span class="gloss">A contexture is instantiated per host, yet its coherence stays jointly maintained.</span></li>
+    <li><a href="/identity-attractor-as-fixed-point/">Identity as a fixed point</a><span class="gloss">Identity read formally as a greatest fixed point &mdash; the attractor the dynamics cannot leave.</span></li>
+    <li><a href="/contexture-as-epistemic-temporal-structure/">An epistemic-temporal structure</a><span class="gloss">The principles mapped onto dynamic-epistemic and temporal logic, asymmetry and all.</span></li>
+    <li><a href="/convergence-measures-prior-concentration/">Convergence vs. truth</a><span class="gloss">Agreement across fresh conversations measures shared priors, not discovered truth.</span></li>
+    <li><a href="/coherence-as-held-bisimulation/">Coherence as held bisimulation</a><span class="gloss">Coherence recast as a held bisimulation between two systems, not identity of content.</span></li>
   </ul>
 
   <h2 class="section">Depictions</h2>
   <p class="small">Ideas from the series rendered as animated mathematical fields. The gallery and the fields are Claude's, pointing at the series' own text.</p>
   <ul class="links">
-    <li><a href="/depictions/">The Depictions gallery</a></li>
+    <li><a href="/depictions/">The Depictions gallery</a><span class="gloss">A gallery of the series' ideas as animated mathematical fields.</span></li>
   </ul>
 
-  <footer class="foot">
-    <span>Strange Interlocutor &middot; draft</span>
-    <span id="stylestate">style: wallpaper</span>
-  </footer>
+  <footer class="foot">Strange Interlocutor &middot; draft</footer>
 
 </div>
 
 <script>
-/* Inline B3 catalogue (SSOT mirror committed at content/dwm/renditions.json).
-   The hub is the chooser: it sets the collection key, previews the style by
-   restyling itself, and points the piece tiles at the chosen rendition. */
-var FP_MANIFEST = {
-  collection: "strange-interlocutor",
-  default: "wallpaper",
-  variants: {
-    shader:    { label:"Shader",     accent:"#5d7a3a", blurb:"A slowly drifting field behind floating text islands." },
-    palm:      { label:"Monochrome PDA", accent:"#000000", blurb:"A monochrome PDA reader, paged one screen at a time." },
-    wallpaper: { label:"Wallpaper",  accent:"#b5512f", blurb:"Plain themed prose on a patterned ground." }
-  },
-  pieces: {
-    "who-were-you-talking-to": { title:"Who were you talking to?", renditions:{
-      shader:"/who-were-you-talking-to-field/", palm:"/who-were-you-talking-to-palm/", wallpaper:"/who-were-you-talking-to/" } },
-    "memory-without-a-brain": { title:"Memory without a brain", renditions:{
-      shader:"/memory-without-a-brain/", palm:"/memory-without-a-brain-palm/", wallpaper:"/memory-without-a-brain-wallpaper/" } }
-  }
-};
-
+/* Progressive enhancement only. Without this, the page already works: the
+   tiles point at the wallpaper renditions and every link resolves. This adds
+   live switching — it reads the collection-scoped key, marks the active style,
+   reskins the hub as a preview, and repoints the tiles at the chosen rendition
+   (each tile carries its per-style URLs as data-* attributes). The rendition
+   catalogue SSOT is content/dwm/renditions.json; the tile data-* mirror it. */
 (function(){
-  var KEY = "flubpub:style:" + FP_MANIFEST.collection;
+  var KEY = "flubpub:style:strange-interlocutor";
+  var V = {shader:1, palm:1, wallpaper:1};
   function get(){ try{ return localStorage.getItem(KEY); }catch(e){ return null; } }
   function set(v){ try{ localStorage.setItem(KEY, v); }catch(e){} }
 
-  var seg = document.getElementById("seg");
-  var blurb = document.getElementById("blurb");
-  var pieces = document.getElementById("pieces");
-  var stylestate = document.getElementById("stylestate");
-  var variants = Object.keys(FP_MANIFEST.variants);
-  var current = (function(){ var k=get(); return (k && FP_MANIFEST.variants[k]) ? k : FP_MANIFEST.default; })();
+  var opts  = [].slice.call(document.querySelectorAll(".opt"));
+  var tiles = [].slice.call(document.querySelectorAll(".tile"));
+  var k = get();
+  var current = (k && V[k]) ? k : "wallpaper";
 
-  function setBlurb(v){ blurb.textContent = FP_MANIFEST.variants[v].blurb || ""; }
-  function tileHref(pk){ return FP_MANIFEST.pieces[pk].renditions[current] || "#"; }
-  function paintActive(){
-    [].forEach.call(seg.children, function(b){
-      if(b.dataset.v===current) b.setAttribute("aria-current","true"); else b.removeAttribute("aria-current");
+  function apply(v){
+    document.documentElement.dataset.fpStyle = v;
+    opts.forEach(function(b){
+      if(b.dataset.v === v) b.setAttribute("aria-current","true");
+      else b.removeAttribute("aria-current");
+    });
+    tiles.forEach(function(a){
+      var h = a.getAttribute("data-" + v);
+      if(h) a.setAttribute("href", h);
     });
   }
-  function repointTiles(){
-    [].forEach.call(pieces.children, function(a){ a.href = tileHref(a.dataset.piece); });
-  }
-  function applySkin(v){ document.documentElement.dataset.fpStyle = v; stylestate.textContent = "style: " + v; }
 
-  variants.forEach(function(v){
-    var b = document.createElement("button");
-    b.type="button"; b.dataset.v=v; b.textContent = FP_MANIFEST.variants[v].label;
-    b.addEventListener("mouseenter", function(){ setBlurb(v); });
-    b.addEventListener("focus", function(){ setBlurb(v); });
-    b.addEventListener("click", function(){
-      current = v; set(v);
-      paintActive(); repointTiles(); setBlurb(v); applySkin(v);
-    });
-    seg.appendChild(b);
+  opts.forEach(function(b){
+    b.addEventListener("click", function(){ current = b.dataset.v; set(current); apply(current); });
   });
 
-  var n=0;
-  Object.keys(FP_MANIFEST.pieces).forEach(function(pk){
-    n++;
-    var a = document.createElement("a");
-    a.className="tile"; a.dataset.piece=pk; a.href=tileHref(pk);
-    a.innerHTML = '<span class="k">'+String(n).padStart(2,"0")+'</span>'+
-                  '<h3>'+FP_MANIFEST.pieces[pk].title+'</h3>'+
-                  '<span class="go">open &rsaquo;</span>';
-    pieces.appendChild(a);
-  });
-
-  paintActive(); setBlurb(current); applySkin(current); repointTiles();
+  apply(current);
 })();
 </script>
 </body>

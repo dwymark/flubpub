@@ -1036,7 +1036,8 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
         if no_rebuild:
             args += " --no-rebuild"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
-        _remote_cleanup(remote)
+        if not ctx.obj.get("defer_cleanup"):
+            _remote_cleanup(remote)
         if _should_mirror(ctx):
             mirror_slug = slug or _slugify(title)
             _mirror_to_content(ctx.obj["site_key"], mirror_slug, path)
@@ -1265,7 +1266,8 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
         if no_rebuild:
             args += " --no-rebuild"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
-        _remote_cleanup(remote)
+        if not ctx.obj.get("defer_cleanup"):
+            _remote_cleanup(remote)
         if _should_mirror(ctx):
             _mirror_to_content(ctx.obj["site_key"], slug, path)
             _write_pages_meta(ctx.obj["site_key"], slug, path, {
@@ -1483,7 +1485,8 @@ def set_index(ctx, file_path, vars_file, no_rebuild):
             if no_rebuild:
                 args += " --no-rebuild"
             _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
-            _remote_cleanup(remote)
+            if not ctx.obj.get("defer_cleanup"):
+                _remote_cleanup(remote)
             if _should_mirror(ctx):
                 _mirror_to_content(ctx.obj["site_key"], path.stem, path)
         finally:
@@ -1664,6 +1667,11 @@ def sync(ctx, dry_run, force):
     if dry_run:
         return
 
+    # Each push/revise/set-index uploads into its own remote tempdir and would
+    # normally `rm -rf /tmp/flubpub-upload-*` itself afterwards. Defer that to a
+    # single sweep at the end of the batch instead of one ssh per page.
+    ctx.obj["defer_cleanup"] = True
+
     # Recycle first so we don't accidentally revise a page we're about to drop.
     bin_root: Path | None = None
     recycled_ok: list[str] = []
@@ -1712,6 +1720,11 @@ def sync(ctx, dry_run, force):
     # Every mutation above deferred its 11ty rebuild; collapse them into one.
     if pushed_ok or revised_ok or recycled_ok or index_changed:
         ctx.invoke(rebuild)
+
+    # One sweep for all the deferred upload tempdirs (only push/revise/set-index
+    # leave any behind).
+    if pushed_ok or revised_ok or index_changed:
+        _remote_cleanup(remote)
 
     click.echo()
     click.echo(f"Sync report for '{site_key}':")

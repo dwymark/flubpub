@@ -89,6 +89,16 @@ def main() -> None:
                     cmds.append(toks[i])
             return cmds
 
+        def cleanup_calls() -> int:
+            """Count the `rm -rf /tmp/flubpub-upload-*` sweeps this run (the
+            upload mkdirs also mention flubpub-upload, so match the rm)."""
+            n = 0
+            for e in fr.read_transcript():
+                if e.raw.get("kind") == "bash" and \
+                        "rm -rf /tmp/flubpub-upload" in e.raw.get("remote_cmd", ""):
+                    n += 1
+            return n
+
         state_file = content_test / ".sync-state.json"
 
         # --- run 1: empty remote → push everything, set index, one rebuild ---
@@ -99,6 +109,9 @@ def main() -> None:
         cmds = remote_flubpub_cmds()
         check(cmds.count("rebuild") == 1, f"run1: expected exactly 1 rebuild, got {cmds}")
         check("set-index" in cmds, "run1: expected a set-index call")
+        # 2 pushes + 1 set-index uploaded, but cleanup is deferred to one sweep.
+        check(cleanup_calls() == 1,
+              f"run1: expected exactly 1 tmp cleanup sweep, got {cleanup_calls()}")
         check(state_file.is_file(), "run1: .sync-state.json not written")
         st = json.loads(state_file.read_text())
         check(set(st.get("pages", {})) == {"a", "b"},

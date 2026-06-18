@@ -386,6 +386,19 @@ def rewrite_refs(content: str, slug: str, asset_paths: list[Path], sub_paths: li
 DEFAULT_REMOTE_DIR = "/opt/flubpub"
 REMOTE_TMP_PREFIX = "/tmp/flubpub-upload-"
 
+# SSH connection multiplexing. A single sync makes ~4 ssh/scp calls per page
+# (mkdir, scp, remote flubpub, cleanup); without reuse each pays a fresh
+# TCP+auth handshake. ControlMaster=auto opens one master connection per
+# distinct remote and every later ssh/scp piggybacks on it (and for Control-
+# Persist seconds after the process exits). %C is ssh's hash of the connection
+# params, so the socket name is unique per (user, host, port).
+_SSH_CONTROL_PATH = os.path.join(tempfile.gettempdir(), "flubpub-ssh-%C")
+_SSH_MUX_OPTS = [
+    "-o", "ControlMaster=auto",
+    "-o", f"ControlPath={_SSH_CONTROL_PATH}",
+    "-o", "ControlPersist=60s",
+]
+
 
 def _parse_remote(spec: str) -> tuple[str, str]:
     """Split `user@host[:/abs/path]` into (host, install_dir).
@@ -471,7 +484,7 @@ def _resolve_remote(
 
 
 def _ssh_run(remote: str, cmd: str) -> subprocess.CompletedProcess:
-    result = subprocess.run(["ssh", remote, cmd], capture_output=True, text=True)
+    result = subprocess.run(["ssh", *_SSH_MUX_OPTS, remote, cmd], capture_output=True, text=True)
     if result.returncode != 0:
         click.echo(f"SSH error: {result.stderr.strip()}", err=True)
         sys.exit(1)
@@ -480,7 +493,7 @@ def _ssh_run(remote: str, cmd: str) -> subprocess.CompletedProcess:
 
 def _scp_to(remote: str, local_path: Path, remote_path: str):
     result = subprocess.run(
-        ["scp", str(local_path), f"{remote}:{remote_path}"],
+        ["scp", *_SSH_MUX_OPTS, str(local_path), f"{remote}:{remote_path}"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -817,7 +830,7 @@ def _enumerate_content_site(site_dir: Path) -> tuple[Path | None, dict[str, Path
 def _remote_pages_index(remote: str, remote_dir: str) -> list[dict]:
     """Read the remote's data/pages.json via ssh. Returns [] when missing."""
     result = subprocess.run(
-        ["ssh", remote, f"cat {shlex.quote(remote_dir)}/data/pages.json 2>/dev/null || echo '[]'"],
+        ["ssh", *_SSH_MUX_OPTS, remote, f"cat {shlex.quote(remote_dir)}/data/pages.json 2>/dev/null || echo '[]'"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -841,14 +854,14 @@ def _recycle_remote_page(remote: str, remote_dir: str, bin_dir: Path,
     for ext in (".html", ".md"):
         src = f"{remote}:{remote_dir}/site/src/pages/{slug}{ext}"
         r = subprocess.run(
-            ["scp", "-q", src, str(bin_dir / f"{slug}{ext}")],
+            ["scp", *_SSH_MUX_OPTS, "-q", src, str(bin_dir / f"{slug}{ext}")],
             capture_output=True, text=True,
         )
         if r.returncode == 0:
             break
     assets_src = f"{remote}:{remote_dir}/site/src/assets/{slug}"
     subprocess.run(
-        ["scp", "-rq", assets_src, str(bin_dir / "assets")],
+        ["scp", *_SSH_MUX_OPTS, "-rq", assets_src, str(bin_dir / "assets")],
         capture_output=True, text=True,
     )
     (bin_dir / "metadata.json").write_text(json.dumps(meta, indent=2))

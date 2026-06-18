@@ -1,0 +1,157 @@
+"""Smoke test: `sync` skips unchanged pages and rebuilds once per batch.
+
+Run with: PYTHONUNBUFFERED=1 uv run python3 tests/smoke_test_sync.py
+
+`sync` reconciles a remote site against content/<key>/. This exercises the
+two perf behaviors added to it:
+
+  - rebuild deferral: every push/revise/set-index runs with --no-rebuild and
+    sync issues a single `rebuild` at the end (and none at all when nothing
+    changed);
+  - change detection: a per-site .sync-state.json caches each page's content
+    digest, so a second sync with no edits skips every page.
+
+The remote side is the default (stub) ssh shim — it records calls but does
+not mutate the fake install's data/pages.json. That is exactly what we want:
+the test owns the "remote state" by writing data/pages.json directly, and
+asserts on what sync *decides* to do (its stdout report + the call transcript).
+"""
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tests.fakeremote import FakeRemote
+
+REPO = Path(__file__).resolve().parent.parent
+FLUBPUB = REPO / ".venv" / "bin" / "flubpub"
+
+
+def main() -> None:
+    sys.stdout.reconfigure(line_buffering=True)
+    failures: list[str] = []
+
+    def check(cond: bool, msg: str) -> None:
+        if not cond:
+            failures.append(msg)
+            print(f"  FAIL: {msg}")
+
+    fake_home = Path(tempfile.mkdtemp(prefix="flubpub-sync-home-"))
+    fake_repo = Path(tempfile.mkdtemp(prefix="flubpub-sync-repo-"))
+    (fake_repo / ".git").mkdir()
+    content_test = fake_repo / "content" / "test"
+    content_test.mkdir(parents=True)
+    (content_test / "_manifest.toml").write_text('index = "home.md"\n')
+    (content_test / "home.md").write_text("# Home\n\nwelcome\n")
+    (content_test / "a.md").write_text("# A\n\nalpha body\n")
+    (content_test / "b.md").write_text("# B\n\nbeta body\n")
+
+    with FakeRemote(verbose=False) as fr:
+        fr.install("test")
+        remote_pages = fr.install_path("test") / "data" / "pages.json"
+        cfg = fake_home / ".config" / "flubpub"
+        cfg.mkdir(parents=True)
+        (cfg / "sites.json").write_text(json.dumps({
+            "content_root": str(fake_repo),
+            "sites": {"test": {"remote": fr.remote_spec("test"), "port": 8099}},
+        }, indent=2))
+
+        def sync(*extra: str) -> str:
+            fr.transcript_path.write_text("")  # snapshot calls per-run
+            proc = subprocess.run(
+                [str(FLUBPUB), "--no-mirror", "--site", "test", "sync", *extra],
+                cwd=str(fake_repo), env={**fr.env, "HOME": str(fake_home)},
+                capture_output=True, text=True,
+            )
+            if proc.returncode != 0:
+                sys.stderr.write(f"sync rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}\n")
+                sys.exit(1)
+            return proc.stdout
+
+        def remote_flubpub_cmds() -> list[str]:
+            """The subcommand of every remote `uv run flubpub` call this run.
+            _remote_flubpub prepends `--server <url>`, so skip that pair."""
+            import shlex
+            cmds = []
+            for e in fr.read_transcript():
+                p = e.raw.get("parsed", {})
+                if e.raw.get("kind") != "flubpub" or not p.get("args"):
+                    continue
+                toks = shlex.split(p["args"])
+                i = 0
+                while i < len(toks) and toks[i] == "--server":
+                    i += 2
+                if i < len(toks):
+                    cmds.append(toks[i])
+            return cmds
+
+        state_file = content_test / ".sync-state.json"
+
+        # --- run 1: empty remote → push everything, set index, one rebuild ---
+        print("--- run 1: initial sync (remote empty) ---")
+        out = sync()
+        check("pushed   (2)" in out, "run1: expected 2 pushes")
+        check("skipped  (0)" in out, "run1: expected 0 skips")
+        cmds = remote_flubpub_cmds()
+        check(cmds.count("rebuild") == 1, f"run1: expected exactly 1 rebuild, got {cmds}")
+        check("set-index" in cmds, "run1: expected a set-index call")
+        check(state_file.is_file(), "run1: .sync-state.json not written")
+        st = json.loads(state_file.read_text())
+        check(set(st.get("pages", {})) == {"a", "b"},
+              f"run1: state should track a,b; got {list(st.get('pages', {}))}")
+        check(st.get("index") is not None, "run1: index digest not recorded")
+
+        # Simulate the pushes having landed on the remote.
+        remote_pages.write_text(json.dumps([
+            {"slug": "a", "title": "A"}, {"slug": "b", "title": "B"},
+        ]))
+
+        # --- run 2: no edits → skip both pages, skip index, NO rebuild ---
+        print("--- run 2: re-sync with no changes ---")
+        out = sync()
+        check("pushed   (0)" in out, "run2: expected 0 pushes")
+        check("revised  (0)" in out, "run2: expected 0 revises")
+        check("skipped  (2)" in out, "run2: expected 2 skips")
+        cmds = remote_flubpub_cmds()
+        check("rebuild" not in cmds, f"run2: expected NO rebuild, got {cmds}")
+        check("revise" not in cmds and "push" not in cmds,
+              f"run2: expected no push/revise calls, got {cmds}")
+
+        # --- run 3: edit one page → revise just that one, skip the other ---
+        print("--- run 3: edit a.md, re-sync ---")
+        (content_test / "a.md").write_text("# A\n\nalpha body EDITED\n")
+        out = sync()
+        check("revised  (1)" in out, "run3: expected exactly 1 revise")
+        check("skipped  (1)" in out, "run3: expected exactly 1 skip")
+        cmds = remote_flubpub_cmds()
+        check(cmds.count("revise") == 1, f"run3: expected 1 revise call, got {cmds}")
+        check(cmds.count("rebuild") == 1, f"run3: expected 1 rebuild, got {cmds}")
+
+        # --- run 4: stability — no further edits → all skip again ---
+        print("--- run 4: re-sync again, expect all skipped ---")
+        out = sync()
+        check("skipped  (2)" in out, "run4: expected 2 skips (digests stable)")
+        check("rebuild" not in remote_flubpub_cmds(),
+              "run4: expected NO rebuild on unchanged re-sync")
+
+        # --- run 5: --force re-revises everything despite the cache ---
+        print("--- run 5: --force ignores the digest cache ---")
+        out = sync("--force")
+        check("revised  (2)" in out, "run5: --force should revise both pages")
+        check("skipped  (0)" in out, "run5: --force should skip nothing")
+
+    print()
+    if failures:
+        print(f"{len(failures)} FAILURE(S):")
+        for f in failures:
+            print(f"  - {f}")
+        sys.exit(1)
+    print("All passed.")
+
+
+if __name__ == "__main__":
+    main()

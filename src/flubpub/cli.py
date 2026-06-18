@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import json
+import hashlib
 import shlex
 import shutil
 import subprocess
@@ -758,6 +759,59 @@ def _rebuild_query(no_rebuild: bool) -> str:
 # it grow organically rather than designing an ontology up front.
 SITE_MANIFEST_NAME = "_manifest.toml"
 RECYCLE_DIR_NAME = ".recycle"
+# Per-site cache of the last-synced content digest per slug, so `sync` can skip
+# re-pushing pages whose local bundle is byte-identical to what it last sent.
+# Hidden, so _enumerate_content_site (skips dotfiles) never treats it as a page.
+SYNC_STATE_NAME = ".sync-state.json"
+
+
+def _bundle_digest(entry: Path, meta: dict) -> str:
+    """Stable content hash of a page bundle — the entry file plus its ref
+    closure (assets/sub-pages) plus its sync-time metadata. Any edit to the
+    entry, a referenced asset, or the html-article metadata flips the digest;
+    `sync` compares it against the cached value to skip unchanged pages."""
+    h = hashlib.sha256()
+    suffix = entry.suffix.lower()
+    assets, subs = collect_all_refs(entry) if suffix in PAGE_SUFFIXES else ([], [])
+    base = entry.parent.resolve()
+    ordered = [entry, *sorted(assets + subs, key=lambda p: p.resolve().as_posix())]
+    for f in ordered:
+        try:
+            rel = f.resolve().relative_to(base).as_posix()
+        except ValueError:
+            rel = f.name
+        h.update(rel.encode())
+        h.update(b"\0")
+        try:
+            h.update(f.read_bytes())
+        except OSError:
+            h.update(b"<unreadable>")
+        h.update(b"\0")
+    # Normalize tuples (e.g. tags) to lists so the metadata serializes stably.
+    norm = {k: (list(v) if isinstance(v, tuple) else v) for k, v in meta.items()}
+    h.update(json.dumps(norm, sort_keys=True, default=str).encode())
+    return h.hexdigest()
+
+
+def _load_sync_state(site_dir: Path) -> dict:
+    """Read content/<site>/.sync-state.json. Returns a fresh empty state (so a
+    first-ever sync treats everything as changed) on any read/parse failure."""
+    path = site_dir / SYNC_STATE_NAME
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("pages", {})
+    data.setdefault("index", None)
+    return data
+
+
+def _save_sync_state(site_dir: Path, state: dict) -> None:
+    (site_dir / SYNC_STATE_NAME).write_text(
+        json.dumps(state, indent=2, sort_keys=True)
+    )
 
 
 def _load_site_manifest(site_dir: Path) -> dict:
@@ -1525,14 +1579,20 @@ def rebuild(ctx):
 @cli.command()
 @click.option("--dry-run", is_flag=True, default=False,
               help="Show the plan without making any remote changes.")
+@click.option("--force", is_flag=True, default=False,
+              help="Re-push every page even if its content digest is unchanged "
+                   "(ignore content/<site>/.sync-state.json).")
 @click.pass_context
-def sync(ctx, dry_run):
+def sync(ctx, dry_run, force):
     """Reconcile remote site with content/<site>/ as the source of truth.
 
     Pushes new entries, revises existing ones, and recycles remote-only pages
     into content/<site>/.recycle/<UTC-ts>/<slug>/ before deleting them. Looks
     for `home.{md,html}` at the content root and re-applies it via set-index.
-    Requires --site (or a configured default); --local is not supported."""
+    Requires --site (or a configured default); --local is not supported.
+
+    Pages whose content digest matches the last sync (cached in
+    content/<site>/.sync-state.json) are skipped; pass --force to override."""
     if ctx.obj.get("remote") is None:
         click.echo("sync requires a remote site; pass --site KEY (or set a "
                    "default in sites.toml). --local is unsupported.", err=True)
@@ -1558,19 +1618,49 @@ def sync(ctx, dry_run):
     remote_pages = _remote_pages_index(remote, remote_dir)
     remote_slugs = {p["slug"]: p for p in remote_pages if "slug" in p}
 
-    to_push   = sorted(s for s in local_pages if s not in remote_slugs)
-    to_revise = sorted(s for s in local_pages if s in remote_slugs)
+    # An html entry's metadata lives in _pages.yaml (no frontmatter to lift), so
+    # feed it back as flags; md entries carry their own frontmatter. Defined
+    # here (before the plan) because it also feeds the content digest.
+    def _meta_kwargs(slug: str, entry: Path) -> dict:
+        if entry.suffix.lower() != ".html":
+            return {}
+        m = _read_pages_meta(site_key, slug)
+        kw = {k: m[k] for k in ("title", "description", "theme",
+                                "color_scheme", "parent", "excerpt") if m.get(k)}
+        if m.get("tags"):
+            kw["tags"] = tuple(m["tags"])
+        return kw
+
+    state = _load_sync_state(site_dir)
+    digests = {s: _bundle_digest(e, _meta_kwargs(s, e)) for s, e in local_pages.items()}
+    index_digest = _bundle_digest(index_entry, {}) if index_entry else None
+
+    def _unchanged(slug: str) -> bool:
+        return not force and state["pages"].get(slug) == digests[slug]
+
+    to_push = sorted(s for s in local_pages if s not in remote_slugs)
+    # Split existing pages into changed (revise) vs digest-unchanged (skip).
+    present = sorted(s for s in local_pages if s in remote_slugs)
+    to_revise = [s for s in present if not _unchanged(s)]
+    to_skip   = [s for s in present if _unchanged(s)]
+    index_changed = bool(index_entry) and (force or state.get("index") != index_digest)
     # The remote's reserved root-index slug ("index") maps to the manifest's
     # index entry, not to a top-level page, so it is never remote-only.
     reserved_index_slugs = {"index"} if index_entry is not None else set()
     to_recycle = sorted(s for s in remote_slugs
                         if s not in local_pages and s not in reserved_index_slugs)
 
+    index_plan = (
+        "(none)" if not index_entry
+        else f"{index_entry.name} (unchanged, skip)" if not index_changed
+        else index_entry.name
+    )
     click.echo(f"Sync plan for '{site_key}':")
     click.echo(f"  push:    {to_push or '(none)'}")
     click.echo(f"  revise:  {to_revise or '(none)'}")
+    click.echo(f"  skip:    {to_skip or '(none)'}")
     click.echo(f"  recycle: {to_recycle or '(none)'}")
-    click.echo(f"  index:   {index_entry.name if index_entry else '(none)'}")
+    click.echo(f"  index:   {index_plan}")
     if dry_run:
         return
 
@@ -1585,18 +1675,18 @@ def sync(ctx, dry_run):
         _recycle_remote_page(remote, remote_dir, slug_bin, slug, remote_slugs[slug])
         ctx.invoke(delete, slug=slug, no_rebuild=True)
         recycled_ok.append(slug)
+        state["pages"].pop(slug, None)
+        _save_sync_state(site_dir, state)
 
-    # An html entry's metadata lives in _pages.yaml (no frontmatter to lift), so
-    # feed it back as flags; md entries carry their own frontmatter.
-    def _meta_kwargs(slug: str, entry: Path) -> dict:
-        if entry.suffix.lower() != ".html":
-            return {}
-        m = _read_pages_meta(site_key, slug)
-        kw = {k: m[k] for k in ("title", "description", "theme",
-                                "color_scheme", "parent", "excerpt") if m.get(k)}
-        if m.get("tags"):
-            kw["tags"] = tuple(m["tags"])
-        return kw
+    # Record the digest only after the mutation succeeds (push/revise sys.exit
+    # on failure), recomputed from the file's *final* form: push/revise apply
+    # in-file SoT (e.g. injecting `slug:` frontmatter), so the post-write digest
+    # is what the next sync will see — caching the pre-write one would make the
+    # page look changed forever. Persist incrementally so an interrupted sync
+    # leaves an accurate cache rather than a stale all-synced one.
+    def _record(slug: str, entry: Path) -> None:
+        state["pages"][slug] = _bundle_digest(entry, _meta_kwargs(slug, entry))
+        _save_sync_state(site_dir, state)
 
     pushed_ok: list[str] = []
     for slug in to_push:
@@ -1604,6 +1694,7 @@ def sync(ctx, dry_run):
         ctx.invoke(push, file_path=str(entry), slug=slug, no_rebuild=True,
                    **_meta_kwargs(slug, entry))
         pushed_ok.append(slug)
+        _record(slug, entry)
 
     revised_ok: list[str] = []
     for slug in to_revise:
@@ -1611,18 +1702,22 @@ def sync(ctx, dry_run):
         ctx.invoke(revise, slug=slug, file_path=str(entry), no_rebuild=True,
                    **_meta_kwargs(slug, entry))
         revised_ok.append(slug)
+        _record(slug, entry)
 
-    if index_entry:
+    if index_changed:
         ctx.invoke(set_index, file_path=str(index_entry), no_rebuild=True)
+        state["index"] = index_digest
+        _save_sync_state(site_dir, state)
 
     # Every mutation above deferred its 11ty rebuild; collapse them into one.
-    if pushed_ok or revised_ok or recycled_ok or index_entry:
+    if pushed_ok or revised_ok or recycled_ok or index_changed:
         ctx.invoke(rebuild)
 
     click.echo()
     click.echo(f"Sync report for '{site_key}':")
     click.echo(f"  pushed   ({len(pushed_ok)}): {pushed_ok or '(none)'}")
     click.echo(f"  revised  ({len(revised_ok)}): {revised_ok or '(none)'}")
+    click.echo(f"  skipped  ({len(to_skip)}): {to_skip or '(none)'}")
     click.echo(f"  recycled ({len(recycled_ok)}): {recycled_ok or '(none)'}")
     if bin_root is not None:
         try:
@@ -1630,7 +1725,12 @@ def sync(ctx, dry_run):
         except ValueError:
             rel = bin_root
         click.echo(f"  recycle bin: {rel}/")
-    click.echo(f"  index:    {index_entry.name if index_entry else '(unchanged)'}")
+    index_report = (
+        index_entry.name if index_changed
+        else "(unchanged)" if index_entry
+        else "(none)"
+    )
+    click.echo(f"  index:    {index_report}")
 
 
 def _find_templates_dir() -> Path | None:

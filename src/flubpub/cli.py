@@ -732,6 +732,14 @@ def _should_mirror(ctx) -> bool:
     return bool(ctx.obj.get("mirror")) and bool(ctx.obj.get("site_key"))
 
 
+def _rebuild_query(no_rebuild: bool) -> str:
+    """Query suffix that defers the server-side 11ty rebuild. A batch caller
+    (`sync`) passes --no-rebuild on every mutation and triggers one rebuild at
+    the end via the `rebuild` command, instead of paying a full site rebuild
+    per page."""
+    return "?rebuild=false" if no_rebuild else ""
+
+
 # `sync` reads a small per-site manifest at content/<site>/_manifest.toml to
 # learn which file is the index. The manifest is intentionally minimal — let
 # it grow organically rather than designing an ontology up front.
@@ -906,8 +914,11 @@ def cli(ctx, server, remote, site, force_local, no_mirror):
 @click.option("--tag", "tags", multiple=True, help="Tag this page (repeatable)")
 @click.option("--excerpt", default=None, help="Short summary used by index list rendering")
 @click.option("--description", default=None, help="Longer per-page subtitle displayed under links in custom index lists")
+@click.option("--no-rebuild", "no_rebuild", is_flag=True, default=False,
+              help="Defer the server-side 11ty rebuild (run `flubpub rebuild` "
+                   "afterwards). Used by `sync` to rebuild once per batch.")
 @click.pass_context
-def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt, description):
+def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt, description, no_rebuild):
     """Push a file to the server as a published page."""
     path = Path(file_path)
 
@@ -955,6 +966,8 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
             args += f" --excerpt {shlex.quote(excerpt)}"
         if description:
             args += f" --description {shlex.quote(description)}"
+        if no_rebuild:
+            args += " --no-rebuild"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
         if _should_mirror(ctx):
@@ -1000,11 +1013,12 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
                 click.confirm("These files will be uploaded. Continue?", abort=True)
 
     server = ctx.obj["server"]
+    rq = _rebuild_query(no_rebuild)
     with httpx.Client() as client:
         for asset in assets:
             with open(asset, "rb") as f:
                 resp = client.post(
-                    f"{server}/api/assets/{page_slug}",
+                    f"{server}/api/assets/{page_slug}{rq}",
                     files={"file": (asset.name, f)},
                 )
             if not resp.is_success:
@@ -1024,7 +1038,7 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
             for asset in sub_assets:
                 with open(asset, "rb") as f:
                     resp = client.post(
-                        f"{server}/api/assets/{sub_slug}",
+                        f"{server}/api/assets/{sub_slug}{rq}",
                         files={"file": (asset.name, f)},
                     )
                 if not resp.is_success:
@@ -1033,7 +1047,7 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
                 click.echo(f"Uploaded asset: {asset.name} (for {sub_slug})")
             sub_content = rewrite_refs(sub_content, sub_slug, sub_assets, sub_links, mode=sub_mode)
             resp = client.post(
-                f"{server}/api/pages",
+                f"{server}/api/pages{rq}",
                 json={
                     "title": sub_title,
                     "content": sub_content,
@@ -1068,7 +1082,7 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
         if index_spec:
             body["index"] = index_spec
 
-        resp = client.post(f"{server}/api/pages", json=body)
+        resp = client.post(f"{server}/api/pages{rq}", json=body)
 
     if resp.is_success:
         data = resp.json()
@@ -1148,8 +1162,11 @@ def get(ctx, slug):
 @click.option("--tag", "tags", multiple=True, help="Tag this page (repeatable; replaces existing tags)")
 @click.option("--excerpt", default=None, help="Short summary used by index list rendering")
 @click.option("--description", default=None, help="Longer per-page subtitle displayed under links in custom index lists")
+@click.option("--no-rebuild", "no_rebuild", is_flag=True, default=False,
+              help="Defer the server-side 11ty rebuild (run `flubpub rebuild` "
+                   "afterwards). Used by `sync` to rebuild once per batch.")
 @click.pass_context
-def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excerpt, description):
+def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excerpt, description, no_rebuild):
     """Update an existing page with new content."""
     path = Path(file_path)
 
@@ -1178,6 +1195,8 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
             args += f" --excerpt {shlex.quote(excerpt)}"
         if description:
             args += f" --description {shlex.quote(description)}"
+        if no_rebuild:
+            args += " --no-rebuild"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         _remote_cleanup(remote)
         if _should_mirror(ctx):
@@ -1220,6 +1239,7 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
     # asset URLs the previous push had fixed up.
     page_slug = slug
     server_base = ctx.obj["server"]
+    rq = _rebuild_query(no_rebuild)
     if suffix in (".md", ".html"):
         assets, sub_pages = collect_all_refs(path)
         if assets or sub_pages:
@@ -1239,7 +1259,7 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
             for asset in assets:
                 with open(asset, "rb") as f:
                     resp = upload_client.post(
-                        f"{server_base}/api/assets/{page_slug}",
+                        f"{server_base}/api/assets/{page_slug}{rq}",
                         files={"file": (asset.name, f)},
                     )
                 if not resp.is_success:
@@ -1268,7 +1288,7 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
         body["index"] = index_spec
 
     with httpx.Client() as client:
-        resp = client.put(f"{ctx.obj['server']}/api/pages/{slug}", json=body)
+        resp = client.put(f"{ctx.obj['server']}/api/pages/{slug}{rq}", json=body)
 
     if resp.is_success:
         data = resp.json()
@@ -1281,19 +1301,25 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
 
 @cli.command()
 @click.argument("slug")
+@click.option("--no-rebuild", "no_rebuild", is_flag=True, default=False,
+              help="Defer the server-side 11ty rebuild (run `flubpub rebuild` "
+                   "afterwards). Used by `sync` to rebuild once per batch.")
 @click.pass_context
-def delete(ctx, slug):
+def delete(ctx, slug, no_rebuild):
     """Delete a published page by slug."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=f"delete {shlex.quote(slug)}")
+        args = f"delete {shlex.quote(slug)}"
+        if no_rebuild:
+            args += " --no-rebuild"
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         if _should_mirror(ctx):
             _unmirror_from_content(ctx.obj["site_key"], slug)
             _remove_pages_meta(ctx.obj["site_key"], slug)
         return
 
     with httpx.Client() as client:
-        resp = client.delete(f"{ctx.obj['server']}/api/pages/{slug}")
+        resp = client.delete(f"{ctx.obj['server']}/api/pages/{slug}{_rebuild_query(no_rebuild)}")
 
     if resp.is_success:
         click.echo(f"Deleted: {slug}")
@@ -1329,8 +1355,11 @@ def _render_index_template(content: str, variables: dict) -> str:
 @click.option("--vars", "vars_file", default=None,
               type=click.Path(exists=True, dir_okay=False, path_type=Path),
               help="YAML file with Jinja variables (brand, tagline, etc).")
+@click.option("--no-rebuild", "no_rebuild", is_flag=True, default=False,
+              help="Defer the server-side 11ty rebuild (run `flubpub rebuild` "
+                   "afterwards). Used by `sync` to rebuild once per batch.")
 @click.pass_context
-def set_index(ctx, file_path, vars_file):
+def set_index(ctx, file_path, vars_file, no_rebuild):
     """Install a custom HTML file as the site index.
 
     The file is rendered as a Jinja2 template (defaults apply when no --vars
@@ -1384,6 +1413,8 @@ def set_index(ctx, file_path, vars_file):
         try:
             remote_path = _upload_bundle_to_remote(remote, upload_path)
             args = f"set-index {shlex.quote(remote_path)}"
+            if no_rebuild:
+                args += " --no-rebuild"
             _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
             _remote_cleanup(remote)
             if _should_mirror(ctx):
@@ -1406,11 +1437,12 @@ def set_index(ctx, file_path, vars_file):
             click.confirm("These files will be uploaded. Continue?", abort=True)
 
     server = ctx.obj["server"]
+    rq = _rebuild_query(no_rebuild)
     with httpx.Client() as client:
         for asset in assets:
             with open(asset, "rb") as f:
                 resp = client.post(
-                    f"{server}/api/assets/{INDEX_ASSETS_SLUG}",
+                    f"{server}/api/assets/{INDEX_ASSETS_SLUG}{rq}",
                     files={"file": (asset.name, f)},
                 )
             if not resp.is_success:
@@ -1426,7 +1458,7 @@ def set_index(ctx, file_path, vars_file):
         if is_markdown_index:
             body["content_type"] = "markdown"
             body.update(md_body)
-        resp = client.post(f"{server}/api/index", json=body)
+        resp = client.post(f"{server}/api/index{rq}", json=body)
 
     if resp.is_success:
         click.echo("Custom index installed.")
@@ -1449,6 +1481,29 @@ def unset_index(ctx):
 
     if resp.is_success:
         click.echo("Custom index removed.")
+    else:
+        click.echo(f"Error: {resp.text}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.pass_context
+def rebuild(ctx):
+    """Trigger a single 11ty site rebuild.
+
+    The companion to --no-rebuild: after a batch of deferred mutations (e.g.
+    `sync`, or several manual `push --no-rebuild`s), run this once to rebuild
+    the static site a single time instead of once per page."""
+    remote = ctx.obj.get("remote")
+    if remote:
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args="rebuild")
+        return
+
+    with httpx.Client() as client:
+        resp = client.post(f"{ctx.obj['server']}/api/rebuild")
+
+    if resp.is_success:
+        click.echo("Rebuilt.")
     else:
         click.echo(f"Error: {resp.text}", err=True)
         sys.exit(1)
@@ -1515,7 +1570,7 @@ def sync(ctx, dry_run):
     for slug in to_recycle:
         slug_bin = bin_root / slug
         _recycle_remote_page(remote, remote_dir, slug_bin, slug, remote_slugs[slug])
-        ctx.invoke(delete, slug=slug)
+        ctx.invoke(delete, slug=slug, no_rebuild=True)
         recycled_ok.append(slug)
 
     # An html entry's metadata lives in _pages.yaml (no frontmatter to lift), so
@@ -1533,17 +1588,23 @@ def sync(ctx, dry_run):
     pushed_ok: list[str] = []
     for slug in to_push:
         entry = local_pages[slug]
-        ctx.invoke(push, file_path=str(entry), slug=slug, **_meta_kwargs(slug, entry))
+        ctx.invoke(push, file_path=str(entry), slug=slug, no_rebuild=True,
+                   **_meta_kwargs(slug, entry))
         pushed_ok.append(slug)
 
     revised_ok: list[str] = []
     for slug in to_revise:
         entry = local_pages[slug]
-        ctx.invoke(revise, slug=slug, file_path=str(entry), **_meta_kwargs(slug, entry))
+        ctx.invoke(revise, slug=slug, file_path=str(entry), no_rebuild=True,
+                   **_meta_kwargs(slug, entry))
         revised_ok.append(slug)
 
     if index_entry:
-        ctx.invoke(set_index, file_path=str(index_entry))
+        ctx.invoke(set_index, file_path=str(index_entry), no_rebuild=True)
+
+    # Every mutation above deferred its 11ty rebuild; collapse them into one.
+    if pushed_ok or revised_ok or recycled_ok or index_entry:
+        ctx.invoke(rebuild)
 
     click.echo()
     click.echo(f"Sync report for '{site_key}':")

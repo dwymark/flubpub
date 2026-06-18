@@ -36,5 +36,6 @@ The three differ only in data: which background they carry, which theme link is
 depressed, and which rendition the essay links point at. The roomy paged layout
 of the JS deck is unchanged.
 
-`_hub/` is metadata, not a page — the leading underscore keeps it out of the
-deploy mirror, and per-file `push` never touches it.
+`_hub/` is metadata, not a page. `sync` skips any entry whose name starts with
+`_` (or `.`), so it is never deployed as a page; per-file `push` never touches
+it either.

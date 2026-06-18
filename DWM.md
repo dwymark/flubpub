@@ -133,8 +133,8 @@ links under the lede (styled like the JS chooser, current one depressed) that
 navigate between the static variants, so a reader without JS can switch style by
 page. The variants differ only in data — background, depressed link, essay
 rendition — so the template stays shared. The roomy paged layout of the JS deck
-is unchanged. `_hub/` is metadata (leading underscore), so per-file `push` never
-deploys it.
+is unchanged. `_hub/` is metadata: `sync` skips any leading-underscore entry, so
+it is never deployed as a page, and per-file `push` never deploys it either.
 
 The hub content lives once in a `#content` block: the JS deck reads its sections
 and pages them, and without JS the same block is the reading column. Edit

@@ -764,8 +764,10 @@ def _find_bundle_entry(bundle_dir: Path) -> Path | None:
 
 def _enumerate_content_site(site_dir: Path) -> tuple[Path | None, dict[str, Path]]:
     """Walk content/<site>/ and classify entries. Returns (index_entry, {slug:
-    entry_path}). The index is named explicitly in `_manifest.toml`; hidden
-    names, the manifest itself, and `.recycle/` are skipped."""
+    entry_path}). The index is named explicitly in `_manifest.toml`; any entry
+    whose name starts with `.` or `_` is metadata, not a page, and is skipped
+    (hidden files, .recycle/, _manifest.toml, _pages.yaml, build dirs like
+    _hub/). Page slugs are [a-z0-9-]+, so this never excludes a real page."""
     if not site_dir.is_dir():
         return None, {}
     manifest = _load_site_manifest(site_dir)
@@ -784,9 +786,8 @@ def _enumerate_content_site(site_dir: Path) -> tuple[Path | None, dict[str, Path
 
     pages: dict[str, Path] = {}
     for item in sorted(site_dir.iterdir()):
-        if item.name.startswith(".") or item.name == RECYCLE_DIR_NAME:
-            continue
-        if item.name in (SITE_MANIFEST_NAME, PAGES_META_NAME):
+        # Leading dot or underscore marks metadata, never a page (see docstring).
+        if item.name.startswith((".", "_")):
             continue
         if index_entry is not None and item.resolve() == index_entry:
             continue

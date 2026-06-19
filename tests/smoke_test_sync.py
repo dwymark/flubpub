@@ -60,34 +60,50 @@ def main() -> None:
             "sites": {"test": {"remote": fr.remote_spec("test"), "port": 8099}},
         }, indent=2))
 
-        def sync(*extra: str) -> str:
+        last = {"proc": None}
+
+        def sync(*extra: str, extra_env: dict | None = None) -> str:
             fr.transcript_path.write_text("")  # snapshot calls per-run
+            env = {**fr.env, "HOME": str(fake_home)}
+            if extra_env:
+                env.update(extra_env)
             proc = subprocess.run(
                 [str(FLUBPUB), "--no-mirror", "--site", "test", "sync", *extra],
-                cwd=str(fake_repo), env={**fr.env, "HOME": str(fake_home)},
-                capture_output=True, text=True,
+                cwd=str(fake_repo), env=env, capture_output=True, text=True,
             )
+            last["proc"] = proc
             if proc.returncode != 0:
                 sys.stderr.write(f"sync rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}\n")
                 sys.exit(1)
             return proc.stdout
 
-        def remote_flubpub_cmds() -> list[str]:
-            """The subcommand of every remote `uv run flubpub` call this run.
-            _remote_flubpub prepends `--server <url>`, so skip that pair."""
-            import shlex
-            cmds = []
+        import shlex as _shlex
+
+        def _flubpub_calls() -> list[list[str]]:
+            """Token lists of every remote `uv run flubpub` call this run, with
+            the leading `--server <url>` pair stripped. The capability probe
+            (`rebuild --help`) is excluded — it's not real work."""
+            out = []
             for e in fr.read_transcript():
                 p = e.raw.get("parsed", {})
                 if e.raw.get("kind") != "flubpub" or not p.get("args"):
                     continue
-                toks = shlex.split(p["args"])
+                toks = _shlex.split(p["args"])
                 i = 0
                 while i < len(toks) and toks[i] == "--server":
                     i += 2
-                if i < len(toks):
-                    cmds.append(toks[i])
-            return cmds
+                toks = toks[i:]
+                if "--help" in toks:
+                    continue
+                if toks:
+                    out.append(toks)
+            return out
+
+        def remote_flubpub_cmds() -> list[str]:
+            return [c[0] for c in _flubpub_calls()]
+
+        def saw_no_rebuild_flag() -> bool:
+            return any("--no-rebuild" in c for c in _flubpub_calls())
 
         def cleanup_calls() -> int:
             """Count the `rm -rf /tmp/flubpub-upload-*` sweeps this run (the
@@ -109,6 +125,8 @@ def main() -> None:
         cmds = remote_flubpub_cmds()
         check(cmds.count("rebuild") == 1, f"run1: expected exactly 1 rebuild, got {cmds}")
         check("set-index" in cmds, "run1: expected a set-index call")
+        check(saw_no_rebuild_flag(),
+              "run1: deferred path should forward --no-rebuild to the remote")
         # 2 pushes + 1 set-index uploaded, but cleanup is deferred to one sweep.
         check(cleanup_calls() == 1,
               f"run1: expected exactly 1 tmp cleanup sweep, got {cleanup_calls()}")
@@ -156,6 +174,22 @@ def main() -> None:
         out = sync("--force")
         check("revised  (2)" in out, "run5: --force should revise both pages")
         check("skipped  (0)" in out, "run5: --force should skip nothing")
+
+        # --- run 6: legacy remote (no --no-rebuild) → graceful fallback ---
+        # Simulates an un-redeployed VPS: the capability probe fails, so sync
+        # must run in per-page-rebuild mode (no --no-rebuild forwarded, no final
+        # `rebuild` command) rather than hard-failing like the real bug did.
+        print("--- run 6: remote predating --no-rebuild ---")
+        out = sync("--force", extra_env={"FAKE_REMOTE_LEGACY": "1"})
+        check("revised  (2)" in out, "run6: legacy fallback should still revise both")
+        check("predates --no-rebuild" in last["proc"].stderr,
+              "run6: expected the legacy-remote note on stderr")
+        check(not saw_no_rebuild_flag(),
+              "run6: must NOT forward --no-rebuild to a legacy remote")
+        check("rebuild" not in remote_flubpub_cmds(),
+              "run6: must NOT call the `rebuild` command on a legacy remote")
+        check(remote_flubpub_cmds().count("revise") == 2,
+              f"run6: expected 2 revises, got {remote_flubpub_cmds()}")
 
     print()
     if failures:

@@ -523,6 +523,26 @@ def _remote_flubpub(remote: str, remote_dir: str, args: str,
         click.echo(result.stdout.strip())
 
 
+def _remote_supports_no_rebuild(remote: str, remote_dir: str,
+                                remote_port: int | None = None) -> bool:
+    """Probe whether the remote's flubpub understands the deferred-rebuild
+    protocol (`--no-rebuild` on push/revise/... plus the `rebuild` command,
+    which shipped together). A remote that predates this branch rejects the
+    flag at the Click layer, so `sync` would hard-fail mid-batch; probing once
+    up front lets it fall back to per-page rebuilds instead. Uses a raw
+    subprocess (not _ssh_run) so a 'no such command' exit is a clean False,
+    not a sys.exit."""
+    cmd = (
+        f'PATH="$HOME/.local/bin:$PATH" && cd {shlex.quote(remote_dir)} '
+        f'&& uv run flubpub rebuild --help'
+    )
+    result = subprocess.run(
+        ["ssh", *_SSH_MUX_OPTS, remote, cmd],
+        capture_output=True, text=True,
+    )
+    return result.returncode == 0
+
+
 def _upload_bundle_to_remote(remote: str, file_path: Path) -> str:
     """SCP a file plus its sibling assets into a fresh remote tempdir,
     preserving each asset's path relative to the entry file's directory so
@@ -1617,6 +1637,21 @@ def sync(ctx, dry_run, force):
     remote = ctx.obj["remote"]
     remote_dir = ctx.obj["remote_dir"]
 
+    # The deferred-rebuild fast path needs a remote flubpub that understands
+    # --no-rebuild + the `rebuild` command. Probe once; if the remote predates
+    # this branch, fall back to letting each push/revise rebuild itself (slower,
+    # but correct) instead of hard-failing mid-batch. The SSH-mux and
+    # digest-skip wins still apply either way.
+    defer_rebuild = _remote_supports_no_rebuild(
+        remote, remote_dir, ctx.obj["remote_port"])
+    if not defer_rebuild:
+        click.echo(
+            "Note: remote flubpub predates --no-rebuild; rebuilding per page. "
+            "Deploy this branch to the remote (flubpub deploy --site …) to "
+            "enable single-rebuild syncs.",
+            err=True,
+        )
+
     index_entry, local_pages = _enumerate_content_site(site_dir)
     remote_pages = _remote_pages_index(remote, remote_dir)
     remote_slugs = {p["slug"]: p for p in remote_pages if "slug" in p}
@@ -1681,7 +1716,7 @@ def sync(ctx, dry_run, force):
     for slug in to_recycle:
         slug_bin = bin_root / slug
         _recycle_remote_page(remote, remote_dir, slug_bin, slug, remote_slugs[slug])
-        ctx.invoke(delete, slug=slug, no_rebuild=True)
+        ctx.invoke(delete, slug=slug, no_rebuild=defer_rebuild)
         recycled_ok.append(slug)
         state["pages"].pop(slug, None)
         _save_sync_state(site_dir, state)
@@ -1699,7 +1734,7 @@ def sync(ctx, dry_run, force):
     pushed_ok: list[str] = []
     for slug in to_push:
         entry = local_pages[slug]
-        ctx.invoke(push, file_path=str(entry), slug=slug, no_rebuild=True,
+        ctx.invoke(push, file_path=str(entry), slug=slug, no_rebuild=defer_rebuild,
                    **_meta_kwargs(slug, entry))
         pushed_ok.append(slug)
         _record(slug, entry)
@@ -1707,18 +1742,20 @@ def sync(ctx, dry_run, force):
     revised_ok: list[str] = []
     for slug in to_revise:
         entry = local_pages[slug]
-        ctx.invoke(revise, slug=slug, file_path=str(entry), no_rebuild=True,
+        ctx.invoke(revise, slug=slug, file_path=str(entry), no_rebuild=defer_rebuild,
                    **_meta_kwargs(slug, entry))
         revised_ok.append(slug)
         _record(slug, entry)
 
     if index_changed:
-        ctx.invoke(set_index, file_path=str(index_entry), no_rebuild=True)
+        ctx.invoke(set_index, file_path=str(index_entry), no_rebuild=defer_rebuild)
         state["index"] = index_digest
         _save_sync_state(site_dir, state)
 
     # Every mutation above deferred its 11ty rebuild; collapse them into one.
-    if pushed_ok or revised_ok or recycled_ok or index_changed:
+    # Skipped when the remote couldn't defer (it already rebuilt per page, and
+    # has no `rebuild` command to call).
+    if defer_rebuild and (pushed_ok or revised_ok or recycled_ok or index_changed):
         ctx.invoke(rebuild)
 
     # One sweep for all the deferred upload tempdirs (only push/revise/set-index

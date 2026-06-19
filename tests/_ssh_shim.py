@@ -58,6 +58,11 @@ m = PATTERN.match(remote_cmd)
 # every fake install. Tests that need real round-trip can set
 # FAKE_REMOTE_EXECUTE=1 (TODO: plumb a server-per-install for this).
 EXECUTE = os.environ.get("FAKE_REMOTE_EXECUTE") == "1"
+# Simulate a remote flubpub that predates the --no-rebuild/`rebuild` protocol:
+# any invocation that uses --no-rebuild or the `rebuild` subcommand fails at the
+# Click layer, exactly as an un-redeployed VPS would. Lets tests exercise the
+# sync capability-probe fallback.
+LEGACY = os.environ.get("FAKE_REMOTE_LEGACY") == "1"
 
 t0 = time.monotonic()
 
@@ -74,7 +79,15 @@ if m:
     actual_dir = remote_dir.replace(PREFIX, ACTUAL)
     parsed_kind = "flubpub"
     parsed = {"remote_dir": remote_dir, "actual_dir": actual_dir, "args": args_str}
-    if EXECUTE:
+    # Tokens after an optional leading `--server <url>` pair.
+    _toks = shlex.split(args_str)
+    _i = 0
+    while _i < len(_toks) and _toks[_i] == "--server":
+        _i += 2
+    _subcmd = _toks[_i] if _i < len(_toks) else ""
+    if LEGACY and (_subcmd == "rebuild" or "--no-rebuild" in _toks):
+        proc = _Stub(stderr="Error: No such option '--no-rebuild'.\n", rc=2)
+    elif EXECUTE:
         env = {
             **os.environ,
             "FLUBPUB_DATA_DIR": f"{actual_dir}/data",

@@ -42,12 +42,16 @@ else
 fi
 
 echo "Building package..."
+# Build into a clean dist/ so a stray wheel (e.g. the deploy smoke test's
+# fake artifact, or a leftover from an old version) can't get globbed into the
+# install below. dist/ is gitignored and rebuilt from scratch each deploy.
+rm -rf dist
 uv build
 
 ssh "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}/{dist,site,deploy}"
 
 echo "Syncing files to remote..."
-rsync -av --exclude node_modules --exclude _site --exclude __pycache__ --exclude .venv \
+rsync -av --delete --exclude node_modules --exclude _site --exclude __pycache__ --exclude .venv \
     dist/ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/dist/"
 rsync -av --exclude node_modules --exclude _site --exclude __pycache__ \
     site/ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/site/"

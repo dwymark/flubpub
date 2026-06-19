@@ -367,10 +367,15 @@ def _create_or_replace_page(
     parent: str | None, excerpt: str | None,
     description: str | None,
     tags: list[str], tile: dict | None,
+    rebuild: bool = True,
 ) -> dict:
     """Write the page file + (re)create the pages.json entry + rebuild. The
     single create/replace path; create_page and the root /api/index endpoint
-    both funnel through here so there is one persistence model, not two."""
+    both funnel through here so there is one persistence model, not two.
+
+    `rebuild=False` skips the (expensive) 11ty rebuild so a batch caller (e.g.
+    `sync`) can mutate many pages and trigger a single rebuild at the end via
+    POST /api/rebuild."""
     # Markdown-sourced indexes may carry a theme; HTML-sourced indexes do not
     # (the HTML already declares its own styling).
     can_theme = content_type != "index" or index_source_format == "markdown"
@@ -416,12 +421,13 @@ def _create_or_replace_page(
     pages.append(entry)
     save_pages(DATA_DIR, pages)
 
-    rebuild_site(SITE_DIR)
+    if rebuild:
+        rebuild_site(SITE_DIR)
     return entry
 
 
 @app.post("/api/pages", response_model=PageResponse)
-def create_page(body: PageCreate):
+def create_page(body: PageCreate, rebuild: bool = True):
     slug = body.slug or slugify(body.title)
     if not slug:
         raise HTTPException(status_code=400, detail="Could not derive slug from title")
@@ -445,6 +451,7 @@ def create_page(body: PageCreate):
         parent=body.parent, excerpt=body.excerpt,
         description=body.description,
         tags=body.tags, tile=body.tile,
+        rebuild=rebuild,
     )
     return PageResponse(**entry, url=f"/{slug}/")
 
@@ -455,7 +462,7 @@ _SAFE_SLUG_RE = re.compile(r"\A[a-z0-9-]+\Z")
 
 
 @app.post("/api/assets/{slug}")
-async def upload_asset(slug: str, file: UploadFile = File(...)):
+async def upload_asset(slug: str, file: UploadFile = File(...), rebuild: bool = True):
     # Defense in depth: even though nginx no longer proxies /api/ publicly and
     # uvicorn binds 127.0.0.1, never let a client-controlled slug or filename
     # escape the assets tree. Both are reduced to a single safe path segment.
@@ -469,7 +476,8 @@ async def upload_asset(slug: str, file: UploadFile = File(...)):
     dest = asset_dir / safe_name
     content = await file.read()
     dest.write_bytes(content)
-    rebuild_site(SITE_DIR)
+    if rebuild:
+        rebuild_site(SITE_DIR)
     return {"path": f"/assets/{slug}/{safe_name}"}
 
 
@@ -508,7 +516,7 @@ def get_page(slug: str):
 
 
 @app.put("/api/pages/{slug}", response_model=PageResponse)
-def update_page(slug: str, body: PageUpdate):
+def update_page(slug: str, body: PageUpdate, rebuild: bool = True):
     pages = load_pages(DATA_DIR)
     entry = next((p for p in pages if p["slug"] == slug), None)
     if not entry:
@@ -614,12 +622,13 @@ def update_page(slug: str, body: PageUpdate):
             entry.pop("tile", None)
     save_pages(DATA_DIR, pages)
 
-    rebuild_site(SITE_DIR)
+    if rebuild:
+        rebuild_site(SITE_DIR)
     return PageResponse(**entry, url=f"/{slug}/")
 
 
 @app.delete("/api/pages/{slug}")
-def delete_page(slug: str):
+def delete_page(slug: str, rebuild: bool = True):
     md_path = PAGES_DIR / f"{slug}.md"
     html_path = PAGES_DIR / f"{slug}.html"
     if not md_path.exists() and not html_path.exists():
@@ -630,7 +639,8 @@ def delete_page(slug: str):
     pages = [p for p in load_pages(DATA_DIR) if p["slug"] != slug]
     save_pages(DATA_DIR, pages)
 
-    rebuild_site(SITE_DIR)
+    if rebuild:
+        rebuild_site(SITE_DIR)
     return {"deleted": slug}
 
 
@@ -654,7 +664,7 @@ class IndexBody(BaseModel):
 
 
 @app.post("/api/index")
-def set_custom_index(body: IndexBody):
+def set_custom_index(body: IndexBody, rebuild: bool = True):
     """Install/replace the site front page. Thin adaptor over the unified
     page-type index model: classify (force_index — this endpoint is by
     definition the root index), then create/replace the entry at
@@ -675,13 +685,14 @@ def set_custom_index(body: IndexBody):
         index_source_format=index_source_format,
         theme=body.theme, color_scheme=body.color_scheme,
         parent=None, excerpt=None, description=None, tags=[], tile=None,
+        rebuild=rebuild,
     )
     _sweep_legacy_root_index()
     return {"status": "ok", "marker": INDEX_PAGES_MARKER_ID}
 
 
 @app.delete("/api/index")
-def clear_custom_index():
+def clear_custom_index(rebuild: bool = True):
     """Remove the custom front page — delete the ROOT_INDEX_SLUG entry so
     11ty's default src/index.njk build wins again."""
     (PAGES_DIR / f"{ROOT_INDEX_SLUG}.md").unlink(missing_ok=True)
@@ -689,6 +700,16 @@ def clear_custom_index():
     pages = [p for p in load_pages(DATA_DIR) if p["slug"] != ROOT_INDEX_SLUG]
     save_pages(DATA_DIR, pages)
     _sweep_legacy_root_index()
+    if rebuild:
+        rebuild_site(SITE_DIR)
+    return {"status": "ok"}
+
+
+@app.post("/api/rebuild")
+def rebuild():
+    """Run a single 11ty rebuild. The companion to the `rebuild=false` query
+    param on the mutation endpoints: a batch caller mutates many pages with
+    rebuilds deferred, then triggers exactly one rebuild here."""
     rebuild_site(SITE_DIR)
     return {"status": "ok"}
 

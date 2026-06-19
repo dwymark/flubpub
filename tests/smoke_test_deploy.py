@@ -23,6 +23,7 @@ and 'bj' (port 8002, host bijectivity.net):
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -56,7 +57,37 @@ def main() -> None:
     failures: list[str] = []
     project_root = Path.cwd()
 
-    with FakeRemote(verbose=True, stub_system_commands=True) as fr:
+    # deploy.sh writes into dist/ (shimmed `uv build` drops a fake wheel; the
+    # real script now `rm -rf dist` first). Both touch the live repo dist/, so
+    # snapshot it aside and restore afterward to keep the test hermetic — and to
+    # avoid leaving a stray fake wheel that would later poison a real deploy.
+    dist = project_root / "dist"
+    dist_backup = project_root / "dist.smoke-backup"
+    if dist_backup.exists():
+        shutil.rmtree(dist_backup)
+    dist_existed = dist.exists()
+    if dist_existed:
+        dist.rename(dist_backup)
+    try:
+        _run(failures, project_root, fr_factory=lambda: FakeRemote(
+            verbose=True, stub_system_commands=True))
+    finally:
+        if dist.exists():
+            shutil.rmtree(dist)
+        if dist_existed:
+            dist_backup.rename(dist)
+
+    print()
+    if failures:
+        print(f"{len(failures)} FAILURE(S):")
+        for f in failures:
+            print(f"  - {f}")
+        sys.exit(1)
+    print("All passed.")
+
+
+def _run(failures: list, project_root: Path, fr_factory) -> None:
+    with fr_factory() as fr:
         etc = fr.make_etc()
 
         print("\n--- deploying site 'dwm' (with TLS) ---")
@@ -192,14 +223,6 @@ def main() -> None:
             failures.append(f"dwm re-deploy rc={proc.returncode}")
 
         fr.print_transcript()
-
-    print()
-    if failures:
-        print(f"FAILURES ({len(failures)}):")
-        for f in failures:
-            print(f"  - {f}")
-        sys.exit(1)
-    print("All passed.")
 
 
 if __name__ == "__main__":

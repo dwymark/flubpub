@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import json
+import hashlib
 import shlex
 import shutil
 import subprocess
@@ -386,6 +387,19 @@ def rewrite_refs(content: str, slug: str, asset_paths: list[Path], sub_paths: li
 DEFAULT_REMOTE_DIR = "/opt/flubpub"
 REMOTE_TMP_PREFIX = "/tmp/flubpub-upload-"
 
+# SSH connection multiplexing. A single sync makes ~4 ssh/scp calls per page
+# (mkdir, scp, remote flubpub, cleanup); without reuse each pays a fresh
+# TCP+auth handshake. ControlMaster=auto opens one master connection per
+# distinct remote and every later ssh/scp piggybacks on it (and for Control-
+# Persist seconds after the process exits). %C is ssh's hash of the connection
+# params, so the socket name is unique per (user, host, port).
+_SSH_CONTROL_PATH = os.path.join(tempfile.gettempdir(), "flubpub-ssh-%C")
+_SSH_MUX_OPTS = [
+    "-o", "ControlMaster=auto",
+    "-o", f"ControlPath={_SSH_CONTROL_PATH}",
+    "-o", "ControlPersist=60s",
+]
+
 
 def _parse_remote(spec: str) -> tuple[str, str]:
     """Split `user@host[:/abs/path]` into (host, install_dir).
@@ -471,7 +485,7 @@ def _resolve_remote(
 
 
 def _ssh_run(remote: str, cmd: str) -> subprocess.CompletedProcess:
-    result = subprocess.run(["ssh", remote, cmd], capture_output=True, text=True)
+    result = subprocess.run(["ssh", *_SSH_MUX_OPTS, remote, cmd], capture_output=True, text=True)
     if result.returncode != 0:
         click.echo(f"SSH error: {result.stderr.strip()}", err=True)
         sys.exit(1)
@@ -480,7 +494,7 @@ def _ssh_run(remote: str, cmd: str) -> subprocess.CompletedProcess:
 
 def _scp_to(remote: str, local_path: Path, remote_path: str):
     result = subprocess.run(
-        ["scp", str(local_path), f"{remote}:{remote_path}"],
+        ["scp", *_SSH_MUX_OPTS, str(local_path), f"{remote}:{remote_path}"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -507,6 +521,26 @@ def _remote_flubpub(remote: str, remote_dir: str, args: str,
     result = _ssh_run(remote, cmd)
     if result.stdout:
         click.echo(result.stdout.strip())
+
+
+def _remote_supports_no_rebuild(remote: str, remote_dir: str,
+                                remote_port: int | None = None) -> bool:
+    """Probe whether the remote's flubpub understands the deferred-rebuild
+    protocol (`--no-rebuild` on push/revise/... plus the `rebuild` command,
+    which shipped together). A remote that predates this branch rejects the
+    flag at the Click layer, so `sync` would hard-fail mid-batch; probing once
+    up front lets it fall back to per-page rebuilds instead. Uses a raw
+    subprocess (not _ssh_run) so a 'no such command' exit is a clean False,
+    not a sys.exit."""
+    cmd = (
+        f'PATH="$HOME/.local/bin:$PATH" && cd {shlex.quote(remote_dir)} '
+        f'&& uv run flubpub rebuild --help'
+    )
+    result = subprocess.run(
+        ["ssh", *_SSH_MUX_OPTS, remote, cmd],
+        capture_output=True, text=True,
+    )
+    return result.returncode == 0
 
 
 def _upload_bundle_to_remote(remote: str, file_path: Path) -> str:
@@ -732,11 +766,72 @@ def _should_mirror(ctx) -> bool:
     return bool(ctx.obj.get("mirror")) and bool(ctx.obj.get("site_key"))
 
 
+def _rebuild_query(no_rebuild: bool) -> str:
+    """Query suffix that defers the server-side 11ty rebuild. A batch caller
+    (`sync`) passes --no-rebuild on every mutation and triggers one rebuild at
+    the end via the `rebuild` command, instead of paying a full site rebuild
+    per page."""
+    return "?rebuild=false" if no_rebuild else ""
+
+
 # `sync` reads a small per-site manifest at content/<site>/_manifest.toml to
 # learn which file is the index. The manifest is intentionally minimal — let
 # it grow organically rather than designing an ontology up front.
 SITE_MANIFEST_NAME = "_manifest.toml"
 RECYCLE_DIR_NAME = ".recycle"
+# Per-site cache of the last-synced content digest per slug, so `sync` can skip
+# re-pushing pages whose local bundle is byte-identical to what it last sent.
+# Hidden, so _enumerate_content_site (skips dotfiles) never treats it as a page.
+SYNC_STATE_NAME = ".sync-state.json"
+
+
+def _bundle_digest(entry: Path, meta: dict) -> str:
+    """Stable content hash of a page bundle — the entry file plus its ref
+    closure (assets/sub-pages) plus its sync-time metadata. Any edit to the
+    entry, a referenced asset, or the html-article metadata flips the digest;
+    `sync` compares it against the cached value to skip unchanged pages."""
+    h = hashlib.sha256()
+    suffix = entry.suffix.lower()
+    assets, subs = collect_all_refs(entry) if suffix in PAGE_SUFFIXES else ([], [])
+    base = entry.parent.resolve()
+    ordered = [entry, *sorted(assets + subs, key=lambda p: p.resolve().as_posix())]
+    for f in ordered:
+        try:
+            rel = f.resolve().relative_to(base).as_posix()
+        except ValueError:
+            rel = f.name
+        h.update(rel.encode())
+        h.update(b"\0")
+        try:
+            h.update(f.read_bytes())
+        except OSError:
+            h.update(b"<unreadable>")
+        h.update(b"\0")
+    # Normalize tuples (e.g. tags) to lists so the metadata serializes stably.
+    norm = {k: (list(v) if isinstance(v, tuple) else v) for k, v in meta.items()}
+    h.update(json.dumps(norm, sort_keys=True, default=str).encode())
+    return h.hexdigest()
+
+
+def _load_sync_state(site_dir: Path) -> dict:
+    """Read content/<site>/.sync-state.json. Returns a fresh empty state (so a
+    first-ever sync treats everything as changed) on any read/parse failure."""
+    path = site_dir / SYNC_STATE_NAME
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("pages", {})
+    data.setdefault("index", None)
+    return data
+
+
+def _save_sync_state(site_dir: Path, state: dict) -> None:
+    (site_dir / SYNC_STATE_NAME).write_text(
+        json.dumps(state, indent=2, sort_keys=True)
+    )
 
 
 def _load_site_manifest(site_dir: Path) -> dict:
@@ -810,7 +905,7 @@ def _enumerate_content_site(site_dir: Path) -> tuple[Path | None, dict[str, Path
 def _remote_pages_index(remote: str, remote_dir: str) -> list[dict]:
     """Read the remote's data/pages.json via ssh. Returns [] when missing."""
     result = subprocess.run(
-        ["ssh", remote, f"cat {shlex.quote(remote_dir)}/data/pages.json 2>/dev/null || echo '[]'"],
+        ["ssh", *_SSH_MUX_OPTS, remote, f"cat {shlex.quote(remote_dir)}/data/pages.json 2>/dev/null || echo '[]'"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -834,14 +929,14 @@ def _recycle_remote_page(remote: str, remote_dir: str, bin_dir: Path,
     for ext in (".html", ".md"):
         src = f"{remote}:{remote_dir}/site/src/pages/{slug}{ext}"
         r = subprocess.run(
-            ["scp", "-q", src, str(bin_dir / f"{slug}{ext}")],
+            ["scp", *_SSH_MUX_OPTS, "-q", src, str(bin_dir / f"{slug}{ext}")],
             capture_output=True, text=True,
         )
         if r.returncode == 0:
             break
     assets_src = f"{remote}:{remote_dir}/site/src/assets/{slug}"
     subprocess.run(
-        ["scp", "-rq", assets_src, str(bin_dir / "assets")],
+        ["scp", *_SSH_MUX_OPTS, "-rq", assets_src, str(bin_dir / "assets")],
         capture_output=True, text=True,
     )
     (bin_dir / "metadata.json").write_text(json.dumps(meta, indent=2))
@@ -907,8 +1002,11 @@ def cli(ctx, server, remote, site, force_local, no_mirror):
 @click.option("--tag", "tags", multiple=True, help="Tag this page (repeatable)")
 @click.option("--excerpt", default=None, help="Short summary used by index list rendering")
 @click.option("--description", default=None, help="Longer per-page subtitle displayed under links in custom index lists")
+@click.option("--no-rebuild", "no_rebuild", is_flag=True, default=False,
+              help="Defer the server-side 11ty rebuild (run `flubpub rebuild` "
+                   "afterwards). Used by `sync` to rebuild once per batch.")
 @click.pass_context
-def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt, description):
+def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt, description, no_rebuild):
     """Push a file to the server as a published page."""
     path = Path(file_path)
 
@@ -956,8 +1054,11 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
             args += f" --excerpt {shlex.quote(excerpt)}"
         if description:
             args += f" --description {shlex.quote(description)}"
+        if no_rebuild:
+            args += " --no-rebuild"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
-        _remote_cleanup(remote)
+        if not ctx.obj.get("defer_cleanup"):
+            _remote_cleanup(remote)
         if _should_mirror(ctx):
             mirror_slug = slug or _slugify(title)
             _mirror_to_content(ctx.obj["site_key"], mirror_slug, path)
@@ -1001,11 +1102,12 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
                 click.confirm("These files will be uploaded. Continue?", abort=True)
 
     server = ctx.obj["server"]
+    rq = _rebuild_query(no_rebuild)
     with httpx.Client() as client:
         for asset in assets:
             with open(asset, "rb") as f:
                 resp = client.post(
-                    f"{server}/api/assets/{page_slug}",
+                    f"{server}/api/assets/{page_slug}{rq}",
                     files={"file": (asset.name, f)},
                 )
             if not resp.is_success:
@@ -1025,7 +1127,7 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
             for asset in sub_assets:
                 with open(asset, "rb") as f:
                     resp = client.post(
-                        f"{server}/api/assets/{sub_slug}",
+                        f"{server}/api/assets/{sub_slug}{rq}",
                         files={"file": (asset.name, f)},
                     )
                 if not resp.is_success:
@@ -1034,7 +1136,7 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
                 click.echo(f"Uploaded asset: {asset.name} (for {sub_slug})")
             sub_content = rewrite_refs(sub_content, sub_slug, sub_assets, sub_links, mode=sub_mode)
             resp = client.post(
-                f"{server}/api/pages",
+                f"{server}/api/pages{rq}",
                 json={
                     "title": sub_title,
                     "content": sub_content,
@@ -1069,7 +1171,7 @@ def push(ctx, file_path, title, slug, theme, color_scheme, parent, tags, excerpt
         if index_spec:
             body["index"] = index_spec
 
-        resp = client.post(f"{server}/api/pages", json=body)
+        resp = client.post(f"{server}/api/pages{rq}", json=body)
 
     if resp.is_success:
         data = resp.json()
@@ -1149,8 +1251,11 @@ def get(ctx, slug):
 @click.option("--tag", "tags", multiple=True, help="Tag this page (repeatable; replaces existing tags)")
 @click.option("--excerpt", default=None, help="Short summary used by index list rendering")
 @click.option("--description", default=None, help="Longer per-page subtitle displayed under links in custom index lists")
+@click.option("--no-rebuild", "no_rebuild", is_flag=True, default=False,
+              help="Defer the server-side 11ty rebuild (run `flubpub rebuild` "
+                   "afterwards). Used by `sync` to rebuild once per batch.")
 @click.pass_context
-def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excerpt, description):
+def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excerpt, description, no_rebuild):
     """Update an existing page with new content."""
     path = Path(file_path)
 
@@ -1179,8 +1284,11 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
             args += f" --excerpt {shlex.quote(excerpt)}"
         if description:
             args += f" --description {shlex.quote(description)}"
+        if no_rebuild:
+            args += " --no-rebuild"
         _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
-        _remote_cleanup(remote)
+        if not ctx.obj.get("defer_cleanup"):
+            _remote_cleanup(remote)
         if _should_mirror(ctx):
             _mirror_to_content(ctx.obj["site_key"], slug, path)
             _write_pages_meta(ctx.obj["site_key"], slug, path, {
@@ -1221,6 +1329,7 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
     # asset URLs the previous push had fixed up.
     page_slug = slug
     server_base = ctx.obj["server"]
+    rq = _rebuild_query(no_rebuild)
     if suffix in (".md", ".html"):
         assets, sub_pages = collect_all_refs(path)
         if assets or sub_pages:
@@ -1240,7 +1349,7 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
             for asset in assets:
                 with open(asset, "rb") as f:
                     resp = upload_client.post(
-                        f"{server_base}/api/assets/{page_slug}",
+                        f"{server_base}/api/assets/{page_slug}{rq}",
                         files={"file": (asset.name, f)},
                     )
                 if not resp.is_success:
@@ -1269,7 +1378,7 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
         body["index"] = index_spec
 
     with httpx.Client() as client:
-        resp = client.put(f"{ctx.obj['server']}/api/pages/{slug}", json=body)
+        resp = client.put(f"{ctx.obj['server']}/api/pages/{slug}{rq}", json=body)
 
     if resp.is_success:
         data = resp.json()
@@ -1282,19 +1391,25 @@ def revise(ctx, slug, file_path, title, theme, color_scheme, parent, tags, excer
 
 @cli.command()
 @click.argument("slug")
+@click.option("--no-rebuild", "no_rebuild", is_flag=True, default=False,
+              help="Defer the server-side 11ty rebuild (run `flubpub rebuild` "
+                   "afterwards). Used by `sync` to rebuild once per batch.")
 @click.pass_context
-def delete(ctx, slug):
+def delete(ctx, slug, no_rebuild):
     """Delete a published page by slug."""
     remote = ctx.obj.get("remote")
     if remote:
-        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=f"delete {shlex.quote(slug)}")
+        args = f"delete {shlex.quote(slug)}"
+        if no_rebuild:
+            args += " --no-rebuild"
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
         if _should_mirror(ctx):
             _unmirror_from_content(ctx.obj["site_key"], slug)
             _remove_pages_meta(ctx.obj["site_key"], slug)
         return
 
     with httpx.Client() as client:
-        resp = client.delete(f"{ctx.obj['server']}/api/pages/{slug}")
+        resp = client.delete(f"{ctx.obj['server']}/api/pages/{slug}{_rebuild_query(no_rebuild)}")
 
     if resp.is_success:
         click.echo(f"Deleted: {slug}")
@@ -1330,8 +1445,11 @@ def _render_index_template(content: str, variables: dict) -> str:
 @click.option("--vars", "vars_file", default=None,
               type=click.Path(exists=True, dir_okay=False, path_type=Path),
               help="YAML file with Jinja variables (brand, tagline, etc).")
+@click.option("--no-rebuild", "no_rebuild", is_flag=True, default=False,
+              help="Defer the server-side 11ty rebuild (run `flubpub rebuild` "
+                   "afterwards). Used by `sync` to rebuild once per batch.")
 @click.pass_context
-def set_index(ctx, file_path, vars_file):
+def set_index(ctx, file_path, vars_file, no_rebuild):
     """Install a custom HTML file as the site index.
 
     The file is rendered as a Jinja2 template (defaults apply when no --vars
@@ -1385,8 +1503,11 @@ def set_index(ctx, file_path, vars_file):
         try:
             remote_path = _upload_bundle_to_remote(remote, upload_path)
             args = f"set-index {shlex.quote(remote_path)}"
+            if no_rebuild:
+                args += " --no-rebuild"
             _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args=args)
-            _remote_cleanup(remote)
+            if not ctx.obj.get("defer_cleanup"):
+                _remote_cleanup(remote)
             if _should_mirror(ctx):
                 _mirror_to_content(ctx.obj["site_key"], path.stem, path)
         finally:
@@ -1407,11 +1528,12 @@ def set_index(ctx, file_path, vars_file):
             click.confirm("These files will be uploaded. Continue?", abort=True)
 
     server = ctx.obj["server"]
+    rq = _rebuild_query(no_rebuild)
     with httpx.Client() as client:
         for asset in assets:
             with open(asset, "rb") as f:
                 resp = client.post(
-                    f"{server}/api/assets/{INDEX_ASSETS_SLUG}",
+                    f"{server}/api/assets/{INDEX_ASSETS_SLUG}{rq}",
                     files={"file": (asset.name, f)},
                 )
             if not resp.is_success:
@@ -1427,7 +1549,7 @@ def set_index(ctx, file_path, vars_file):
         if is_markdown_index:
             body["content_type"] = "markdown"
             body.update(md_body)
-        resp = client.post(f"{server}/api/index", json=body)
+        resp = client.post(f"{server}/api/index{rq}", json=body)
 
     if resp.is_success:
         click.echo("Custom index installed.")
@@ -1456,16 +1578,45 @@ def unset_index(ctx):
 
 
 @cli.command()
+@click.pass_context
+def rebuild(ctx):
+    """Trigger a single 11ty site rebuild.
+
+    The companion to --no-rebuild: after a batch of deferred mutations (e.g.
+    `sync`, or several manual `push --no-rebuild`s), run this once to rebuild
+    the static site a single time instead of once per page."""
+    remote = ctx.obj.get("remote")
+    if remote:
+        _remote_flubpub(remote, ctx.obj["remote_dir"], remote_port=ctx.obj["remote_port"], args="rebuild")
+        return
+
+    with httpx.Client() as client:
+        resp = client.post(f"{ctx.obj['server']}/api/rebuild")
+
+    if resp.is_success:
+        click.echo("Rebuilt.")
+    else:
+        click.echo(f"Error: {resp.text}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
 @click.option("--dry-run", is_flag=True, default=False,
               help="Show the plan without making any remote changes.")
+@click.option("--force", is_flag=True, default=False,
+              help="Re-push every page even if its content digest is unchanged "
+                   "(ignore content/<site>/.sync-state.json).")
 @click.pass_context
-def sync(ctx, dry_run):
+def sync(ctx, dry_run, force):
     """Reconcile remote site with content/<site>/ as the source of truth.
 
     Pushes new entries, revises existing ones, and recycles remote-only pages
     into content/<site>/.recycle/<UTC-ts>/<slug>/ before deleting them. Looks
     for `home.{md,html}` at the content root and re-applies it via set-index.
-    Requires --site (or a configured default); --local is not supported."""
+    Requires --site (or a configured default); --local is not supported.
+
+    Pages whose content digest matches the last sync (cached in
+    content/<site>/.sync-state.json) are skipped; pass --force to override."""
     if ctx.obj.get("remote") is None:
         click.echo("sync requires a remote site; pass --site KEY (or set a "
                    "default in sites.toml). --local is unsupported.", err=True)
@@ -1487,40 +1638,28 @@ def sync(ctx, dry_run):
     remote = ctx.obj["remote"]
     remote_dir = ctx.obj["remote_dir"]
 
+    # The deferred-rebuild fast path needs a remote flubpub that understands
+    # --no-rebuild + the `rebuild` command. Probe once; if the remote predates
+    # this branch, fall back to letting each push/revise rebuild itself (slower,
+    # but correct) instead of hard-failing mid-batch. The SSH-mux and
+    # digest-skip wins still apply either way.
+    defer_rebuild = _remote_supports_no_rebuild(
+        remote, remote_dir, ctx.obj["remote_port"])
+    if not defer_rebuild:
+        click.echo(
+            "Note: remote flubpub predates --no-rebuild; rebuilding per page. "
+            "Deploy this branch to the remote (flubpub deploy --site …) to "
+            "enable single-rebuild syncs.",
+            err=True,
+        )
+
     index_entry, local_pages = _enumerate_content_site(site_dir)
     remote_pages = _remote_pages_index(remote, remote_dir)
     remote_slugs = {p["slug"]: p for p in remote_pages if "slug" in p}
 
-    to_push   = sorted(s for s in local_pages if s not in remote_slugs)
-    to_revise = sorted(s for s in local_pages if s in remote_slugs)
-    # The remote's reserved root-index slug ("index") maps to the manifest's
-    # index entry, not to a top-level page, so it is never remote-only.
-    reserved_index_slugs = {"index"} if index_entry is not None else set()
-    to_recycle = sorted(s for s in remote_slugs
-                        if s not in local_pages and s not in reserved_index_slugs)
-
-    click.echo(f"Sync plan for '{site_key}':")
-    click.echo(f"  push:    {to_push or '(none)'}")
-    click.echo(f"  revise:  {to_revise or '(none)'}")
-    click.echo(f"  recycle: {to_recycle or '(none)'}")
-    click.echo(f"  index:   {index_entry.name if index_entry else '(none)'}")
-    if dry_run:
-        return
-
-    # Recycle first so we don't accidentally revise a page we're about to drop.
-    bin_root: Path | None = None
-    recycled_ok: list[str] = []
-    if to_recycle:
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
-        bin_root = site_dir / RECYCLE_DIR_NAME / ts
-    for slug in to_recycle:
-        slug_bin = bin_root / slug
-        _recycle_remote_page(remote, remote_dir, slug_bin, slug, remote_slugs[slug])
-        ctx.invoke(delete, slug=slug)
-        recycled_ok.append(slug)
-
     # An html entry's metadata lives in _pages.yaml (no frontmatter to lift), so
-    # feed it back as flags; md entries carry their own frontmatter.
+    # feed it back as flags; md entries carry their own frontmatter. Defined
+    # here (before the plan) because it also feeds the content digest.
     def _meta_kwargs(slug: str, entry: Path) -> dict:
         if entry.suffix.lower() != ".html":
             return {}
@@ -1531,25 +1670,105 @@ def sync(ctx, dry_run):
             kw["tags"] = tuple(m["tags"])
         return kw
 
+    state = _load_sync_state(site_dir)
+    digests = {s: _bundle_digest(e, _meta_kwargs(s, e)) for s, e in local_pages.items()}
+    index_digest = _bundle_digest(index_entry, {}) if index_entry else None
+
+    def _unchanged(slug: str) -> bool:
+        return not force and state["pages"].get(slug) == digests[slug]
+
+    to_push = sorted(s for s in local_pages if s not in remote_slugs)
+    # Split existing pages into changed (revise) vs digest-unchanged (skip).
+    present = sorted(s for s in local_pages if s in remote_slugs)
+    to_revise = [s for s in present if not _unchanged(s)]
+    to_skip   = [s for s in present if _unchanged(s)]
+    index_changed = bool(index_entry) and (force or state.get("index") != index_digest)
+    # The remote's reserved root-index slug ("index") maps to the manifest's
+    # index entry, not to a top-level page, so it is never remote-only.
+    reserved_index_slugs = {"index"} if index_entry is not None else set()
+    to_recycle = sorted(s for s in remote_slugs
+                        if s not in local_pages and s not in reserved_index_slugs)
+
+    index_plan = (
+        "(none)" if not index_entry
+        else f"{index_entry.name} (unchanged, skip)" if not index_changed
+        else index_entry.name
+    )
+    click.echo(f"Sync plan for '{site_key}':")
+    click.echo(f"  push:    {to_push or '(none)'}")
+    click.echo(f"  revise:  {to_revise or '(none)'}")
+    click.echo(f"  skip:    {to_skip or '(none)'}")
+    click.echo(f"  recycle: {to_recycle or '(none)'}")
+    click.echo(f"  index:   {index_plan}")
+    if dry_run:
+        return
+
+    # Each push/revise/set-index uploads into its own remote tempdir and would
+    # normally `rm -rf /tmp/flubpub-upload-*` itself afterwards. Defer that to a
+    # single sweep at the end of the batch instead of one ssh per page.
+    ctx.obj["defer_cleanup"] = True
+
+    # Recycle first so we don't accidentally revise a page we're about to drop.
+    bin_root: Path | None = None
+    recycled_ok: list[str] = []
+    if to_recycle:
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
+        bin_root = site_dir / RECYCLE_DIR_NAME / ts
+    for slug in to_recycle:
+        slug_bin = bin_root / slug
+        _recycle_remote_page(remote, remote_dir, slug_bin, slug, remote_slugs[slug])
+        ctx.invoke(delete, slug=slug, no_rebuild=defer_rebuild)
+        recycled_ok.append(slug)
+        state["pages"].pop(slug, None)
+        _save_sync_state(site_dir, state)
+
+    # Record the digest only after the mutation succeeds (push/revise sys.exit
+    # on failure), recomputed from the file's *final* form: push/revise apply
+    # in-file SoT (e.g. injecting `slug:` frontmatter), so the post-write digest
+    # is what the next sync will see — caching the pre-write one would make the
+    # page look changed forever. Persist incrementally so an interrupted sync
+    # leaves an accurate cache rather than a stale all-synced one.
+    def _record(slug: str, entry: Path) -> None:
+        state["pages"][slug] = _bundle_digest(entry, _meta_kwargs(slug, entry))
+        _save_sync_state(site_dir, state)
+
     pushed_ok: list[str] = []
     for slug in to_push:
         entry = local_pages[slug]
-        ctx.invoke(push, file_path=str(entry), slug=slug, **_meta_kwargs(slug, entry))
+        ctx.invoke(push, file_path=str(entry), slug=slug, no_rebuild=defer_rebuild,
+                   **_meta_kwargs(slug, entry))
         pushed_ok.append(slug)
+        _record(slug, entry)
 
     revised_ok: list[str] = []
     for slug in to_revise:
         entry = local_pages[slug]
-        ctx.invoke(revise, slug=slug, file_path=str(entry), **_meta_kwargs(slug, entry))
+        ctx.invoke(revise, slug=slug, file_path=str(entry), no_rebuild=defer_rebuild,
+                   **_meta_kwargs(slug, entry))
         revised_ok.append(slug)
+        _record(slug, entry)
 
-    if index_entry:
-        ctx.invoke(set_index, file_path=str(index_entry))
+    if index_changed:
+        ctx.invoke(set_index, file_path=str(index_entry), no_rebuild=defer_rebuild)
+        state["index"] = index_digest
+        _save_sync_state(site_dir, state)
+
+    # Every mutation above deferred its 11ty rebuild; collapse them into one.
+    # Skipped when the remote couldn't defer (it already rebuilt per page, and
+    # has no `rebuild` command to call).
+    if defer_rebuild and (pushed_ok or revised_ok or recycled_ok or index_changed):
+        ctx.invoke(rebuild)
+
+    # One sweep for all the deferred upload tempdirs (only push/revise/set-index
+    # leave any behind).
+    if pushed_ok or revised_ok or index_changed:
+        _remote_cleanup(remote)
 
     click.echo()
     click.echo(f"Sync report for '{site_key}':")
     click.echo(f"  pushed   ({len(pushed_ok)}): {pushed_ok or '(none)'}")
     click.echo(f"  revised  ({len(revised_ok)}): {revised_ok or '(none)'}")
+    click.echo(f"  skipped  ({len(to_skip)}): {to_skip or '(none)'}")
     click.echo(f"  recycled ({len(recycled_ok)}): {recycled_ok or '(none)'}")
     if bin_root is not None:
         try:
@@ -1557,7 +1776,12 @@ def sync(ctx, dry_run):
         except ValueError:
             rel = bin_root
         click.echo(f"  recycle bin: {rel}/")
-    click.echo(f"  index:    {index_entry.name if index_entry else '(unchanged)'}")
+    index_report = (
+        index_entry.name if index_changed
+        else "(unchanged)" if index_entry
+        else "(none)"
+    )
+    click.echo(f"  index:    {index_report}")
 
 
 def _find_templates_dir() -> Path | None:

@@ -9,8 +9,6 @@ index:
   sort:
     by: manual
     manual:
-    - wavelength-cli-tutorial
-    - suzuki-narrate-gpu-runbook
     - a322111-pairing-theorem
     - blockipelago
     - a-grammar-of-bach

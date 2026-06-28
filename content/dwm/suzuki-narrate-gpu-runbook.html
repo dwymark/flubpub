@@ -209,6 +209,10 @@ const G = {START:"START", RUN:"RUN", NOTES:"NOTES"};
 const PAGES = [
   { g:G.START, id:"—", title:"COVER", kind:"cover" },
 
+  { g:G.START, id:"AI", title:"WHO MADE THIS", html:`
+    <div class="blk"><span class="lab">WHO MADE THIS</span><p>This runbook was written with <b>Claude</b> (Anthropic) under Daniel Wymark's direction.</p></div>
+    <div class="pnote">It documents SUZUKI-NARRATE, a tool that isn't public yet. The runbook runs entirely in your browser, with no network calls and no storage.</div>` },
+
   { g:G.START, id:"A", title:"THE SHAPE", html:`
     <div class="blk"><span class="lab">WHERE THE GPU IS</span><p>The accelerator is the Arc 140V iGPU, reachable only from native Windows through torch's xpu backend. This WSL repo stays the source of truth.</p></div>
     <dl class="terse">
@@ -380,30 +384,5 @@ window.addEventListener("resize", ()=>{ render(); });
 applyZoom();
 render();
 </script>
-<!-- dwm-disclosure -->
-<style>
-#dwm-disc{position:fixed;top:.6rem;left:.6rem;z-index:2147483000;display:flex;flex-direction:column;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;}
-#dwm-disc *{box-sizing:border-box;}
-#dwm-disc-cb{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
-#dwm-disc .dwm-disc-pill{display:none;align-items:center;gap:.4em;cursor:pointer;font-size:.7rem;letter-spacing:.04em;padding:.36em .75em;border-radius:999px;background:rgba(18,18,20,.82);color:#f2efe6;border:1px solid rgba(255,255,255,.25);box-shadow:0 2px 12px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);user-select:none;white-space:nowrap;}
-#dwm-disc .dwm-disc-pill:hover{background:rgba(18,18,20,.96);}
-#dwm-disc .dwm-disc-panel{display:block;width:min(23rem,calc(100vw - 1.4rem));background:rgba(16,16,18,.97);color:#f2efe6;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:1.05rem 1.1rem .95rem;box-shadow:0 12px 40px rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
-#dwm-disc .dwm-disc-h{margin:0 0 .5rem;font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;opacity:.6;}
-#dwm-disc .dwm-disc-b{margin:0 0 .85rem;font-family:Georgia,'Times New Roman',serif;font-size:.9rem;line-height:1.5;}
-#dwm-disc .dwm-disc-btn{display:inline-block;cursor:pointer;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;padding:.42em .95em;border:1px solid rgba(242,239,230,.5);color:#f2efe6;border-radius:7px;}
-#dwm-disc .dwm-disc-btn:hover{background:#f2efe6;color:#121214;}
-#dwm-disc-cb:checked~.dwm-disc-pill{display:inline-flex;}
-#dwm-disc-cb:checked~.dwm-disc-panel{display:none;}
-</style>
-<div id="dwm-disc">
-<input type="checkbox" id="dwm-disc-cb" aria-hidden="true">
-<label for="dwm-disc-cb" class="dwm-disc-pill" tabindex="0">🤖 AI-made</label>
-<div class="dwm-disc-panel" role="region" aria-label="Authorship disclosure">
-<p class="dwm-disc-h">Who made this?</p>
-<p class="dwm-disc-b">A vibe-coded toy, made with Claude (Anthropic) under Daniel Wymark's direction. It runs entirely in your browser, with no network calls and no storage.</p>
-<label for="dwm-disc-cb" class="dwm-disc-btn" tabindex="0">Noted</label>
-</div>
-</div>
-<!-- /dwm-disclosure -->
 </body>
 </html>

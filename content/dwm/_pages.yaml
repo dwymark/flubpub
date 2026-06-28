@@ -133,11 +133,29 @@ strange-interlocutor-retro:
   - draft
   - strange-interlocutor
   title: Strange Interlocutor (Retro)
+suzuki-narrate-gpu-runbook:
+  description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel
+    Wymark, with Claude (Anthropic)</span> A GPU text-to-speech runbook staged as
+    a monochrome e-ink reader: step through the smoke test, dial-in, and recovery
+    one card at a time. <span class="ai-desc" title="This one-line description was
+    written by Claude (Anthropic).">Description: written by Claude</span>'
+  tags:
+  - vibe-coded
+  title: SUZUKI-NARRATE — GPU Runbook
 tightening-corridor:
   tags:
   - draft
   - strange-interlocutor
   title: Nothing more and nothing less
+wavelength-cli-tutorial:
+  description: '<span class="ai-work" title="Made by Daniel Wymark with Claude (Anthropic).">Daniel
+    Wymark, with Claude (Anthropic)</span> A handheld e-ink field guide to a small
+    audio-publishing CLI, paged through section by section like a pocket reference
+    device. <span class="ai-desc" title="This one-line description was written by
+    Claude (Anthropic).">Description: written by Claude</span>'
+  tags:
+  - vibe-coded
+  title: Wavelength CLI — Field Guide
 who-were-you-talking-to-field:
   tags:
   - draft

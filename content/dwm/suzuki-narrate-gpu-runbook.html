@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SUZUKI-NARRATE &mdash; GPU runbook</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:#fff; color:#000;                 /* e-ink: white surround, not heavy black */
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;
+    display:flex; align-items:stretch; justify-content:center;
+    overflow:hidden; -webkit-text-size-adjust:100%;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+  *{transition:none!important;animation:none!important}   /* e-ink ghosts on motion */
+  :root{ --mono:ui-monospace,"SFMono-Regular",Menlo,"Courier New",monospace; }
+
+  .device{
+    --zoom:1;                                    /* body-text scale; chrome ignores it */
+    width:100%; max-width:440px; height:100%;
+    background:#fff;
+    border-left:2px solid #000; border-right:2px solid #000;
+    display:flex; flex-direction:column;
+    position:relative;
+  }
+  @media (min-width:481px){ .device{ max-width:680px; } }
+  @media (min-width:1025px){ .device{ max-width:960px; } }
+
+  /* ---- title bar (static chrome) ---- */
+  .titlebar{
+    background:#000; color:#fff;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:7px 9px; gap:8px;
+    font-family:var(--mono); flex:0 0 auto;
+  }
+  .titlebar .app{ font-size:12px; font-weight:700; letter-spacing:1px; }
+  .cat{
+    font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.5px;
+    color:#fff; background:#000; border:1.5px solid #fff;
+    padding:3px 8px; cursor:pointer; white-space:nowrap;
+  }
+  .cat:active{ background:#fff; color:#000; }
+
+  /* ---- header strip (static chrome): title + zoom + counter ---- */
+  .header{
+    flex:0 0 auto; border-bottom:2px solid #000;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:7px 9px;
+  }
+  .header .ptitle{ font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:.3px;
+    line-height:1.15; flex:1 1 auto; min-width:0; }
+  .hgroup{ display:flex; align-items:center; gap:5px; flex:0 0 auto; }
+  .zbtn{
+    font-family:var(--mono); font-weight:700; font-size:11px;
+    border:1.5px solid #000; background:#fff; color:#000;
+    padding:3px 7px; cursor:pointer; line-height:1;
+  }
+  .zbtn:active{ background:#000; color:#fff; }
+  .zbtn[disabled]{ border-style:dotted; color:#000; cursor:default; }
+  .zbtn[disabled]:active{ background:#fff; color:#000; }
+  .counter{ font-family:var(--mono); font-size:11px; font-weight:700;
+    border:1.5px solid #000; padding:2px 6px; white-space:nowrap; }
+
+  /* ---- body region: stage (scales + scrolls) + static palm scrollbar ---- */
+  .region{ flex:1 1 auto; display:flex; min-height:0; position:relative; }
+  .stage{
+    flex:1 1 auto; min-height:0; padding:10px 12px 9px;
+    overflow-y:auto; overflow-x:hidden;            /* scroll fallback when a card overflows */
+    -webkit-overflow-scrolling:auto; overscroll-behavior:contain;
+    font-size:calc(13px * var(--zoom));            /* the zoom knob; body text only */
+  }
+  .stage .col{ max-width:70ch; margin:0 auto; }
+  .stage *{ max-width:100%; overflow-wrap:break-word; word-break:break-word; }
+
+  /* body content — all sizes in em, so zoom scales them; chrome above stays px */
+  .lede{ font-size:1.04em; line-height:1.3; }
+  .blk{ margin-bottom:8px; }
+  .blk:last-child{ margin-bottom:0; }
+  .lab{
+    font-family:var(--mono); font-size:.74em; font-weight:700; letter-spacing:1.2px;
+    border-bottom:1px solid #000; padding-bottom:1px; margin-bottom:3px; display:inline-block;
+  }
+  .blk p{ font-size:1em; line-height:1.32; }
+  .blk p + p{ margin-top:3px; }
+  dl.terse{ font-size:.96em; line-height:1.25; }
+  dl.terse dt{ font-family:var(--mono); font-weight:700; font-size:.8em; letter-spacing:.6px; margin-top:7px; }
+  dl.terse dt:first-child{ margin-top:0; }
+  dl.terse dd{ margin:1px 0 0 0; }
+  ul.tight{ list-style:none; font-size:.96em; line-height:1.28; }
+  ul.tight li{ padding-left:13px; position:relative; margin-bottom:3px; }
+  ul.tight li:last-child{ margin-bottom:0; }
+  ul.tight li::before{ content:"\25AA"; position:absolute; left:0; top:0; font-size:.7em; }
+  .pnote{ margin-top:8px; font-size:.85em; font-style:italic; line-height:1.26; }
+
+  /* command listing — two inks, hard border, monospace, wraps (no sideways scroll) */
+  .cmd{
+    font-family:var(--mono); font-size:.8em; line-height:1.45;
+    border:2px solid #000; background:#fff; color:#000;
+    padding:6px 8px; margin:4px 0 2px;
+    white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word;
+  }
+
+  .cover{ min-height:100%; display:flex; flex-direction:column; justify-content:center; }
+  .cover .dither{ height:16px; margin-bottom:13px;
+    background-image:repeating-linear-gradient(45deg,#000 0,#000 1px,#fff 1px,#fff 2px); }
+  .cover h1{ font-size:1.95em; line-height:1.05; letter-spacing:-.5px; margin-bottom:6px; }
+  .cover .sub{ font-family:var(--mono); font-size:.85em; letter-spacing:1px; text-transform:uppercase; }
+  .cover .status{ margin-top:13px; font-family:var(--mono); font-size:.82em; line-height:1.4; border:2px solid #000; padding:6px 8px; }
+  .cover .tag2{ margin-top:13px; font-size:1em; line-height:1.3; }
+
+  /* "more below" hint — only when the current card overflows the stage */
+  .morehint{
+    position:absolute; right:30px; bottom:6px; display:none;
+    font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:.5px;
+    background:#000; color:#fff; padding:2px 6px; pointer-events:none;
+  }
+  .region.has-more .morehint{ display:block; }
+
+  /* ---- palm position scrollbar (paging — static chrome) ---- */
+  .pbar{ flex:0 0 24px; border-left:2px solid #000; display:flex; flex-direction:column; }
+  .pbar .arr{ flex:0 0 24px; border:none; background:#fff; color:#000; cursor:pointer;
+    font-size:12px; font-family:var(--mono); font-weight:700; }
+  .pbar .arr.top{ border-bottom:2px solid #000; }
+  .pbar .arr.bot{ border-top:2px solid #000; }
+  .pbar .arr:active{ background:#000; color:#fff; }
+  .pbar .track{ flex:1 1 auto; position:relative; }
+  .pbar .thumb{ position:absolute; left:3px; right:3px; background:#000; min-height:10px; }
+
+  /* ---- silkscreen nav row (static chrome) ---- */
+  .silk{ flex:0 0 auto; border-top:2px solid #000; display:flex; gap:8px; padding:9px; background:#fff; }
+  .btn{
+    font-family:var(--mono); font-weight:700; letter-spacing:.5px;
+    background:#fff; color:#000; border:2px solid #000; box-shadow:3px 3px 0 #000;
+    padding:9px 6px; cursor:pointer; font-size:12px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .btn:active{ transform:translate(3px,3px); box-shadow:none; background:#000; color:#fff; }
+  .btn.sq{ flex:0 0 auto; width:42px; }
+  .btn.wide{ flex:1 1 auto; }
+  .btn[disabled]{ box-shadow:none; border-style:dotted; cursor:default; color:#000; }
+  .btn[disabled]:active{ transform:none; background:#fff; color:#000; }
+
+  /* ---- TOC launcher overlay ---- */
+  .overlay{ position:absolute; inset:0; background:#fff; display:none; flex-direction:column; }
+  .overlay.on{ display:flex; }
+  .overlay .obar{ background:#000; color:#fff; font-family:var(--mono); font-size:12px; font-weight:700;
+    letter-spacing:1px; padding:8px 9px; display:flex; justify-content:space-between; align-items:center; }
+  .overlay .odone{ border:1.5px solid #fff; background:#000; color:#fff; font-family:var(--mono);
+    font-weight:700; font-size:11px; padding:3px 9px; cursor:pointer; }
+  .overlay .odone:active{ background:#fff; color:#000; }
+  .toc{ flex:1 1 auto; overflow-y:auto; padding:8px; }
+  .toc .grp{ font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:1.5px;
+    border-bottom:2px solid #000; padding:7px 2px 2px; margin-top:6px; }
+  .toc .grp:first-child{ margin-top:0; }
+  .toc .row{ display:flex; gap:8px; align-items:baseline;
+    border:1.5px solid #000; box-shadow:2px 2px 0 #000;
+    margin:6px 2px; padding:7px 8px; cursor:pointer; background:#fff; }
+  .toc .row:active,.toc .row.cur{ background:#000; color:#fff; }
+  .toc .row .rid{ font-family:var(--mono); font-weight:700; font-size:11px; min-width:30px; }
+  .toc .row .rt{ font-size:12.5px; line-height:1.2; }
+</style>
+</head>
+<body>
+<div class="device" id="device">
+
+  <div class="titlebar">
+    <span class="app">SUZUKI-NARRATE</span>
+    <span class="cat" id="cat" title="cycle section">START &#9656;</span>
+  </div>
+
+  <div class="header">
+    <span class="ptitle" id="ptitle">&mdash;</span>
+    <span class="hgroup">
+      <button class="zbtn" id="zout" title="smaller text">A&minus;</button>
+      <button class="zbtn" id="zin" title="larger text">A+</button>
+      <span class="counter" id="counter">01 / 11</span>
+    </span>
+  </div>
+
+  <div class="region" id="region">
+    <div class="stage" id="stage"></div>
+    <div class="morehint" id="morehint">MORE &#9660;</div>
+    <div class="pbar">
+      <button class="arr top" id="up" title="previous">&#9650;</button>
+      <div class="track" id="track"><div class="thumb" id="thumb"></div></div>
+      <button class="arr bot" id="dn" title="next">&#9660;</button>
+    </div>
+  </div>
+
+  <div class="silk">
+    <button class="btn sq" id="home" title="cover">&#8962;</button>
+    <button class="btn wide" id="prev">&#9664; PREV</button>
+    <button class="btn wide" id="menu">MENU</button>
+    <button class="btn wide" id="next">NEXT &#9654;</button>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="obar"><span>CONTENTS</span><button class="odone" id="odone">DONE</button></div>
+    <div class="toc" id="toc"></div>
+  </div>
+
+</div>
+
+<script>
+const G = {START:"START", RUN:"RUN", NOTES:"NOTES"};
+
+const PAGES = [
+  { g:G.START, id:"—", title:"COVER", kind:"cover" },
+
+  { g:G.START, id:"A", title:"THE SHAPE", html:`
+    <div class="blk"><span class="lab">WHERE THE GPU IS</span><p>The accelerator is the Arc 140V iGPU, reachable only from native Windows through torch's xpu backend. This WSL repo stays the source of truth.</p></div>
+    <dl class="terse">
+      <dt>WHERE YOU WORK</dt><dd>~/projects/suzuki-narrate, in WSL. Always.</dd>
+      <dt>THE WRAPPER</dt><dd>gpu-narrate.sh syncs the Windows mirror, renders on the GPU, copies WAVs into output/.</dd>
+      <dt>THE LOOP</dt><dd>look &#183; smoke-test &#183; listen &#183; render &#183; recover.</dd>
+    </dl>` },
+
+  { g:G.RUN, id:"1", title:"LOOK FIRST", kind:"step", goalLab:"WHY",
+    goal:`The chunk plan needs no GPU, so check the parse before you spend a minute of it. This runs right here in WSL.`,
+    cmd:`uv run narrate.py --input transcripts/suzuki-gakuin-fy2007-tts.md --dry-run`,
+    then:`One line per issue with its chunk count. A number that looks wrong means malformed markdown, not a model problem.` },
+
+  { g:G.RUN, id:"2", title:"SMOKE TEST", kind:"step", goalLab:"DO",
+    goal:`Render issue 1 on the GPU. The wrapper is the whole boundary crossing: it syncs the Windows mirror, runs on xpu, and copies the WAV back into output/.`,
+    cmd:`./gpu-narrate.sh --input transcripts/suzuki-gakuin-fy2007-tts.md --issues 1`,
+    then:`You watch it land on the GPU (Loading Chatterbox on xpu), a Sampling bar per chunk, then copying WAVs back. Roughly 1 to 2 minutes including model load.` },
+
+  { g:G.RUN, id:"2b", title:"THEN LISTEN", kind:"step", goalLab:"THE GATE",
+    goal:`Listen before you spend more. This first listen is the cheap gate: it catches an unsuitable voice or wrong emphasis before the full volume.`,
+    cmd:`wslview output/suzuki-gakuin-fy2007-tts-issue-01.wav`,
+    note:`Or just open the WAV in any player.` },
+
+  { g:G.RUN, id:"3", title:"DIAL IN", kind:"step", goalLab:"OPTIONAL",
+    goal:`Too flat or too theatrical? Re-render just issue 1 with the tone knobs. Suzuki essays want calm.`,
+    cmd:`./gpu-narrate.sh --input transcripts/suzuki-gakuin-fy2007-tts.md --issues 1 --exaggeration 0.4 --cfg-weight 0.4`,
+    then:`Lower exaggeration is more measured; lower cfg-weight is quicker pacing. Iterate on issue 1, then carry the flags forward.` },
+
+  { g:G.RUN, id:"4", title:"FULL VOLUME", kind:"step", goalLab:"DO",
+    goal:`Happy with the voice? Drop --issues to render every issue, with the flags you settled on.`,
+    cmd:`./gpu-narrate.sh --input transcripts/suzuki-gakuin-fy2007-tts.md --exaggeration 0.4`,
+    then:`One WAV per issue in output/. About 10 to 15 minutes of wall time for a volume.` },
+
+  { g:G.RUN, id:"5", title:"RECOVER", kind:"step", goalLab:"WHEN ONE FAILS",
+    goal:`One issue garbled? Don't redo the volume. Re-render the offenders by number.`,
+    cmd:`./gpu-narrate.sh --input transcripts/suzuki-gakuin-fy2007-tts.md --issues 4,9` },
+
+  { g:G.NOTES, id:"N1", title:"COMMIT FIRST", html:`
+    <div class="blk"><span class="lab">THE ONE RULE</span><p>The wrapper hard-resets the mirror to origin/main, so it renders <b>committed</b> state. Edit a transcript or narrate.py and the change won't show until you commit it.</p></div>
+    <div class="pnote">Just rendering existing transcripts? Nothing to commit. This only bites edited code.</div>` },
+
+  { g:G.NOTES, id:"N2", title:"PICKING A VOICE", kind:"step", goalLab:"AUDITION",
+    goal:`explore.py auditions random voices; you save one you like and pass it as --reference voice.wav. It isn't in the wrapper yet, so run it on the mirror directly.`,
+    cmd:`powershell.exe -NoProfile -Command "Set-Location C:&#92;dev&#92;suzuki-narrate; uv run python explore.py -n 20 --exaggeration 0.4"<br>cp /mnt/c/dev/suzuki-narrate/output/exploration/*.wav output/exploration/`,
+    note:`Say the word to fold exploration into gpu-narrate.sh too.` },
+
+  { g:G.NOTES, id:"N3", title:"FRESH MACHINE", kind:"step", goalLab:"ONE-TIME SETUP",
+    goal:`Already done on this laptop. On a new box, build the Windows mirror once:`,
+    cmd:`# let Windows git read the WSL repo, clone the mirror, build the xpu venv<br>powershell.exe -NoProfile -Command "git config --global --add safe.directory '*'"<br>powershell.exe -NoProfile -Command "git clone '&#92;&#92;wsl.localhost&#92;Ubuntu&#92;home&#92;dwymark&#92;projects&#92;suzuki-narrate' 'C:&#92;dev&#92;suzuki-narrate'"<br>powershell.exe -NoProfile -Command "Set-Location C:&#92;dev&#92;suzuki-narrate; uv sync"`,
+    note:`Needs uv, Python 3.11, and Intel Arc driver >= 32.0.101.6127 on the Windows side. After that you only ever touch gpu-narrate.sh.` },
+];
+
+const N = PAGES.length;
+let idx = 0;
+
+const ZMIN=0.75, ZMAX=1.9, ZSTEP=0.15;
+let zoom = 1;
+
+const $ = id => document.getElementById(id);
+const device=$("device"), stage=$("stage"), region=$("region"), ptitle=$("ptitle"),
+      counter=$("counter"), cat=$("cat"), thumb=$("thumb"), track=$("track"),
+      prevB=$("prev"), nextB=$("next"), overlay=$("overlay"), toc=$("toc"),
+      zin=$("zin"), zout=$("zout");
+
+function pad(n){ return String(n).padStart(2,"0"); }
+
+function bodyFor(p){
+  if(p.kind==="cover"){
+    return `<div class="cover">
+      <div class="dither"></div>
+      <h1>Narrate on<br>the Arc GPU</h1>
+      <div class="sub">&#183; suzuki-narrate &#183;</div>
+      <div class="status">LOCAL &#183; INTEL ARC 140V &#183; TORCH XPU<br>driven from WSL, rendered on Windows</div>
+      <div class="tag2">A pocket runbook. One step per screen.<br>Swipe, or use PREV / NEXT below.</div>
+    </div>`;
+  }
+  if(p.kind==="step"){
+    return `<div class="col">
+      <div class="blk"><span class="lab">${p.goalLab||"GOAL"}</span><p>${p.goal}</p></div>
+      <div class="cmd">${p.cmd}</div>
+      ${p.then?`<div class="blk"><span class="lab">THEN</span><p>${p.then}</p></div>`:""}
+      ${p.note?`<div class="pnote">${p.note}</div>`:""}
+    </div>`;
+  }
+  return `<div class="col">${p.html||""}</div>`;
+}
+
+function refreshOverflow(){
+  const more = (stage.scrollHeight - stage.clientHeight) > 2;
+  const atBottom = (stage.scrollTop + stage.clientHeight) >= (stage.scrollHeight - 2);
+  region.classList.toggle("has-more", more && !atBottom);
+}
+
+function render(){
+  const p = PAGES[idx];
+  stage.innerHTML = bodyFor(p);
+  stage.scrollTop = 0;
+  ptitle.innerHTML = (p.id && p.id!=="—") ? (p.id+" · "+p.title) : p.title;
+  counter.textContent = pad(idx+1)+" / "+pad(N);
+  cat.innerHTML = p.g + " &#9656;";
+  const h = track.clientHeight;
+  const th = Math.max(10, Math.round(h/N));
+  thumb.style.height = th+"px";
+  const span = Math.max(0, h-th);
+  thumb.style.top = Math.round(span * (N>1? idx/(N-1):0))+"px";
+  prevB.disabled = (idx===0);
+  nextB.disabled = (idx===N-1);
+  refreshOverflow();
+}
+
+function go(i){ idx = Math.max(0, Math.min(N-1, i)); render(); }
+
+function applyZoom(){
+  device.style.setProperty("--zoom", zoom.toFixed(2));
+  zout.disabled = zoom <= ZMIN + 1e-9;
+  zin.disabled  = zoom >= ZMAX - 1e-9;
+  refreshOverflow();
+}
+
+const order=[G.START,G.RUN,G.NOTES];
+function firstOf(g){ return PAGES.findIndex(p=>p.g===g); }
+cat.onclick = ()=>{ const ng=order[(order.indexOf(PAGES[idx].g)+1)%order.length]; go(firstOf(ng)); };
+
+prevB.onclick = ()=>go(idx-1);
+nextB.onclick = ()=>go(idx+1);
+$("up").onclick = ()=>go(idx-1);
+$("dn").onclick = ()=>go(idx+1);
+$("home").onclick = ()=>go(0);
+
+zin.onclick  = ()=>{ zoom=Math.min(ZMAX, +(zoom+ZSTEP).toFixed(2)); applyZoom(); };
+zout.onclick = ()=>{ zoom=Math.max(ZMIN, +(zoom-ZSTEP).toFixed(2)); applyZoom(); };
+
+stage.addEventListener("scroll", refreshOverflow, {passive:true});
+
+function buildTOC(){
+  let html="", lastG=null;
+  PAGES.forEach((p,i)=>{
+    if(p.g!==lastG){ html += `<div class="grp">${p.g}</div>`; lastG=p.g; }
+    const rid = (p.id==="—")? "⌂" : p.id;
+    html += `<div class="row${i===idx?" cur":""}" data-i="${i}"><span class="rid">${rid}</span><span class="rt">${p.title}</span></div>`;
+  });
+  toc.innerHTML = html;
+  toc.querySelectorAll(".row").forEach(r=>{ r.onclick = ()=>{ go(parseInt(r.dataset.i,10)); closeTOC(); }; });
+}
+function openTOC(){ buildTOC(); overlay.classList.add("on"); }
+function closeTOC(){ overlay.classList.remove("on"); }
+$("menu").onclick = openTOC;
+$("odone").onclick = closeTOC;
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ closeTOC(); return; }
+  if(overlay.classList.contains("on")) return;
+  if(e.key==="ArrowLeft") go(idx-1);
+  if(e.key==="ArrowRight") go(idx+1);
+  if(e.key==="+"||e.key==="=") zin.onclick();
+  if(e.key==="-"||e.key==="_") zout.onclick();
+});
+
+/* swipe pages only when horizontal motion dominates — so vertical scroll passes through */
+let sx=null, sy=null;
+stage.addEventListener("touchstart",e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; },{passive:true});
+stage.addEventListener("touchend",e=>{
+  if(sx===null) return;
+  const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy; sx=null; sy=null;
+  if(Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)){ go(idx + (dx<0?1:-1)); }
+},{passive:true});
+
+window.addEventListener("resize", ()=>{ render(); });
+applyZoom();
+render();
+</script>
+<!-- dwm-disclosure -->
+<style>
+#dwm-disc{position:fixed;top:.6rem;left:.6rem;z-index:2147483000;display:flex;flex-direction:column;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;}
+#dwm-disc *{box-sizing:border-box;}
+#dwm-disc-cb{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+#dwm-disc .dwm-disc-pill{display:none;align-items:center;gap:.4em;cursor:pointer;font-size:.7rem;letter-spacing:.04em;padding:.36em .75em;border-radius:999px;background:rgba(18,18,20,.82);color:#f2efe6;border:1px solid rgba(255,255,255,.25);box-shadow:0 2px 12px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);user-select:none;white-space:nowrap;}
+#dwm-disc .dwm-disc-pill:hover{background:rgba(18,18,20,.96);}
+#dwm-disc .dwm-disc-panel{display:block;width:min(23rem,calc(100vw - 1.4rem));background:rgba(16,16,18,.97);color:#f2efe6;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:1.05rem 1.1rem .95rem;box-shadow:0 12px 40px rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+#dwm-disc .dwm-disc-h{margin:0 0 .5rem;font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;opacity:.6;}
+#dwm-disc .dwm-disc-b{margin:0 0 .85rem;font-family:Georgia,'Times New Roman',serif;font-size:.9rem;line-height:1.5;}
+#dwm-disc .dwm-disc-btn{display:inline-block;cursor:pointer;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;padding:.42em .95em;border:1px solid rgba(242,239,230,.5);color:#f2efe6;border-radius:7px;}
+#dwm-disc .dwm-disc-btn:hover{background:#f2efe6;color:#121214;}
+#dwm-disc-cb:checked~.dwm-disc-pill{display:inline-flex;}
+#dwm-disc-cb:checked~.dwm-disc-panel{display:none;}
+</style>
+<div id="dwm-disc">
+<input type="checkbox" id="dwm-disc-cb" aria-hidden="true">
+<label for="dwm-disc-cb" class="dwm-disc-pill" tabindex="0">🤖 AI-made</label>
+<div class="dwm-disc-panel" role="region" aria-label="Authorship disclosure">
+<p class="dwm-disc-h">Who made this?</p>
+<p class="dwm-disc-b">A vibe-coded toy, made with Claude (Anthropic) under Daniel Wymark's direction. It runs entirely in your browser, with no network calls and no storage.</p>
+<label for="dwm-disc-cb" class="dwm-disc-btn" tabindex="0">Noted</label>
+</div>
+</div>
+<!-- /dwm-disclosure -->
+</body>
+</html>

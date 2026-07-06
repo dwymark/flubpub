@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import json
+import getpass
 import hashlib
 import shlex
 import shutil
@@ -2022,6 +2023,100 @@ def deploy(site_key, script):
     click.echo(f"  → {entry['server_name']}:{entry['port']}")
     click.echo(f"  → tls: {'certbot (' + email + ')' if email else 'http only'}")
     rc = subprocess.run(["bash", str(script_path)], env=env).returncode
+    sys.exit(rc)
+
+
+@cli.group()
+def tunnel():
+    """Manage the reverse SSH tunnel that exposes this home machine on the VPS.
+
+    A thin wrapper around deploy/tunnel/setup-tunnel.sh (the source of truth for
+    the mechanism); `up`/`down` shell out to it with the right env, `status`/
+    `logs` query the local systemd unit (flubpub-tunnel)."""
+
+
+@tunnel.command(name="up")
+@click.option("--port", default=47022, show_default=True, type=int,
+              help="Port on the VPS that forwards home (TUNNEL_PORT).")
+@click.option("--remote-host", default="danielwymark.com", show_default=True,
+              help="VPS hostname (REMOTE_HOST).")
+@click.option("--remote-user", default="root", show_default=True,
+              help="SSH user on the VPS (REMOTE_USER).")
+@click.option("--local-user", default=None,
+              help="Home login the tunnel exposes / runs as "
+                   "(LOCAL_USER; defaults to the current login).")
+@click.option("--local-ssh-port", default=22, show_default=True, type=int,
+              help="Home sshd port (LOCAL_SSH_PORT).")
+@click.option("--script", default="deploy/tunnel/setup-tunnel.sh",
+              show_default=True, help="Path to the tunnel setup script.")
+def tunnel_up(port, remote_host, remote_user, local_user, local_ssh_port, script):
+    """Install/start the reverse SSH tunnel by shelling out to setup-tunnel.sh."""
+    local_user = local_user or os.environ.get("USER") or getpass.getuser()
+    script_path = Path(script)
+    if not script_path.is_file():
+        click.echo(f"Tunnel script not found at {script_path}", err=True)
+        sys.exit(1)
+
+    env = {
+        **os.environ,
+        "TUNNEL_PORT": str(port),
+        "REMOTE_HOST": remote_host,
+        "REMOTE_USER": remote_user,
+        "LOCAL_USER": local_user,
+        "LOCAL_SSH_PORT": str(local_ssh_port),
+    }
+    click.echo(f"Bringing up tunnel via {script_path}")
+    click.echo(f"  → VPS {remote_user}@{remote_host}, forwarding port {port}")
+    click.echo(f"  → exposes {local_user}@localhost:{local_ssh_port}")
+    click.echo(f"  → reach home with: ssh -p {port} {local_user}@{remote_host}")
+    rc = subprocess.run(["bash", str(script_path)], env=env).returncode
+    sys.exit(rc)
+
+
+@tunnel.command(name="down")
+@click.option("--remote-host", default="danielwymark.com", show_default=True,
+              help="VPS hostname (REMOTE_HOST).")
+@click.option("--remote-user", default="root", show_default=True,
+              help="SSH user on the VPS (REMOTE_USER).")
+@click.option("--script", default="deploy/tunnel/setup-tunnel.sh",
+              show_default=True, help="Path to the tunnel setup script.")
+def tunnel_down(remote_host, remote_user, script):
+    """Tear down the tunnel (stop local unit, remove the VPS sshd snippet)."""
+    script_path = Path(script)
+    if not script_path.is_file():
+        click.echo(f"Tunnel script not found at {script_path}", err=True)
+        sys.exit(1)
+
+    env = {
+        **os.environ,
+        "REMOTE_HOST": remote_host,
+        "REMOTE_USER": remote_user,
+    }
+    click.echo(f"Tearing down tunnel via {script_path}")
+    click.echo(f"  → VPS {remote_user}@{remote_host}")
+    rc = subprocess.run(["bash", str(script_path), "--down"], env=env).returncode
+    sys.exit(rc)
+
+
+@tunnel.command(name="status")
+def tunnel_status():
+    """Show the local flubpub-tunnel systemd unit status."""
+    rc = subprocess.run(
+        ["systemctl", "--no-pager", "status", "flubpub-tunnel"]
+    ).returncode
+    sys.exit(rc)
+
+
+@tunnel.command(name="logs")
+@click.option("--follow", "-f", is_flag=True, help="Follow the log stream.")
+@click.option("--lines", "-n", default=50, show_default=True, type=int,
+              help="Number of past lines to show.")
+def tunnel_logs(follow, lines):
+    """Show the flubpub-tunnel journal logs."""
+    cmd = ["journalctl", "-u", "flubpub-tunnel", "-n", str(lines)]
+    if follow:
+        cmd.append("-f")
+    rc = subprocess.run(cmd).returncode
     sys.exit(rc)
 
 

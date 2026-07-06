@@ -1,0 +1,35 @@
+# flubpub reverse SSH tunnel — local systemd unit (runs on the home WSL box).
+# Rendered by setup-tunnel.sh (sed-substitutes the __PLACEHOLDERS__) and
+# installed to /etc/systemd/system/flubpub-tunnel.service.
+#
+# Holds an autossh reverse tunnel open so that
+#   __REMOTE_HOST__:__TUNNEL_PORT__  ->  this machine's sshd on :__LOCAL_SSH_PORT__
+# From anywhere:  ssh -p __TUNNEL_PORT__ __LOCAL_USER__@__REMOTE_HOST__
+[Unit]
+Description=flubpub reverse SSH tunnel (home -> __REMOTE_HOST__:__TUNNEL_PORT__)
+Documentation=file:///home/__LOCAL_USER__/projects/flubpub/deploy/tunnel/README.md
+After=network-online.target ssh.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__LOCAL_USER__
+# Restart the ssh child even if it dies within the first seconds (default 30s
+# grace would otherwise make autossh give up on a fast-failing link).
+Environment=AUTOSSH_GATETIME=0
+# -M 0 disables autossh's own monitoring port; we rely on SSH keepalives.
+# ExitOnForwardFailure makes ssh exit (and autossh respawn it) if the remote
+# port bind fails — e.g. a stale bind lingering after a reconnect.
+ExecStart=/usr/bin/autossh -M 0 -N \
+  -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 \
+  -o ExitOnForwardFailure=yes \
+  -o StrictHostKeyChecking=accept-new \
+  -i /home/__LOCAL_USER__/.ssh/id_rsa \
+  -R 0.0.0.0:__TUNNEL_PORT__:localhost:__LOCAL_SSH_PORT__ \
+  __REMOTE_USER__@__REMOTE_HOST__
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

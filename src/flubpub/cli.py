@@ -2026,22 +2026,43 @@ def deploy(site_key, script):
     sys.exit(rc)
 
 
+def _tunnel_remote_defaults(site_key: str | None) -> tuple[str, str]:
+    """Resolve (remote_user, remote_host) for the tunnel from the sites registry.
+
+    Uses the given site key, else FLUBPUB_SITE, else the registry [default];
+    the target's `remote` (user@host[:/path]) supplies the pair. Falls back to
+    ("root", "danielwymark.com") when the registry has nothing usable, so the
+    tunnel still has a sane target on a machine without a configured registry."""
+    cfg = _load_sites_config()
+    key = site_key or os.environ.get("FLUBPUB_SITE") or cfg.get("default")
+    entry = (cfg.get("sites") or {}).get(key) if key else None
+    if entry and entry.get("remote"):
+        host, _ = _parse_remote(entry["remote"])
+        user, _, hostname = host.partition("@")
+        return (user, hostname) if hostname else ("root", host)
+    return "root", "danielwymark.com"
+
+
 @cli.group()
 def tunnel():
     """Manage the reverse SSH tunnel that exposes this home machine on the VPS.
 
     A thin wrapper around deploy/tunnel/setup-tunnel.sh (the source of truth for
     the mechanism); `up`/`down` shell out to it with the right env, `status`/
-    `logs` query the local systemd unit (flubpub-tunnel)."""
+    `logs` query the local systemd unit (flubpub-tunnel). The VPS host/user
+    default to the sites registry's target (see `--site`); `--remote-host`/
+    `--remote-user` override."""
 
 
 @tunnel.command(name="up")
 @click.option("--port", default=47022, show_default=True, type=int,
               help="Port on the VPS that forwards home (TUNNEL_PORT).")
-@click.option("--remote-host", default="danielwymark.com", show_default=True,
-              help="VPS hostname (REMOTE_HOST).")
-@click.option("--remote-user", default="root", show_default=True,
-              help="SSH user on the VPS (REMOTE_USER).")
+@click.option("--site", "site_key", default=None,
+              help="Registry site whose VPS to target (defaults to [default]).")
+@click.option("--remote-host", default=None,
+              help="VPS hostname (REMOTE_HOST); defaults to the site's host.")
+@click.option("--remote-user", default=None,
+              help="SSH user on the VPS (REMOTE_USER); defaults to the site's user.")
 @click.option("--local-user", default=None,
               help="Home login the tunnel exposes / runs as "
                    "(LOCAL_USER; defaults to the current login).")
@@ -2049,8 +2070,11 @@ def tunnel():
               help="Home sshd port (LOCAL_SSH_PORT).")
 @click.option("--script", default="deploy/tunnel/setup-tunnel.sh",
               show_default=True, help="Path to the tunnel setup script.")
-def tunnel_up(port, remote_host, remote_user, local_user, local_ssh_port, script):
+def tunnel_up(port, site_key, remote_host, remote_user, local_user, local_ssh_port, script):
     """Install/start the reverse SSH tunnel by shelling out to setup-tunnel.sh."""
+    def_user, def_host = _tunnel_remote_defaults(site_key)
+    remote_host = remote_host or def_host
+    remote_user = remote_user or def_user
     local_user = local_user or os.environ.get("USER") or getpass.getuser()
     script_path = Path(script)
     if not script_path.is_file():
@@ -2074,14 +2098,19 @@ def tunnel_up(port, remote_host, remote_user, local_user, local_ssh_port, script
 
 
 @tunnel.command(name="down")
-@click.option("--remote-host", default="danielwymark.com", show_default=True,
-              help="VPS hostname (REMOTE_HOST).")
-@click.option("--remote-user", default="root", show_default=True,
-              help="SSH user on the VPS (REMOTE_USER).")
+@click.option("--site", "site_key", default=None,
+              help="Registry site whose VPS to target (defaults to [default]).")
+@click.option("--remote-host", default=None,
+              help="VPS hostname (REMOTE_HOST); defaults to the site's host.")
+@click.option("--remote-user", default=None,
+              help="SSH user on the VPS (REMOTE_USER); defaults to the site's user.")
 @click.option("--script", default="deploy/tunnel/setup-tunnel.sh",
               show_default=True, help="Path to the tunnel setup script.")
-def tunnel_down(remote_host, remote_user, script):
+def tunnel_down(site_key, remote_host, remote_user, script):
     """Tear down the tunnel (stop local unit, remove the VPS sshd snippet)."""
+    def_user, def_host = _tunnel_remote_defaults(site_key)
+    remote_host = remote_host or def_host
+    remote_user = remote_user or def_user
     script_path = Path(script)
     if not script_path.is_file():
         click.echo(f"Tunnel script not found at {script_path}", err=True)

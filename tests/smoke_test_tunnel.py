@@ -11,8 +11,12 @@ env to a stand-in for each downstream command, and propagates its exit code.
 Cases:
   1. `up` passes explicit flags through as TUNNEL_PORT/REMOTE_HOST/REMOTE_USER/
      LOCAL_USER/LOCAL_SSH_PORT and propagates the script's exit code.
-  2. `up` with no flags applies the documented defaults (port 47022,
-     danielwymark.com, root, $USER, 22).
+  2. `up` with no host/user flags derives REMOTE_HOST/REMOTE_USER from the
+     sites registry ([default] site's `remote`), and applies literal defaults
+     for the rest (port 47022, $USER, 22).
+  2b. A registry with a different default target drives different host/user
+     (proves it reads the registry, not a hardcoded literal).
+  2c. With no registry at all, host/user fall back to root@danielwymark.com.
   3. `down` invokes the script with `--down` and only REMOTE_HOST/REMOTE_USER.
   4. `up`/`down` with a missing --script exit non-zero with a clear message.
   5. `status` invokes `systemctl --no-pager status flubpub-tunnel` and passes
@@ -22,6 +26,7 @@ Cases:
 """
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -29,6 +34,12 @@ import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+
+
+def write_registry(home: Path, cfg: dict) -> None:
+    d = home / ".config" / "flubpub"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "sites.json").write_text(json.dumps(cfg, indent=2))
 
 _failures: list[str] = []
 
@@ -108,21 +119,64 @@ def main() -> None:
         check("up: script called with no extra argv", rec.get("ARGV") == "",
               f"(ARGV={rec.get('ARGV')!r})")
 
-        # --- Case 2: up defaults -----------------------------------------------
+        # --- Case 2: up derives host/user from the registry [default] ----------
         out.unlink(missing_ok=True)
+        home = tmp / "home2"
+        write_registry(home, {
+            "default": "dwm",
+            "sites": {"dwm": {"remote": "root@danielwymark.com:/opt/flubpub-dwm"}},
+        })
         env = base_env()
         env["TUNNEL_TEST_OUT"] = str(out)
         env["USER"] = "alice"
+        env["HOME"] = str(home)
         proc = run(["tunnel", "up", "--script", str(script)], env)
         rec = parse_out(out)
         check("up: default port 47022", rec.get("TUNNEL_PORT") == "47022", f"(rec={rec})")
-        check("up: default host danielwymark.com",
+        check("up: host from registry default site",
               rec.get("REMOTE_HOST") == "danielwymark.com", f"(rec={rec})")
-        check("up: default user root", rec.get("REMOTE_USER") == "root", f"(rec={rec})")
+        check("up: user from registry default site",
+              rec.get("REMOTE_USER") == "root", f"(rec={rec})")
         check("up: default local_user from $USER", rec.get("LOCAL_USER") == "alice",
               f"(rec={rec})")
         check("up: default local_ssh_port 22", rec.get("LOCAL_SSH_PORT") == "22",
               f"(rec={rec})")
+
+        # --- Case 2b: a different registry target drives different host/user ---
+        out.unlink(missing_ok=True)
+        home = tmp / "home2b"
+        write_registry(home, {
+            "default": "x",
+            "sites": {"x": {"remote": "deploy@example.org:/opt/x"}},
+        })
+        env = base_env()
+        env["TUNNEL_TEST_OUT"] = str(out)
+        env["HOME"] = str(home)
+        run(["tunnel", "up", "--script", str(script)], env)
+        rec = parse_out(out)
+        check("up: host pulled from non-default registry",
+              rec.get("REMOTE_HOST") == "example.org", f"(rec={rec})")
+        check("up: user pulled from non-default registry",
+              rec.get("REMOTE_USER") == "deploy", f"(rec={rec})")
+        # explicit --remote-host still overrides the registry
+        out.unlink(missing_ok=True)
+        run(["tunnel", "up", "--script", str(script), "--remote-host", "override.net"], env)
+        rec = parse_out(out)
+        check("up: explicit --remote-host overrides registry",
+              rec.get("REMOTE_HOST") == "override.net", f"(rec={rec})")
+
+        # --- Case 2c: no registry -> literal fallback --------------------------
+        out.unlink(missing_ok=True)
+        home = tmp / "home2c"  # exists but no .config/flubpub/sites.json
+        home.mkdir()
+        env = base_env()
+        env["TUNNEL_TEST_OUT"] = str(out)
+        env["HOME"] = str(home)
+        run(["tunnel", "up", "--script", str(script)], env)
+        rec = parse_out(out)
+        check("up: fallback host danielwymark.com",
+              rec.get("REMOTE_HOST") == "danielwymark.com", f"(rec={rec})")
+        check("up: fallback user root", rec.get("REMOTE_USER") == "root", f"(rec={rec})")
 
         # --- Case 3: down invokes script with --down, only remote env ----------
         out.unlink(missing_ok=True)

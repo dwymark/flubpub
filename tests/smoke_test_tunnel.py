@@ -19,6 +19,8 @@ Cases:
   2c. With no registry at all, host/user fall back to root@danielwymark.com.
   3. `down` invokes the script with `--down` and only REMOTE_HOST/REMOTE_USER.
   4. `up`/`down` with a missing --script exit non-zero with a clear message.
+  4b. `password-auth on|off` shells out `--password-auth <state>`, propagates
+      rc, rejects an invalid state, and errors on a missing script.
   5. `status` invokes `systemctl --no-pager status flubpub-tunnel` and passes
      its (non-zero) rc straight through.
   6. `logs` invokes `journalctl -u flubpub-tunnel -n <lines>` (+ `-f` when
@@ -205,6 +207,31 @@ def main() -> None:
               "Tunnel script not found" in proc.stderr, f"(stderr={proc.stderr!r})")
         proc = run(["tunnel", "down", "--script", "/no/such/file"], env)
         check("down: missing script -> non-zero", proc.returncode != 0,
+              f"(rc={proc.returncode})")
+
+        # --- Case 4b: password-auth passes state through, propagates rc --------
+        out.unlink(missing_ok=True)
+        pw_script = make_recorder(tmp, "setup-pw.sh", exit_code=5)
+        env = base_env()
+        env["TUNNEL_TEST_OUT"] = str(out)
+        proc = run(["tunnel", "password-auth", "off", "--script", str(pw_script)], env)
+        check("password-auth: rc propagates", proc.returncode == 5,
+              f"(rc={proc.returncode}, stderr={proc.stderr!r})")
+        rec = parse_out(out)
+        check("password-auth off: script argv",
+              rec.get("ARGV") == "--password-auth off", f"(ARGV={rec.get('ARGV')!r})")
+        out.unlink(missing_ok=True)
+        run(["tunnel", "password-auth", "on", "--script", str(pw_script)], env)
+        rec = parse_out(out)
+        check("password-auth on: script argv",
+              rec.get("ARGV") == "--password-auth on", f"(ARGV={rec.get('ARGV')!r})")
+        # invalid state rejected by Click before shelling out
+        proc = run(["tunnel", "password-auth", "bogus", "--script", str(pw_script)], env)
+        check("password-auth: invalid state -> non-zero", proc.returncode != 0,
+              f"(rc={proc.returncode})")
+        # missing script errors cleanly
+        proc = run(["tunnel", "password-auth", "off", "--script", "/no/such/file"], env)
+        check("password-auth: missing script -> non-zero", proc.returncode != 0,
               f"(rc={proc.returncode})")
 
         # --- Case 5: status shells out to systemctl, passes rc through ---------

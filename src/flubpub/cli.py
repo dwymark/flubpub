@@ -2127,6 +2127,27 @@ def tunnel_down(site_key, remote_host, remote_user, script):
     sys.exit(rc)
 
 
+@tunnel.command(name="password-auth")
+@click.argument("state", type=click.Choice(["on", "off"]))
+@click.option("--script", default="deploy/tunnel/setup-tunnel.sh",
+              show_default=True, help="Path to the tunnel setup script.")
+def tunnel_password_auth(state, script):
+    """Enable/disable password auth on the LOCAL sshd this tunnel exposes.
+
+    STATE is `on` or `off`. Writes a PasswordAuthentication drop-in and reloads
+    ssh via setup-tunnel.sh. Disable once your key is installed — the tunnel
+    exposes this sshd to the public internet."""
+    script_path = Path(script)
+    if not script_path.is_file():
+        click.echo(f"Tunnel script not found at {script_path}", err=True)
+        sys.exit(1)
+    click.echo(f"Setting local sshd password auth {state} via {script_path}")
+    rc = subprocess.run(
+        ["bash", str(script_path), "--password-auth", state]
+    ).returncode
+    sys.exit(rc)
+
+
 @tunnel.command(name="status")
 def tunnel_status():
     """Show the local flubpub-tunnel systemd unit status."""

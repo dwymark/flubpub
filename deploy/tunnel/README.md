@@ -35,9 +35,21 @@ TUNNEL_PORT=47022 REMOTE_HOST=danielwymark.com bash deploy/tunnel/setup-tunnel.s
 ssh -p 47022 dwymark@danielwymark.com
 ```
 
-Password auth is on today. **Switch to keys** by appending your work machine's
-public key to `~/.ssh/authorized_keys` on the home box, then set
-`PasswordAuthentication no` in the home sshd config.
+**Switch to keys:** append your work machine's public key to
+`~/.ssh/authorized_keys` on the home box, then disable password auth:
+
+```bash
+flubpub tunnel password-auth off      # writes a PasswordAuthentication no drop-in, reloads sshd
+flubpub tunnel password-auth on       # re-enable if you need to
+# underlying primitive:
+bash deploy/tunnel/setup-tunnel.sh --password-auth off
+```
+
+This toggles the **local** sshd (the one the tunnel exposes publicly) via
+`/etc/ssh/sshd_config.d/40-flubpub-passwordauth.conf`. The `40-` prefix sorts it
+ahead of any cloud-init drop-in so it wins. Verify no key is lost *before*
+disabling — `flubpub tunnel password-auth off` will not warn you if
+`authorized_keys` is empty.
 
 ## Operate
 

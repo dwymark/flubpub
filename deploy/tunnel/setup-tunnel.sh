@@ -19,6 +19,11 @@
 #
 # Teardown: pass  --down  to stop+disable the local unit and remove the VPS
 # snippet (leaves autossh installed).
+#
+# Password-auth toggle: pass  --password-auth on|off  to set the LOCAL sshd's
+# PasswordAuthentication policy (a drop-in this box's tunnel exposes publicly).
+# This mode only touches local sshd — it does not stand up or tear down the
+# tunnel. Disable password auth once your key is installed.
 set -euo pipefail
 
 TUNNEL_PORT="${TUNNEL_PORT:-47022}"
@@ -26,13 +31,34 @@ REMOTE_HOST="${REMOTE_HOST:-danielwymark.com}"
 REMOTE_USER="${REMOTE_USER:-root}"
 LOCAL_USER="${LOCAL_USER:-$USER}"
 LOCAL_SSH_PORT="${LOCAL_SSH_PORT:-22}"
+# Overridable so the local sshd edit can be exercised against a temp dir.
+LOCAL_SSHD_CONFIG_D="${LOCAL_SSHD_CONFIG_D:-/etc/ssh/sshd_config.d}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UNIT_NAME="flubpub-tunnel.service"
 UNIT_DEST="/etc/systemd/system/${UNIT_NAME}"
 REMOTE_SNIPPET="/etc/ssh/sshd_config.d/40-flubpub-tunnel.conf"
+PWAUTH_SNIPPET="${LOCAL_SSHD_CONFIG_D}/40-flubpub-passwordauth.conf"
 
 say() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
+
+set_password_auth() {
+  local state="${1:-}" val
+  case "$state" in
+    on|yes|enable)   val=yes ;;
+    off|no|disable)  val=no ;;
+    *) echo "usage: $0 --password-auth on|off" >&2; exit 2 ;;
+  esac
+  say "Setting local sshd PasswordAuthentication=$val -> $PWAUTH_SNIPPET"
+  # Prefix 40- so this sorts ahead of any 50-cloud-init drop-in (first match
+  # wins in sshd), and the Include sits above the main config's own lines.
+  printf '# flubpub tunnel — local sshd auth policy (managed by setup-tunnel.sh)\nPasswordAuthentication %s\nKbdInteractiveAuthentication %s\n' \
+    "$val" "$val" | sudo tee "$PWAUTH_SNIPPET" >/dev/null
+  sudo chmod 644 "$PWAUTH_SNIPPET"
+  sudo sshd -t
+  sudo systemctl reload ssh
+  say "Done. Effective PasswordAuthentication: $(sudo sshd -T | awk '/^passwordauthentication/{print $2}')"
+}
 
 teardown() {
   say "Tearing down local unit"
@@ -46,6 +72,7 @@ teardown() {
 }
 
 if [[ "${1:-}" == "--down" ]]; then teardown; exit 0; fi
+if [[ "${1:-}" == "--password-auth" ]]; then set_password_auth "${2:-}"; exit 0; fi
 
 # --- 1. LOCAL: autossh -------------------------------------------------------
 if ! command -v autossh >/dev/null 2>&1; then

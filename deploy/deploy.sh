@@ -53,7 +53,13 @@ ssh "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}/{dist,site,deploy}"
 echo "Syncing files to remote..."
 rsync -av --delete --exclude node_modules --exclude _site --exclude __pycache__ --exclude .venv \
     dist/ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/dist/"
+# Sync the site scaffold (11ty config, index.njk, _includes) but never the
+# server-managed instance content: src/pages and src/assets are written by the
+# running flubpub server on the box (push/set-index/asset-upload), and _site is
+# its build output. Rsyncing the local dev install's copies here would clobber
+# production content and leak local pages onto the live site. Exclude all three.
 rsync -av --exclude node_modules --exclude _site --exclude __pycache__ \
+    --exclude /src/pages --exclude /src/assets \
     site/ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/site/"
 rsync -av deploy/ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/deploy/"
 

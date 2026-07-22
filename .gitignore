@@ -11,3 +11,8 @@ site/src/pages/*.md
 site/src/pages/*.html
 .cards/
 scratch/
+
+# Emacs droppings
+\#*\#
+.\#*
+*~

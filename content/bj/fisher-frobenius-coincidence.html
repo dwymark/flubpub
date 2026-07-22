@@ -1,0 +1,3282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Fisher–Frobenius Coincidence — A Tutorial</title>
+<style>
+  /* ============================================================
+     Keitai-studious skeleton × lookbook-dense-dashboard discipline.
+
+     Two-panel layout (Tufte main + NeXTSTEP inspector): the left
+     panel is the nested TOC (fleet state); the right panel is the
+     content-plus-visualisation that follows selection.
+
+     The backdrop colour changes per topic to communicate *where in
+     the argument* the reader is. The foreground card is locked to
+     off-white; ink is restricted to black, red, blue, green — red
+     for the combinatorial thread, blue for the algebraic thread,
+     green for the geometric thread, black for connective prose.
+     ============================================================ */
+
+  :root {
+    /* Foreground ink palette — semantic, not decorative */
+    --ink:          #1a1a1a;
+    --ink-soft:     #4a4a4a;
+    --ink-faint:    #888888;
+    --paper:        #f7f2e8;   /* off-white, warm */
+    --paper-card:   #fbf8f0;   /* slightly brighter for inset cards */
+    --rule:         #d6cfbf;
+    --rule-soft:    #e8e2d0;
+
+    --red:          #a01818;   /* combinatorial / designs */
+    --blue:         #1a3d82;   /* algebraic / finite fields */
+    --green:        #1f6631;   /* geometric / Delaunay */
+
+    --red-pale:     #f0d8d8;
+    --blue-pale:    #d8e0f0;
+    --green-pale:   #d8ecdc;
+
+    /* Backdrop colour — set per topic by JS */
+    --backdrop:     #2a2f3a;   /* default: slate */
+    --backdrop-deep:#1a1d24;
+
+    /* Layout tokens */
+    --toc-w:        320px;
+    --col-max:      680px;
+    --pad:          22px;
+  }
+
+  /* Flat chrome — no shadows, no gradients, no rounded content containers */
+  html, body { margin: 0; padding: 0; }
+  html { background: var(--backdrop-deep); }
+  body {
+    background: var(--backdrop);
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino", "Palatino Linotype",
+                 "Book Antiqua", Georgia, serif;
+    font-size: 15px;
+    line-height: 1.65;
+    letter-spacing: 0.005em;
+    transition: background-color 280ms linear;
+    min-height: 100vh;
+  }
+
+  /* Topic-keyed backdrop classes applied to <body> */
+  body.t-cover    { --backdrop: #2a2f3a; --backdrop-deep: #1a1d24; }
+  body.t-designs  { --backdrop: #5a1818; --backdrop-deep: #380f0f; }
+  body.t-fisher   { --backdrop: #6a2020; --backdrop-deep: #401414; }
+  body.t-fields   { --backdrop: #1a2a5a; --backdrop-deep: #101a3a; }
+  body.t-frobenius{ --backdrop: #1a3564; --backdrop-deep: #0f2040; }
+  body.t-proj     { --backdrop: #18483a; --backdrop-deep: #0f2e24; }
+  body.t-delaunay { --backdrop: #215a30; --backdrop-deep: #12381e; }
+  body.t-conj     { --backdrop: #0a0a0a; --backdrop-deep: #000000; }
+
+  /* ====== Page shell ====== */
+  .shell {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+    display: grid;
+    grid-template-columns: var(--toc-w) 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* ====== Left panel: banner + TOC ====== */
+  .toc-panel {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+  .banner {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 14px 16px 10px;
+    text-align: left;
+  }
+  .banner h1 {
+    font-size: 15px;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+  }
+  .banner .subtitle {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-top: 4px;
+    color: rgba(247,242,232,0.72);
+  }
+
+  /* TOC nav — nested, numbered keycaps */
+  nav.toc {
+    padding: 8px 0 14px;
+  }
+  nav.toc ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  nav.toc > ol > li {
+    border-bottom: 1px dotted var(--rule);
+  }
+  nav.toc > ol > li:last-child {
+    border-bottom: none;
+  }
+  nav.toc a {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    padding: 8px 14px;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 13.5px;
+    line-height: 1.4;
+    letter-spacing: 0.005em;
+  }
+  nav.toc a:active { background: #fff4c4; }
+  nav.toc .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    border-radius: 50%;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    background: var(--paper);
+    transform: translateY(1px);
+  }
+  nav.toc .num.sub {
+    width: 18px;
+    height: 18px;
+    font-size: 9.5px;
+    border-style: dotted;
+  }
+  /* Sub-list */
+  nav.toc ol ol {
+    padding: 2px 0 8px 20px;
+    border-top: 1px dotted var(--rule-soft);
+  }
+  nav.toc ol ol li {
+    border-bottom: none;
+  }
+  nav.toc ol ol a {
+    padding: 5px 14px 5px 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    letter-spacing: 0.01em;
+  }
+  nav.toc .active > a,
+  nav.toc a.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  nav.toc .active > a .num,
+  nav.toc a.active .num {
+    background: var(--paper);
+    color: var(--ink);
+    border-color: var(--paper);
+  }
+
+  /* Thread dots — colour-coded per thread (red = combinatorial,
+     blue = algebraic, green = geometric) */
+  .thread {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-left: auto;
+    flex-shrink: 0;
+    align-self: center;
+    border: 1px solid var(--ink);
+  }
+  .thread.r { background: var(--red); border-color: var(--red); }
+  .thread.b { background: var(--blue); border-color: var(--blue); }
+  .thread.g { background: var(--green); border-color: var(--green); }
+  .thread.k { background: var(--ink); }
+  .thread.w { background: var(--paper); }
+
+  /* ====== Right panel ====== */
+  .content-panel {
+    min-width: 0;  /* allow grid child to shrink */
+  }
+  .topic {
+    display: none;
+    animation: fadein 200ms ease-out;
+  }
+  .topic.active {
+    display: block;
+  }
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Section header strip */
+  .topic-head {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 16px 22px 14px;
+    margin-bottom: 14px;
+  }
+  .topic-head .crumb {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .topic-head h2 {
+    font-size: 22px;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    color: var(--ink);
+  }
+  .topic-head .tag {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 11px;
+    padding: 1px 7px;
+    border: 1px solid currentColor;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .tag.r { color: var(--red); }
+  .tag.b { color: var(--blue); }
+  .tag.g { color: var(--green); }
+  .tag.k { color: var(--ink); }
+
+  /* Viz card — always white to reset the coloured surround */
+  .viz {
+    background: var(--paper-card);
+    border: 1px solid var(--rule);
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .viz svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  .viz figcaption {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 10px;
+    line-height: 1.5;
+    font-style: italic;
+  }
+  .viz figcaption .figlabel {
+    font-style: normal;
+    font-variant: small-caps;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    margin-right: 4px;
+  }
+
+  /* Prose card */
+  .prose {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 20px 24px 22px;
+  }
+  .prose p { margin: 0 0 12px; }
+  .prose p:last-child { margin-bottom: 0; }
+  .prose h3 {
+    font-size: 14px;
+    margin: 18px 0 8px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .prose h3:first-child { margin-top: 0; }
+
+  /* Definition / theorem / example cards (keitai idiom) */
+  .defn, .thm, .ex, .note {
+    background: var(--paper-card);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink);
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 14.5px;
+    line-height: 1.55;
+  }
+  .defn { border-left-color: var(--ink); }
+  .thm  { border-left-color: var(--red); }
+  .ex   { border-left-color: var(--blue); }
+  .note { border-left-color: var(--green); }
+
+  .defn .label, .thm .label, .ex .label, .note .label {
+    font-variant: small-caps;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    margin-right: 6px;
+  }
+  .thm .label  { color: var(--red); }
+  .ex  .label  { color: var(--blue); }
+  .note .label { color: var(--green); }
+  .defn .label { color: var(--ink); }
+
+  /* Math-ish inline typography */
+  .var, .prose var, .viz text.lbl {
+    font-style: italic;
+    font-family: "Georgia", "Iowan Old Style", serif;
+  }
+
+  .eq {
+    display: block;
+    text-align: center;
+    margin: 10px 0;
+    font-family: "Georgia", serif;
+    font-size: 15px;
+    font-style: italic;
+  }
+  .eq .eqnum {
+    float: right;
+    font-style: normal;
+    color: var(--ink-faint);
+    font-size: 12px;
+  }
+
+  /* Annotation list (keitai) */
+  .annot {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 14px;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  .annot li {
+    padding: 4px 0 4px 18px;
+    border-bottom: 1px dotted var(--rule);
+    position: relative;
+  }
+  .annot li:last-child { border-bottom: none; }
+  .annot li::before {
+    content: "›";
+    position: absolute;
+    left: 2px;
+    top: 3px;
+    color: var(--ink-faint);
+    font-weight: 700;
+  }
+
+  /* Divider rules — keitai plain Unicode, but darker */
+  .divider {
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 10px;
+    padding: 8px 0 10px;
+    letter-spacing: 0.3em;
+    user-select: none;
+  }
+  .divider.r::before { content: "─ ─ ─ ─ ─ ─ ─ ─ ─"; }
+  .divider.t::before { content: "━ ━ ━ ━ ━ ━ ━ ━ ━"; }
+
+  /* Tables — hairline, no box-shadow, Tufte minimal */
+  table.calc {
+    border-collapse: collapse;
+    margin: 8px auto;
+    font-family: "Georgia", serif;
+    font-size: 14px;
+  }
+  table.calc th, table.calc td {
+    padding: 4px 10px;
+    border: 1px solid var(--rule);
+    text-align: center;
+    font-style: italic;
+    font-weight: normal;
+  }
+  table.calc th {
+    background: var(--paper);
+    font-weight: 700;
+    font-style: normal;
+    font-variant: small-caps;
+    letter-spacing: 0.06em;
+    font-size: 12px;
+  }
+
+  /* Footer pagination */
+  .pager {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 16px;
+    padding: 0 2px;
+  }
+  .pager a {
+    display: block;
+    padding: 8px 12px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    flex: 1;
+    max-width: 46%;
+  }
+  .pager a:active { background: #fff4c4; }
+  .pager a.prev::before { content: "← "; color: var(--ink-faint); }
+  .pager a.next::after  { content: " →"; color: var(--ink-faint); }
+  .pager a.next { text-align: right; }
+  .pager a.disabled { visibility: hidden; }
+
+  /* Narrow viewport: stack the two panels */
+  @media (max-width: 860px) {
+    .shell {
+      grid-template-columns: 1fr;
+    }
+    .toc-panel {
+      position: static;
+      max-height: none;
+    }
+  }
+
+  /* SVG global style (inherited inside the figure element) */
+  .fig {
+    --stroke: #1a1a1a;
+    --red:    #a01818;
+    --blue:   #1a3d82;
+    --green:  #1f6631;
+  }
+</style>
+</head>
+<body class="t-cover">
+<div class="shell">
+  <!-- ================= LEFT PANEL ================= -->
+  <aside class="toc-panel" aria-label="Table of contents">
+    <div class="banner">
+      <h1>The Fisher–Frobenius Coincidence</h1>
+      <div class="subtitle">A Tutorial · Conjecture I</div>
+    </div>
+    <nav class="toc" aria-label="Contents">
+      <ol>
+        <li data-topic="cover">
+          <a href="#cover"><span class="num">0</span>What the conjecture says<span class="thread k"></span></a>
+        </li>
+        <li data-topic="designs">
+          <a href="#designs"><span class="num">1</span>Combinatorial designs<span class="thread r"></span></a>
+          <ol>
+            <li data-topic="designs-regular"><a href="#designs-regular"><span class="num sub">1a</span>Regular, uniform, balanced</a></li>
+            <li data-topic="designs-params"><a href="#designs-params"><span class="num sub">1b</span>The BIBD parameter equations</a></li>
+            <li data-topic="designs-matrix"><a href="#designs-matrix"><span class="num sub">1c</span>The incidence matrix</a></li>
+          </ol>
+        </li>
+        <li data-topic="fisher">
+          <a href="#fisher"><span class="num">2</span>Fisher's inequality<span class="thread r"></span></a>
+          <ol>
+            <li data-topic="fisher-morris"><a href="#fisher-morris"><span class="num sub">2a</span>Morris's counting proof</a></li>
+            <li data-topic="fisher-rank"><a href="#fisher-rank"><span class="num sub">2b</span>The rank (linear-algebra) view</a></li>
+          </ol>
+        </li>
+        <li data-topic="fields">
+          <a href="#fields"><span class="num">3</span>Finite fields GF(<var>q</var>)<span class="thread b"></span></a>
+          <ol>
+            <li data-topic="fields-primepower"><a href="#fields-primepower"><span class="num sub">3a</span>Why prime powers?</a></li>
+            <li data-topic="fields-gf4"><a href="#fields-gf4"><span class="num sub">3b</span>GF(4) by hand</a></li>
+          </ol>
+        </li>
+        <li data-topic="frobenius">
+          <a href="#frobenius"><span class="num">4</span>Frobenius and Galois<span class="thread b"></span></a>
+          <ol>
+            <li data-topic="frobenius-map"><a href="#frobenius-map"><span class="num sub">4a</span>The map <var>σ</var>: <var>x</var> ↦ <var>x</var><sup><var>q</var></sup></a></li>
+            <li data-topic="frobenius-orbits"><a href="#frobenius-orbits"><span class="num sub">4b</span>Orbits and the cyclic group</a></li>
+          </ol>
+        </li>
+        <li data-topic="proj">
+          <a href="#proj"><span class="num">5</span>The projective plane PG(2,<var>q</var>)<span class="thread g"></span></a>
+          <ol>
+            <li data-topic="proj-construction"><a href="#proj-construction"><span class="num sub">5a</span>From GF(<var>q</var>)³ to points and lines</a></li>
+            <li data-topic="proj-fano"><a href="#proj-fano"><span class="num sub">5b</span>The Fano plane PG(2, 2)</a></li>
+            <li data-topic="proj-isbibd"><a href="#proj-isbibd"><span class="num sub">5c</span>It <i>is</i> a symmetric BIBD</a></li>
+          </ol>
+        </li>
+        <li data-topic="delaunay">
+          <a href="#delaunay"><span class="num">6</span>Delaunay triangulations<span class="thread g"></span></a>
+          <ol>
+            <li data-topic="delaunay-angle"><a href="#delaunay-angle"><span class="num sub">6a</span>Angle-optimality</a></li>
+            <li data-topic="delaunay-empty"><a href="#delaunay-empty"><span class="num sub">6b</span>The empty-circumcircle criterion</a></li>
+            <li data-topic="delaunay-lift"><a href="#delaunay-lift"><span class="num sub">6c</span>The leap to ℝ<sup><var>v</var></sup></a></li>
+          </ol>
+        </li>
+        <li data-topic="conj">
+          <a href="#conj"><span class="num">7</span>The conjecture, read<span class="thread k"></span></a>
+          <ol>
+            <li data-topic="conj-statement"><a href="#conj-statement"><span class="num sub">7a</span>Full statement</a></li>
+            <li data-topic="conj-fano"><a href="#conj-fano"><span class="num sub">7b</span>The Fano case, explicitly</a></li>
+            <li data-topic="conj-commentary"><a href="#conj-commentary"><span class="num sub">7c</span>What could go wrong</a></li>
+          </ol>
+        </li>
+      </ol>
+    </nav>
+  </aside>
+
+  <!-- ================= RIGHT PANEL ================= -->
+  <main class="content-panel">
+    <!-- TOPICS INSERTED BELOW -->
+    <!-- 0. COVER -->
+<section id="cover" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 0 · orientation</div>
+    <h2>What the conjecture says, in one breath</h2>
+    <span class="tag k">the tripoint</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 560 290" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Three labelled arcs converging on a central node. Red arc labelled Morris BIBDs and Fisher. Blue arc labelled Shoup finite fields and Frobenius. Green arc labelled BCKO Delaunay and angle-optimality. The central node is the conjecture.">
+      <defs>
+        <marker id="arrh" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--stroke)"/>
+        </marker>
+      </defs>
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11.5px; fill: var(--stroke); }
+        .fig .ttl { font-size: 13px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .lbl { font-style: italic; }
+      </style>
+      <!-- central node -->
+      <circle cx="280" cy="160" r="34" fill="none" stroke="var(--stroke)" stroke-width="1.3"/>
+      <text x="280" y="156" text-anchor="middle" class="ttl">Conj. I</text>
+      <text x="280" y="170" text-anchor="middle" font-size="10">Fisher</text>
+      <text x="280" y="182" text-anchor="middle" font-size="10">Frobenius</text>
+
+      <!-- Red: BIBDs — label centred above the arm start -->
+      <path d="M 140 80 Q 190 120 246 145" fill="none" stroke="var(--red)" stroke-width="1.2" marker-end="url(#arrh)"/>
+      <text x="140" y="54" fill="var(--red)" text-anchor="middle" class="ttl">Morris</text>
+      <text x="140" y="70" fill="var(--red)" text-anchor="middle">BIBDs, Fisher's inequality</text>
+
+      <!-- Blue: Frobenius -->
+      <path d="M 280 40 Q 280 80 280 126" fill="none" stroke="var(--blue)" stroke-width="1.2" marker-end="url(#arrh)"/>
+      <text x="280" y="20" fill="var(--blue)" text-anchor="middle" class="ttl">Shoup</text>
+      <text x="280" y="36" fill="var(--blue)" text-anchor="middle">GF(q), Frobenius σ: x ↦ xᵠ</text>
+
+      <!-- Green: Delaunay — label centred above the arm start -->
+      <path d="M 420 80 Q 370 120 314 145" fill="none" stroke="var(--green)" stroke-width="1.2" marker-end="url(#arrh)"/>
+      <text x="420" y="54" fill="var(--green)" text-anchor="middle" class="ttl">BCKO</text>
+      <text x="420" y="70" fill="var(--green)" text-anchor="middle">Delaunay, angle-optimality</text>
+
+      <!-- Connective prose at bottom -->
+      <line x1="80" y1="234" x2="480" y2="234" stroke="var(--stroke)" stroke-width="0.5"/>
+      <text x="280" y="254" text-anchor="middle" class="lbl">the claim: for the symmetric BIBD coming from PG(2, q),</text>
+      <text x="280" y="270" text-anchor="middle" class="lbl">Frobenius orbits coincide with Delaunay faces.</text>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 0.</span> The conjecture lives at a tripoint of three textbook traditions. A combinatorial object (the projective plane, as a symmetric BIBD) carries an algebraic symmetry (Frobenius) and a metric symmetry (angle-optimal Delaunay faces). The claim: the two symmetries agree.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>What the tutorial does</h3>
+    <p>The conjecture below sits at the intersection of three undergraduate courses that rarely speak: design theory, finite-field algebra, and computational geometry. Each supplies one piece of the statement, and none supplies the bridge. The tutorial builds every piece from first principles, then reads the statement slowly.</p>
+
+    <div class="defn">
+      <span class="label">Conjecture I (informal).</span> Take the symmetric block design coming from the projective plane over a finite field GF(<var>q</var>); write down its incidence matrix; treat the rows as points in Euclidean space; compute the Delaunay triangulation of those points. Then the faces of the triangulation are precisely the orbits of the Frobenius automorphism <var>σ</var>: <var>x</var> ↦ <var>x</var><sup><var>q</var></sup>.
+    </div>
+
+    <p>Four words in that sentence are load-bearing and will get a dedicated section apiece: <span style="color:var(--red)">symmetric block design</span>, <span style="color:var(--blue)">Frobenius automorphism</span>, <span style="color:var(--green)">Delaunay triangulation</span>, and <span style="color:var(--blue)">projective plane over GF(<var>q</var>)</span>. The colour coding above is the tutorial's recurring visual vocabulary: <span style="color:var(--red)">red for the combinatorial thread</span>, <span style="color:var(--blue)">blue for the algebraic thread</span>, <span style="color:var(--green)">green for the geometric thread</span>. When threads converge at §7, the backdrop goes black.</p>
+
+    <h3>How to read it</h3>
+    <p>The table of contents on the left is the spine. Each numbered badge drops you at a topic; the sub-lettered items are the prerequisites for that topic. Arrow keys step through in order. The visualisation in the card above each section changes to match the topic. Nothing depends on installing anything — the page is self-contained.</p>
+
+    <p class="aside" style="font-size: 12.5px; color: var(--ink-soft); margin-top: 16px;">Prerequisites: linear algebra (vector spaces, matrix rank), basic combinatorics (binomial coefficients, counting arguments). Nothing else. No abstract algebra, no topology, no computational geometry background is assumed — each is built from scratch.</p>
+  </div>
+
+  <div class="pager">
+    <a class="prev disabled" href="#cover">previous</a>
+    <a class="next" href="#designs">1 · Combinatorial designs</a>
+  </div>
+</section>
+
+
+<!-- 1. DESIGNS -->
+<section id="designs" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 1 · the combinatorial thread</div>
+    <h2>Combinatorial designs</h2>
+    <span class="tag r">Morris, ch. 17</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A small design: seven points arranged, with seven triples of points drawn as curves, each triple being a block. Every pair of points appears in exactly one triple.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); }
+        .fig .lbl { font-style: italic; }
+        .fig .capt { font-size: 10.5px; fill: #4a4a4a; }
+      </style>
+      <!-- Seven points: one big cluster on the left showing V; blocks listed on right -->
+      <!-- LEFT: the set V of 7 points -->
+      <text x="70" y="22" class="lbl" text-anchor="middle" font-weight="700">V = {1,2,3,4,5,6,7}</text>
+      <!-- small dots + labels -->
+      <g>
+        <!-- positions of points 1..7 in a circle -->
+        <!-- center (70, 125), r = 60 -->
+        <circle cx="70" cy="65"  r="3" fill="var(--stroke)"/><text x="70" y="58"  text-anchor="middle" class="lbl">1</text>
+        <circle cx="122" cy="95" r="3" fill="var(--stroke)"/><text x="132" y="93" class="lbl">2</text>
+        <circle cx="122" cy="155" r="3" fill="var(--stroke)"/><text x="132" y="160" class="lbl">3</text>
+        <circle cx="70" cy="185" r="3" fill="var(--stroke)"/><text x="70" y="200" text-anchor="middle" class="lbl">4</text>
+        <circle cx="18" cy="155" r="3" fill="var(--stroke)"/><text x="8" y="160" class="lbl">5</text>
+        <circle cx="18" cy="95"  r="3" fill="var(--stroke)"/><text x="8"  y="93" class="lbl">6</text>
+        <circle cx="70" cy="125" r="3" fill="var(--stroke)"/><text x="80" y="129" class="lbl">7</text>
+      </g>
+
+      <!-- RIGHT: the seven blocks -->
+      <g transform="translate(200,30)">
+        <text x="0" y="0" font-weight="700" class="lbl">B = { blocks of size 3 }</text>
+        <g fill="var(--red)" font-family="Georgia" font-style="italic" font-size="12">
+          <text x="0"  y="22">{1, 2, 4}</text>
+          <text x="0"  y="42">{1, 3, 5}</text>
+          <text x="0"  y="62">{1, 6, 7}</text>
+          <text x="0"  y="82">{2, 3, 6}</text>
+          <text x="0"  y="102">{2, 5, 7}</text>
+          <text x="0"  y="122">{3, 4, 7}</text>
+          <text x="0"  y="142">{4, 5, 6}</text>
+        </g>
+        <text x="0" y="172" class="capt">7 points · 7 blocks · each block size 3</text>
+        <text x="0" y="188" class="capt">each point in 3 blocks · each pair in 1 block</text>
+        <text x="0" y="210" font-weight="700" class="lbl">this is a BIBD(7, 3, 1)</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 1.</span> The parade example. A <i>design</i> on seven points with seven blocks of size three, in which every pair of points appears in exactly one block. We will see this object three more times: as the Fano plane, as a symmetric BIBD, and as the matrix <var>A</var> in the conjecture.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>What is a design?</h3>
+    <p>A <i>design</i> is a pair (<var>V</var>, <var>B</var>) where <var>V</var> is a finite set of <i>points</i> and <var>B</var> is a collection of subsets of <var>V</var> called <i>blocks</i>. That is the whole structure. Take a seven-element set; pick some three-element subsets; you have a design. Nothing asks for more.</p>
+
+    <p>Interesting designs — the ones that show up in statistics, coding theory, finite geometry, and the conjecture — are the ones where the blocks are distributed evenly. "Evenly" decomposes into three conditions, and each has a name. The next subsection walks through them.</p>
+
+    <div class="note">
+      <span class="label">Historical note.</span> The "I" in "BIBD" stands for <i>incomplete</i>, a term inherited from experimental design: a complete design would have every possible subset of size <var>k</var> as a block, which for small <var>k</var> is usually too many to run as experiments. Morris introduces the vocabulary in Chapter 17.1.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#cover">0 · Cover</a>
+    <a class="next" href="#designs-regular">1a · Regular, uniform, balanced</a>
+  </div>
+</section>
+
+
+<!-- 1a. DESIGNS — regularity conditions -->
+<section id="designs-regular" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 1a · combinatorial</div>
+    <h2>Regular, uniform, balanced</h2>
+    <span class="tag r">three conditions</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 240" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Three small diagrams side by side illustrating regular, uniform, and balanced conditions on a design.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 10.5px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .lbl { font-style: italic; }
+      </style>
+
+      <!-- LEFT panel: REGULAR -->
+      <g transform="translate(20,20)">
+        <text x="60" y="0" text-anchor="middle" class="ttl">Regular</text>
+        <text x="60" y="14" text-anchor="middle" font-size="10">every point in r blocks</text>
+        <!-- point at top -->
+        <circle cx="60" cy="40" r="4" fill="var(--red)"/>
+        <text x="60" y="35" text-anchor="middle" class="lbl" dy="-4">p</text>
+        <!-- r=3 blocks -->
+        <rect x="15" y="80"  width="30" height="22" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+        <rect x="55" y="80"  width="30" height="22" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+        <rect x="95" y="80"  width="30" height="22" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+        <line x1="60" y1="44" x2="30" y2="80" stroke="var(--red)" stroke-width="0.9"/>
+        <line x1="60" y1="44" x2="70" y2="80" stroke="var(--red)" stroke-width="0.9"/>
+        <line x1="60" y1="44" x2="110" y2="80" stroke="var(--red)" stroke-width="0.9"/>
+        <text x="60" y="135" text-anchor="middle" class="lbl">r = 3</text>
+      </g>
+
+      <!-- MIDDLE: UNIFORM -->
+      <g transform="translate(160,20)">
+        <text x="60" y="0" text-anchor="middle" class="ttl">Uniform</text>
+        <text x="60" y="14" text-anchor="middle" font-size="10">every block size k</text>
+        <!-- three blocks shown as rounded rectangles with equal point counts -->
+        <g fill="none" stroke="var(--stroke)" stroke-width="0.9">
+          <rect x="10" y="40" width="100" height="20"/>
+          <rect x="10" y="70" width="100" height="20"/>
+          <rect x="10" y="100" width="100" height="20"/>
+        </g>
+        <!-- three dots per block -->
+        <g fill="var(--red)">
+          <circle cx="30" cy="50" r="2.5"/><circle cx="60" cy="50" r="2.5"/><circle cx="90" cy="50" r="2.5"/>
+          <circle cx="30" cy="80" r="2.5"/><circle cx="60" cy="80" r="2.5"/><circle cx="90" cy="80" r="2.5"/>
+          <circle cx="30" cy="110" r="2.5"/><circle cx="60" cy="110" r="2.5"/><circle cx="90" cy="110" r="2.5"/>
+        </g>
+        <text x="60" y="135" text-anchor="middle" class="lbl">k = 3</text>
+      </g>
+
+      <!-- RIGHT: BALANCED -->
+      <g transform="translate(300,20)">
+        <text x="60" y="0" text-anchor="middle" class="ttl">Balanced</text>
+        <text x="60" y="14" text-anchor="middle" font-size="10">every pair in λ blocks</text>
+        <!-- two points -->
+        <circle cx="30" cy="40" r="4" fill="var(--red)"/>
+        <text x="20" y="40" class="lbl">p</text>
+        <circle cx="90" cy="40" r="4" fill="var(--red)"/>
+        <text x="100" y="40" class="lbl">q</text>
+        <!-- curve between them -->
+        <path d="M 30 44 Q 60 68 90 44" fill="none" stroke="var(--stroke)" stroke-width="0.7" stroke-dasharray="2 2"/>
+        <!-- the one block that contains both -->
+        <rect x="15" y="80" width="90" height="22" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+        <line x1="30" y1="44" x2="35" y2="80" stroke="var(--red)" stroke-width="0.9"/>
+        <line x1="90" y1="44" x2="85" y2="80" stroke="var(--red)" stroke-width="0.9"/>
+        <text x="60" y="135" text-anchor="middle" class="lbl">λ = 1</text>
+      </g>
+
+      <!-- bottom note -->
+      <text x="220" y="205" text-anchor="middle" class="ttl">all three + incomplete (k &lt; v) = BIBD</text>
+      <text x="220" y="222" text-anchor="middle" font-size="10">(v, k, λ) together determine b and r</text>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 1a.</span> The three regularity conditions on a design, shown independently. A design that satisfies all three — and has <var>k</var> &lt; <var>v</var> so it is not the trivial "one block containing everything" — is a <i>balanced incomplete block design</i>, written BIBD(<var>v</var>, <var>k</var>, <var>λ</var>).
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The three conditions</h3>
+
+    <div class="defn">
+      <span class="label">Regular.</span> Every point is in the same number of blocks. Call that number <var>r</var>.
+    </div>
+    <div class="defn">
+      <span class="label">Uniform.</span> Every block has the same size. Call that size <var>k</var>.
+    </div>
+    <div class="defn">
+      <span class="label">Balanced.</span> Every pair of distinct points appears together in the same number of blocks. Call that number <var>λ</var>.
+    </div>
+
+    <p>A design satisfying all three conditions, with <var>k</var> &lt; <var>v</var>, is a <i>balanced incomplete block design</i>. The parameters are five: <var>v</var> (number of points), <var>b</var> (number of blocks), <var>r</var> (points are in this many blocks), <var>k</var> (blocks have this many points), <var>λ</var> (pairs appear in this many blocks). The notation BIBD(<var>v</var>, <var>k</var>, <var>λ</var>) lists only three of them, because <var>b</var> and <var>r</var> are forced by the others — the next subsection explains how.</p>
+
+    <h3>Worked example, re-read</h3>
+    <p>The design from Figure 1 has <var>v</var> = 7 points and <var>b</var> = 7 blocks, each of size <var>k</var> = 3. Count: point 1 is in {1,2,4}, {1,3,5}, {1,6,7} — three blocks. So <var>r</var> = 3 at point 1, and by symmetry the same at every point; the design is regular. Every listed block has size 3; it is uniform. The pair {1, 2} is in block {1,2,4} and no other; the pair {2, 5} is in block {2,5,7} and no other; every pair is in exactly one block; <var>λ</var> = 1 and the design is balanced. Conclusion: BIBD(7, 3, 1).</p>
+
+    <div class="note">
+      <span class="label">What "incomplete" buys.</span> The complete design on seven points with <var>k</var> = 3 would include all C(7, 3) = 35 triples. That is also a BIBD, but a trivial one; it contains every triple, so there is no combinatorial content to the pair-counting. The incomplete designs — where most triples are excluded — are the interesting ones.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#designs">1 · Combinatorial designs</a>
+    <a class="next" href="#designs-params">1b · Parameter equations</a>
+  </div>
+</section>
+
+
+<!-- 1b. DESIGNS — parameters -->
+<section id="designs-params" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 1b · combinatorial</div>
+    <h2>The BIBD parameter equations</h2>
+    <span class="tag r">double counting</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Two double-counting diagrams. On the left, count (point, block)-incidences two ways giving bk=vr. On the right, fix a point p and count other points that co-occur with p, giving r(k-1)=lambda(v-1).">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .lbl { font-style: italic; }
+        .fig .eq  { font-family: Georgia, serif; font-style: italic; font-size: 13px; }
+      </style>
+
+      <!-- LEFT: bk = vr -->
+      <g transform="translate(10,10)">
+        <text x="100" y="0" text-anchor="middle" class="ttl">count (point, block)</text>
+        <text x="100" y="14" text-anchor="middle" font-size="10">incidences two ways</text>
+
+        <!-- points column -->
+        <g transform="translate(20,40)">
+          <text x="0" y="-6" font-size="10">points</text>
+          <g fill="var(--red)">
+            <circle cx="5" cy="5" r="2.5"/>
+            <circle cx="5" cy="18" r="2.5"/>
+            <circle cx="5" cy="31" r="2.5"/>
+            <circle cx="5" cy="44" r="2.5"/>
+            <circle cx="5" cy="57" r="2.5"/>
+          </g>
+          <text x="18" y="35" font-size="10">v·r</text>
+        </g>
+
+        <!-- equals sign -->
+        <text x="92" y="78" class="eq" text-anchor="middle">=</text>
+
+        <!-- blocks column -->
+        <g transform="translate(110,40)">
+          <text x="0" y="-6" font-size="10">blocks</text>
+          <g fill="none" stroke="var(--stroke)" stroke-width="0.9">
+            <rect x="0" y="0" width="50" height="10"/>
+            <rect x="0" y="15" width="50" height="10"/>
+            <rect x="0" y="30" width="50" height="10"/>
+            <rect x="0" y="45" width="50" height="10"/>
+          </g>
+          <text x="60" y="35" font-size="10">b·k</text>
+        </g>
+
+        <!-- equation at bottom -->
+        <text x="100" y="180" text-anchor="middle" class="eq" font-size="16" font-weight="700">bk = vr</text>
+        <text x="100" y="202" text-anchor="middle" font-size="10">(Morris Thm 17.1.1)</text>
+      </g>
+
+      <!-- Divider -->
+      <line x1="220" y1="20" x2="220" y2="240" stroke="var(--rule)" stroke-width="0.6"/>
+
+      <!-- RIGHT: r(k-1) = λ(v-1) -->
+      <g transform="translate(230,10)">
+        <text x="100" y="0" text-anchor="middle" class="ttl">fix a point p</text>
+        <text x="100" y="14" text-anchor="middle" font-size="10">count partners two ways</text>
+
+        <!-- point p -->
+        <circle cx="100" cy="54" r="5" fill="var(--red)"/>
+        <text x="100" y="48" text-anchor="middle" class="lbl" dy="-4">p</text>
+
+        <!-- r blocks (showing 3) each contributing k-1 partners -->
+        <g>
+          <rect x="30" y="85" width="30" height="18" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+          <rect x="85" y="85" width="30" height="18" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+          <rect x="140" y="85" width="30" height="18" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+          <!-- lines from p to top-center of each block -->
+          <line x1="100" y1="58" x2="45" y2="85" stroke="var(--red)" stroke-width="0.8"/>
+          <line x1="100" y1="58" x2="100" y2="85" stroke="var(--red)" stroke-width="0.8"/>
+          <line x1="100" y1="58" x2="155" y2="85" stroke="var(--red)" stroke-width="0.8"/>
+        </g>
+        <text x="100" y="120" text-anchor="middle" font-size="10" class="lbl">r blocks × (k−1) partners each</text>
+
+        <!-- vs: v-1 other points × λ blocks each -->
+        <text x="100" y="145" text-anchor="middle" font-size="10" class="lbl">= (v−1) partners × λ blocks each</text>
+
+        <!-- equation -->
+        <text x="100" y="180" text-anchor="middle" class="eq" font-size="16" font-weight="700">r(k−1) = λ(v−1)</text>
+        <text x="100" y="202" text-anchor="middle" font-size="10">(Morris Thm 17.1.1)</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 1b.</span> The two parameter relations come from the same technique: counting a set of incidences two different ways and setting the counts equal. Morris calls this "ordered pairs from a cartesian product"; it is the most used technique in design theory.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>First equation: <span class="var">bk</span> = <span class="var">vr</span></h3>
+    <p>Count the set of pairs (<var>p</var>, <var>B</var>) where the point <var>p</var> lies in the block <var>B</var>. Going row by row: there are <var>v</var> points, each in <var>r</var> blocks, so the count is <var>vr</var>. Going block by block: there are <var>b</var> blocks, each containing <var>k</var> points, so the count is <var>bk</var>. The two counts are equal.</p>
+
+    <h3>Second equation: <span class="var">r</span>(<span class="var">k</span>−1) = <span class="var">λ</span>(<span class="var">v</span>−1)</h3>
+    <p>Fix a single point <var>p</var>. Count the set of pairs (<var>p</var>′, <var>B</var>) where <var>p</var>′ ≠ <var>p</var> and both <var>p</var> and <var>p</var>′ lie in <var>B</var>. Going block by block: <var>p</var> is in <var>r</var> blocks, and each such block has <var>k</var> − 1 other points, so the count is <var>r</var>(<var>k</var> − 1). Going point by point: there are <var>v</var> − 1 other points <var>p</var>′, and each co-occurs with <var>p</var> in <var>λ</var> blocks, so the count is <var>λ</var>(<var>v</var> − 1).</p>
+
+    <div class="thm">
+      <span class="label">Theorem (Morris 17.1.1).</span> In any BIBD with parameters (<var>v</var>, <var>b</var>, <var>r</var>, <var>k</var>, <var>λ</var>):
+      <span class="eq"><var>bk</var> = <var>vr</var>,  <var>r</var>(<var>k</var>−1) = <var>λ</var>(<var>v</var>−1).</span>
+      Consequently, knowing (<var>v</var>, <var>k</var>, <var>λ</var>) determines both <var>r</var> and <var>b</var>:
+      <span class="eq"><var>r</var> = <var>λ</var>(<var>v</var>−1)/(<var>k</var>−1),  <var>b</var> = <var>λv</var>(<var>v</var>−1)/[<var>k</var>(<var>k</var>−1)].</span>
+    </div>
+
+    <h3>Check: BIBD(7, 3, 1)</h3>
+    <p>With <var>v</var> = 7, <var>k</var> = 3, <var>λ</var> = 1: <var>r</var> = 1 · 6 / 2 = 3, and <var>b</var> = 1 · 7 · 6 / (3 · 2) = 7. Both match the seven-point seven-block design of Figure 1.</p>
+
+    <h3>Symmetric designs</h3>
+    <p>When <var>b</var> = <var>v</var>, the design is called <i>symmetric</i>. The first equation then forces <var>r</var> = <var>k</var>, so the design has equally many points and blocks, and each point is in exactly as many blocks as a block has points. The Fano plane is symmetric (<var>b</var> = <var>v</var> = 7, <var>r</var> = <var>k</var> = 3), and every projective plane — the object the conjecture ultimately cares about — is symmetric.</p>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#designs-regular">1a · Regular, uniform, balanced</a>
+    <a class="next" href="#designs-matrix">1c · Incidence matrix</a>
+  </div>
+</section>
+
+
+<!-- 1c. INCIDENCE MATRIX -->
+<section id="designs-matrix" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 1c · combinatorial</div>
+    <h2>The incidence matrix</h2>
+    <span class="tag r">design → matrix</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A 7 by 7 incidence matrix of the Fano plane, with row labels being points 1 through 7 and column labels being blocks B1 through B7. Each entry is 0 or 1.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); }
+        .fig .hd { font-weight: 700; font-size: 10px; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .one { font-family: "SFMono-Regular", "JetBrains Mono", Consolas, monospace; font-size: 12px; font-weight: 700; fill: var(--red); }
+        .fig .zero { font-family: "SFMono-Regular", "JetBrains Mono", Consolas, monospace; font-size: 12px; fill: #bfbaaa; }
+      </style>
+
+      <!-- left: block list (for reference) -->
+      <g transform="translate(20,24)">
+        <text x="0" y="0" class="hd">blocks</text>
+        <g font-family="Georgia" font-style="italic" font-size="11" fill="var(--stroke)">
+          <text x="0" y="20">B<tspan font-size="8" dy="2">1</tspan>  = {1,2,4}</text>
+          <text x="0" y="40">B<tspan font-size="8" dy="2">2</tspan>  = {1,3,5}</text>
+          <text x="0" y="60">B<tspan font-size="8" dy="2">3</tspan>  = {1,6,7}</text>
+          <text x="0" y="80">B<tspan font-size="8" dy="2">4</tspan>  = {2,3,6}</text>
+          <text x="0" y="100">B<tspan font-size="8" dy="2">5</tspan>  = {2,5,7}</text>
+          <text x="0" y="120">B<tspan font-size="8" dy="2">6</tspan>  = {3,4,7}</text>
+          <text x="0" y="140">B<tspan font-size="8" dy="2">7</tspan>  = {4,5,6}</text>
+        </g>
+      </g>
+
+      <!-- right: the matrix -->
+      <g transform="translate(180,24)">
+        <!-- column headers -->
+        <g class="hd">
+          <text x="30" y="-4" text-anchor="middle">B1</text>
+          <text x="54" y="-4" text-anchor="middle">B2</text>
+          <text x="78" y="-4" text-anchor="middle">B3</text>
+          <text x="102" y="-4" text-anchor="middle">B4</text>
+          <text x="126" y="-4" text-anchor="middle">B5</text>
+          <text x="150" y="-4" text-anchor="middle">B6</text>
+          <text x="174" y="-4" text-anchor="middle">B7</text>
+        </g>
+        <!-- bracket -->
+        <path d="M 18 4 L 8 4 L 8 176 L 18 176" fill="none" stroke="var(--stroke)" stroke-width="1"/>
+        <path d="M 186 4 L 196 4 L 196 176 L 186 176" fill="none" stroke="var(--stroke)" stroke-width="1"/>
+
+        <!-- row labels -->
+        <g class="hd">
+          <text x="-6" y="22" text-anchor="end" font-style="italic">1</text>
+          <text x="-6" y="46" text-anchor="end" font-style="italic">2</text>
+          <text x="-6" y="70" text-anchor="end" font-style="italic">3</text>
+          <text x="-6" y="94" text-anchor="end" font-style="italic">4</text>
+          <text x="-6" y="118" text-anchor="end" font-style="italic">5</text>
+          <text x="-6" y="142" text-anchor="end" font-style="italic">6</text>
+          <text x="-6" y="166" text-anchor="end" font-style="italic">7</text>
+        </g>
+
+        <!-- incidence matrix entries -->
+        <!-- A_{ij} = 1 iff i in B_j -->
+        <!-- Row 1: in B1, B2, B3 -->
+        <g>
+          <text class="one"  x="30" y="22" text-anchor="middle">1</text>
+          <text class="one"  x="54" y="22" text-anchor="middle">1</text>
+          <text class="one"  x="78" y="22" text-anchor="middle">1</text>
+          <text class="zero" x="102" y="22" text-anchor="middle">0</text>
+          <text class="zero" x="126" y="22" text-anchor="middle">0</text>
+          <text class="zero" x="150" y="22" text-anchor="middle">0</text>
+          <text class="zero" x="174" y="22" text-anchor="middle">0</text>
+        </g>
+        <!-- Row 2: in B1, B4, B5 -->
+        <g>
+          <text class="one"  x="30" y="46" text-anchor="middle">1</text>
+          <text class="zero" x="54" y="46" text-anchor="middle">0</text>
+          <text class="zero" x="78" y="46" text-anchor="middle">0</text>
+          <text class="one"  x="102" y="46" text-anchor="middle">1</text>
+          <text class="one"  x="126" y="46" text-anchor="middle">1</text>
+          <text class="zero" x="150" y="46" text-anchor="middle">0</text>
+          <text class="zero" x="174" y="46" text-anchor="middle">0</text>
+        </g>
+        <!-- Row 3: in B2, B4, B6 -->
+        <g>
+          <text class="zero" x="30" y="70" text-anchor="middle">0</text>
+          <text class="one"  x="54" y="70" text-anchor="middle">1</text>
+          <text class="zero" x="78" y="70" text-anchor="middle">0</text>
+          <text class="one"  x="102" y="70" text-anchor="middle">1</text>
+          <text class="zero" x="126" y="70" text-anchor="middle">0</text>
+          <text class="one"  x="150" y="70" text-anchor="middle">1</text>
+          <text class="zero" x="174" y="70" text-anchor="middle">0</text>
+        </g>
+        <!-- Row 4: in B1, B6, B7 -->
+        <g>
+          <text class="one"  x="30" y="94" text-anchor="middle">1</text>
+          <text class="zero" x="54" y="94" text-anchor="middle">0</text>
+          <text class="zero" x="78" y="94" text-anchor="middle">0</text>
+          <text class="zero" x="102" y="94" text-anchor="middle">0</text>
+          <text class="zero" x="126" y="94" text-anchor="middle">0</text>
+          <text class="one"  x="150" y="94" text-anchor="middle">1</text>
+          <text class="one"  x="174" y="94" text-anchor="middle">1</text>
+        </g>
+        <!-- Row 5: in B2, B5, B7 -->
+        <g>
+          <text class="zero" x="30" y="118" text-anchor="middle">0</text>
+          <text class="one"  x="54" y="118" text-anchor="middle">1</text>
+          <text class="zero" x="78" y="118" text-anchor="middle">0</text>
+          <text class="zero" x="102" y="118" text-anchor="middle">0</text>
+          <text class="one"  x="126" y="118" text-anchor="middle">1</text>
+          <text class="zero" x="150" y="118" text-anchor="middle">0</text>
+          <text class="one"  x="174" y="118" text-anchor="middle">1</text>
+        </g>
+        <!-- Row 6: in B3, B4, B7 -->
+        <g>
+          <text class="zero" x="30" y="142" text-anchor="middle">0</text>
+          <text class="zero" x="54" y="142" text-anchor="middle">0</text>
+          <text class="one"  x="78" y="142" text-anchor="middle">1</text>
+          <text class="one"  x="102" y="142" text-anchor="middle">1</text>
+          <text class="zero" x="126" y="142" text-anchor="middle">0</text>
+          <text class="zero" x="150" y="142" text-anchor="middle">0</text>
+          <text class="one"  x="174" y="142" text-anchor="middle">1</text>
+        </g>
+        <!-- Row 7: in B3, B5, B6 -->
+        <g>
+          <text class="zero" x="30" y="166" text-anchor="middle">0</text>
+          <text class="zero" x="54" y="166" text-anchor="middle">0</text>
+          <text class="one"  x="78" y="166" text-anchor="middle">1</text>
+          <text class="zero" x="102" y="166" text-anchor="middle">0</text>
+          <text class="one"  x="126" y="166" text-anchor="middle">1</text>
+          <text class="one"  x="150" y="166" text-anchor="middle">1</text>
+          <text class="zero" x="174" y="166" text-anchor="middle">0</text>
+        </g>
+
+        <!-- annotation: each row sum = r = 3, each col sum = k = 3 -->
+        <text x="100" y="200" text-anchor="middle" font-size="10" fill="#4a4a4a" font-style="italic">row sums = r = 3 · col sums = k = 3</text>
+        <text x="100" y="214" text-anchor="middle" font-size="10" fill="#4a4a4a" font-style="italic">the matrix is A ∈ {0, 1}, size 7 × 7</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 1c.</span> The incidence matrix of the Fano plane as a BIBD(7, 3, 1). Rows are points, columns are blocks; entry <var>A<sub>ij</sub></var> is 1 iff point <var>i</var> belongs to block <var>j</var>. In the conjecture, the <i>rows</i> of this matrix — which are {0, 1}-vectors in ℝ⁷ — become the point set whose Delaunay triangulation we study.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The bridge to linear algebra</h3>
+    <p>The incidence matrix is the technical device that turns a design into linear algebra. Once a design has been written as a 0/1 matrix, every notion from linear algebra becomes available: rank, null space, inner products, eigenvalues. Fisher's inequality (next section) is originally stated in terms of the design itself, but the cleanest proof runs through the rank of <var>A</var>.</p>
+
+    <div class="defn">
+      <span class="label">Definition.</span> The <i>incidence matrix</i> of a design (<var>V</var>, <var>B</var>) with <var>v</var> = |<var>V</var>| and <var>b</var> = |<var>B</var>| is the <var>v</var> × <var>b</var> matrix <var>A</var> with
+      <span class="eq"><var>A<sub>ij</sub></var> = 1 if point <var>i</var> ∈ block <var>j</var>,  <var>A<sub>ij</sub></var> = 0 otherwise.</span>
+    </div>
+
+    <h3>Row and column sums</h3>
+    <p>The <var>i</var>th row sum of <var>A</var> is the number of blocks containing point <var>i</var>, which is <var>r</var> for every <var>i</var> (regularity). The <var>j</var>th column sum is the size of block <var>j</var>, which is <var>k</var> for every <var>j</var> (uniformity). Balance is the statement that for any two rows <var>i</var>, <var>i</var>′, the inner product (row <var>i</var>)·(row <var>i</var>′) equals <var>λ</var>. These three linear-algebra facts repackage the three regularity conditions exactly.</p>
+
+    <h3>The matrix equation AAᵀ</h3>
+    <p>Computing <var>A</var><var>A</var><sup>T</sup> for a BIBD gives a <var>v</var> × <var>v</var> matrix with <var>r</var> on the diagonal (since row <var>i</var> has <var>r</var> ones) and <var>λ</var> off-diagonal (balance). In matrix form:
+    <span class="eq"><var>A</var><var>A</var><sup>T</sup> = (<var>r</var> − <var>λ</var>) <var>I</var> + <var>λ</var> <var>J</var>,</span>
+    where <var>I</var> is the identity and <var>J</var> is the all-ones matrix. This equation is the linear-algebra heart of Fisher's inequality, which we derive next.</p>
+
+    <div class="note">
+      <span class="label">Worth noticing.</span> Every row of <var>A</var> is a 0/1 vector with exactly <var>r</var> ones. The conjecture promotes these rows to points in ℝ<sup><var>v</var></sup> and asks about their Delaunay triangulation — a geometric question about objects that arrived from pure combinatorics.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#designs-params">1b · Parameter equations</a>
+    <a class="next" href="#fisher">2 · Fisher's inequality</a>
+  </div>
+</section>
+
+<!-- 2. FISHER -->
+<section id="fisher" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 2 · the combinatorial thread</div>
+    <h2>Fisher's inequality</h2>
+    <span class="tag r">Morris, ch. 17.3</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 240" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A diagram of the constraint b greater than or equal to v for a BIBD: the number of blocks must be at least the number of points.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .eq  { font-family: Georgia, serif; font-style: italic; font-size: 14px; }
+        .fig .bad { fill: #bfbaaa; }
+      </style>
+
+      <!-- v points on left -->
+      <g transform="translate(40,50)">
+        <text x="40" y="-10" text-anchor="middle" class="ttl">v points</text>
+        <g fill="var(--red)">
+          <circle cx="20" cy="10" r="3"/>
+          <circle cx="40" cy="10" r="3"/>
+          <circle cx="60" cy="10" r="3"/>
+          <circle cx="20" cy="30" r="3"/>
+          <circle cx="40" cy="30" r="3"/>
+          <circle cx="60" cy="30" r="3"/>
+          <circle cx="20" cy="50" r="3"/>
+          <circle cx="40" cy="50" r="3"/>
+          <circle cx="60" cy="50" r="3"/>
+        </g>
+      </g>
+
+      <!-- inequality sign -->
+      <text x="170" y="85" class="eq" text-anchor="middle" font-size="28" font-weight="700">≤</text>
+
+      <!-- b blocks on right -->
+      <g transform="translate(220,50)">
+        <text x="70" y="-10" text-anchor="middle" class="ttl">b blocks</text>
+        <g fill="none" stroke="var(--stroke)" stroke-width="0.9">
+          <rect x="0"  y="0"  width="25" height="12"/>
+          <rect x="35" y="0"  width="25" height="12"/>
+          <rect x="70" y="0"  width="25" height="12"/>
+          <rect x="105" y="0" width="25" height="12"/>
+          <rect x="0"  y="18" width="25" height="12"/>
+          <rect x="35" y="18" width="25" height="12"/>
+          <rect x="70" y="18" width="25" height="12"/>
+          <rect x="105" y="18" width="25" height="12"/>
+          <rect x="0"  y="36" width="25" height="12"/>
+          <rect x="35" y="36" width="25" height="12"/>
+          <rect x="70" y="36" width="25" height="12"/>
+          <!-- and b >= v so add at least v more if v=9, need 9 blocks: show extra -->
+        </g>
+      </g>
+
+      <!-- bottom: Fisher statement -->
+      <g transform="translate(60,170)">
+        <text x="160" y="0" text-anchor="middle" class="ttl">Fisher's inequality</text>
+        <text x="160" y="26" text-anchor="middle" class="eq" font-size="18" font-weight="700">b ≥ v</text>
+        <text x="160" y="50" text-anchor="middle" font-size="10" font-style="italic">(Morris Thm 17.3.1)</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 2.</span> Fisher's inequality says a BIBD cannot have fewer blocks than points. This is not obvious from the parameter equations alone — <var>b</var> = <var>λv</var>(<var>v</var>−1)/[<var>k</var>(<var>k</var>−1)] could in principle be less than <var>v</var> for some (<var>v</var>, <var>k</var>, <var>λ</var>) triple. Fisher says no such triple gives rise to an actual design.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The claim</h3>
+    <div class="thm">
+      <span class="label">Fisher's inequality.</span> Every nontrivial BIBD(<var>v</var>, <var>k</var>, <var>λ</var>) satisfies <var>b</var> ≥ <var>v</var>.
+    </div>
+
+    <p>Why is this not obvious? The parameter equations of §1b give <var>b</var> in terms of <var>v</var>, <var>k</var>, <var>λ</var>:
+    <span class="eq"><var>b</var> = <var>λv</var>(<var>v</var> − 1) / [<var>k</var>(<var>k</var> − 1)].</span>
+    For this to be ≥ <var>v</var>, we need <var>λ</var>(<var>v</var> − 1) ≥ <var>k</var>(<var>k</var> − 1). That is an inequality about the parameters; there is no obvious reason it should hold for every choice of <var>v</var>, <var>k</var>, <var>λ</var>. For instance (<var>v</var>, <var>k</var>, <var>λ</var>) = (10, 4, 1) would give <var>b</var> = 10·9/12 = 7.5, which is already nonsense (<var>b</var> must be an integer). But many parameter triples pass the integrality check and still fail Fisher.</p>
+
+    <h3>Two proofs, two traditions</h3>
+    <p>There are two standard proofs of Fisher's inequality. Morris gives an elementary counting proof in §17.3 (because his textbook doesn't assume linear algebra). The standard proof, used in every other treatment of design theory, computes the rank of the incidence matrix <var>A</var> over ℝ and shows it equals <var>v</var>. Both routes arrive at the same conclusion, but the linear-algebra route is shorter and generalises further; we cover both in the two sub-topics.</p>
+
+    <div class="note">
+      <span class="label">Why this matters for the conjecture.</span> The conjecture's commentary says Morris's proof "flags itself as mysterious" — the Fisher–Frobenius side of the conjecture proposes that the mystery of the elementary proof hides an algebraic structure the modern proof doesn't surface either. The linear-algebra proof shows <var>A</var> has rank <var>v</var>; the conjecture asks what <i>more</i> the rows of <var>A</var> know about the algebra of the design.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#designs-matrix">1c · Incidence matrix</a>
+    <a class="next" href="#fisher-morris">2a · Morris's counting proof</a>
+  </div>
+</section>
+
+
+<!-- 2a. FISHER — Morris's counting proof -->
+<section id="fisher-morris" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 2a · combinatorial</div>
+    <h2>Morris's counting proof</h2>
+    <span class="tag r">the n_i buckets</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 480 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="An array of buckets labelled n_0, n_1, ..., n_k, each counting the number of blocks whose intersection with a fixed block B has the corresponding size. Three equations on the right give constraints on these counts.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .lbl { font-style: italic; }
+        .fig .eq { font-family: Georgia, serif; font-style: italic; font-size: 12.5px; }
+      </style>
+
+      <!-- Fixed block B -->
+      <g transform="translate(30,30)">
+        <text x="0" y="0" class="ttl">fix a block B</text>
+        <rect x="0" y="10" width="110" height="26" fill="none" stroke="var(--red)" stroke-width="1.2"/>
+        <g fill="var(--red)">
+          <circle cx="20" cy="23" r="3"/>
+          <circle cx="55" cy="23" r="3"/>
+          <circle cx="90" cy="23" r="3"/>
+        </g>
+        <text x="128" y="27" class="lbl">(|B| = k)</text>
+      </g>
+
+      <!-- buckets: n_0, n_1, ..., n_k -->
+      <g transform="translate(30,90)">
+        <text x="0" y="0" class="ttl">sort the other b−1 blocks</text>
+        <text x="0" y="14" class="lbl">by |B′ ∩ B|</text>
+        <!-- buckets -->
+        <g transform="translate(0,30)">
+          <rect x="0" y="0" width="40" height="46" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+          <rect x="50" y="0" width="40" height="46" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+          <rect x="100" y="0" width="40" height="46" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+          <text x="150" y="26" class="lbl">· · ·</text>
+          <rect x="170" y="0" width="40" height="46" fill="none" stroke="var(--stroke)" stroke-width="0.9"/>
+          <text x="20" y="28" text-anchor="middle" class="lbl" font-size="13">n₀</text>
+          <text x="70" y="28" text-anchor="middle" class="lbl" font-size="13">n₁</text>
+          <text x="120" y="28" text-anchor="middle" class="lbl" font-size="13">n₂</text>
+          <text x="190" y="28" text-anchor="middle" class="lbl" font-size="13">nₖ</text>
+          <text x="20" y="58" text-anchor="middle" font-size="10">|B∩B′|=0</text>
+          <text x="70" y="58" text-anchor="middle" font-size="10">=1</text>
+          <text x="120" y="58" text-anchor="middle" font-size="10">=2</text>
+          <text x="190" y="58" text-anchor="middle" font-size="10">=k</text>
+        </g>
+      </g>
+
+      <!-- three equations on the right -->
+      <g transform="translate(260,30)">
+        <text x="0" y="0" class="ttl">three counting identities</text>
+        <text x="0" y="24" class="eq">Σ nᵢ  =  b − 1</text>
+        <text x="0" y="46" class="eq">Σ i · nᵢ  =  k(r − 1)</text>
+        <text x="0" y="68" class="eq">Σ i(i−1) · nᵢ  =  k(k−1)(λ − 1)</text>
+        <text x="0" y="100" font-size="10" class="lbl">(counts of blocks,</text>
+        <text x="0" y="114" font-size="10" class="lbl">points, and pairs</text>
+        <text x="0" y="128" font-size="10" class="lbl">outside B)</text>
+
+        <text x="0" y="160" class="ttl">apply Cauchy–Schwarz</text>
+        <text x="0" y="180" class="eq">(Σ i · nᵢ)²  ≤  (Σ nᵢ)(Σ i² · nᵢ)</text>
+        <text x="0" y="204" class="eq" font-size="13" font-weight="700">⟹ b ≥ v</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 2a.</span> Morris's counting proof. Fix a block <var>B</var>; sort the other <var>b</var>−1 blocks into buckets <var>n</var><sub>0</sub>, <var>n</var><sub>1</sub>, …, <var>n<sub>k</sub></var> by how many points they share with <var>B</var>. Double-counting gives three linear constraints on the <var>n<sub>i</sub></var>; a non-negativity argument (equivalent to Cauchy–Schwarz) yields <var>b</var> ≥ <var>v</var>.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>Setup</h3>
+    <p>Pick any block <var>B</var> and freeze it. For each <var>i</var> from 0 to <var>k</var>, define
+    <span class="eq"><var>n</var><sub><var>i</var></sub> = # of blocks <var>B</var>′ ≠ <var>B</var> with |<var>B</var>′ ∩ <var>B</var>| = <var>i</var>.</span>
+    The <var>n<sub>i</sub></var> partition the other <var>b</var> − 1 blocks by their intersection size with <var>B</var>.</p>
+
+    <h3>Three constraints by double counting</h3>
+    <ol class="annot">
+      <li><b>Σ <var>n<sub>i</sub></var> = <var>b</var> − 1.</b> The <var>n<sub>i</sub></var> partition all blocks other than <var>B</var>, so they sum to <var>b</var> − 1.</li>
+      <li><b>Σ <var>i</var>·<var>n<sub>i</sub></var> = <var>k</var>(<var>r</var> − 1).</b> Count the number of times elements of <var>B</var> appear in some other block <var>B</var>′. Block by block: <var>B</var>′ contributes |<var>B</var> ∩ <var>B</var>′| = <var>i</var> to the count. Point by point: each of <var>B</var>'s <var>k</var> points appears in <var>r</var> − 1 other blocks (we don't count <var>B</var> itself).</li>
+      <li><b>Σ <var>i</var>(<var>i</var>−1)·<var>n<sub>i</sub></var> = <var>k</var>(<var>k</var>−1)(<var>λ</var> − 1).</b> Count ordered pairs (<var>p</var>, <var>p</var>′) of distinct points of <var>B</var> that appear together in some other block. Block by block: <var>B</var>′ contributes <var>i</var>(<var>i</var>−1). Pair by pair: there are <var>k</var>(<var>k</var>−1) ordered pairs in <var>B</var>, each in <var>λ</var>−1 other blocks.</li>
+    </ol>
+
+    <h3>The inequality</h3>
+    <p>Morris's proof then observes that the variance-like quantity Σ (<var>i</var> − <var>m</var>)²<var>n<sub>i</sub></var> is non-negative for any real <var>m</var>. Expanding and choosing <var>m</var> = <var>k</var>/<var>v</var> (the "average" intersection) pins down, after algebra he carries through explicitly, the inequality <var>b</var> − 1 ≥ <var>v</var> − 1, i.e. <var>b</var> ≥ <var>v</var>.</p>
+
+    <div class="note">
+      <span class="label">What's mysterious.</span> The proof works — one can audit every step — but it does not reveal <i>why</i> the bound is <var>v</var> rather than some other function of <var>v</var>, <var>k</var>, <var>λ</var>. The specific number <var>v</var> falls out of algebraic simplification, not obvious structure. Morris's own text notes: "this is somewhat longer than the standard proof, which uses linear algebra." The next subsection gives the standard proof.
+    </div>
+
+    <div class="aside" style="font-size: 12.5px; color: var(--ink-soft); margin-top: 12px;">
+      Technical aside: what Morris writes out by hand is a specialisation of Cauchy–Schwarz applied to the vectors (<var>n</var><sub>0</sub>, …, <var>n<sub>k</sub></var>) and (1, 1, …, 1). The elementary form avoids naming Cauchy–Schwarz, so the student need not have seen it, but the algebraic content is identical.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#fisher">2 · Fisher's inequality</a>
+    <a class="next" href="#fisher-rank">2b · Rank view</a>
+  </div>
+</section>
+
+
+<!-- 2b. FISHER — rank view -->
+<section id="fisher-rank" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 2b · combinatorial + algebraic</div>
+    <h2>The rank (linear-algebra) view</h2>
+    <span class="tag r">rank A = v</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 560 240" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="An illustration of the decomposition A A transpose equals (r minus lambda) I plus lambda J for a BIBD, yielding an invertible matrix whose rank equals v.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 12px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .eq  { font-family: Georgia, serif; font-style: italic; font-size: 14px; }
+      </style>
+
+      <!-- top: AAᵀ = (r-λ)I + λJ — use Unicode ᵀ (U+1D40), no tspan tricks -->
+      <g transform="translate(30,30)">
+        <text x="250" y="0" class="ttl" text-anchor="middle">the BIBD identity in matrix form</text>
+        <text x="250" y="30" class="eq" text-anchor="middle" font-size="17" font-weight="700">AAᵀ = (r − λ) I + λ J</text>
+        <text x="250" y="54" font-size="10" text-anchor="middle" font-style="italic">(I is the v×v identity; J is the all-ones matrix)</text>
+      </g>
+
+      <!-- center: visual of the two matrices -->
+      <g transform="translate(40,100)">
+        <text x="0" y="0" class="ttl">diagonal</text>
+        <text x="110" y="0" class="ttl">+</text>
+        <text x="140" y="0" class="ttl">constant</text>
+
+        <!-- (r-λ)I -->
+        <rect x="0" y="14" width="90" height="60" fill="none" stroke="var(--stroke)" stroke-width="0.8"/>
+        <g fill="var(--red)">
+          <rect x="2" y="16" width="18" height="14"/>
+          <rect x="22" y="30" width="18" height="14"/>
+          <rect x="42" y="44" width="18" height="14"/>
+          <rect x="62" y="58" width="18" height="14"/>
+        </g>
+        <text x="45" y="92" text-anchor="middle" class="eq">(r − λ) I</text>
+
+        <!-- λJ -->
+        <rect x="140" y="14" width="90" height="60" fill="var(--red-pale)" stroke="var(--stroke)" stroke-width="0.8"/>
+        <text x="185" y="92" text-anchor="middle" class="eq">λ J</text>
+      </g>
+
+      <!-- right side: eigenvalues -->
+      <g transform="translate(285,100)">
+        <text x="0" y="0" class="ttl">eigenvalues</text>
+        <text x="0" y="22" class="eq">rk + (v−1)λ    (once)</text>
+        <text x="0" y="42" class="eq">r − λ         (v−1 times)</text>
+        <text x="0" y="72" class="eq" font-weight="700">both nonzero ⟹ AAᵀ invertible</text>
+        <text x="0" y="96" class="eq">⟹ rank A = v, so b ≥ v.</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 2b.</span> The modern proof. The <var>v</var> × <var>v</var> matrix <var>A</var><var>A</var><sup>T</sup> is the sum of a diagonal matrix and a constant matrix. Its eigenvalues are computable by inspection; both are nonzero for a nontrivial BIBD; the matrix is invertible; its rank is <var>v</var>; so <var>A</var> has rank at least <var>v</var>. Since rank is at most the smaller dimension min(<var>v</var>, <var>b</var>), we get <var>v</var> ≤ <var>b</var>.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>Prep: what is the rank of a matrix?</h3>
+    <p>If you have seen rank before, skip to the next heading. Otherwise: the rank of a matrix is the dimension of the space spanned by its rows (equivalently, by its columns). It is a number between 0 and min(<var>m</var>, <var>n</var>) for an <var>m</var> × <var>n</var> matrix. Rank equals <var>v</var> means the <var>v</var> rows are linearly independent: no nontrivial linear combination of them sums to zero. In Shoup's notation, rank is the dimension of the row space (§14.5).</p>
+
+    <h3>The identity</h3>
+    <p>We saw in §1c that, for a BIBD with parameters (<var>v</var>, <var>b</var>, <var>r</var>, <var>k</var>, <var>λ</var>):
+    <span class="eq"><var>A</var><var>A</var><sup>T</sup> = (<var>r</var> − <var>λ</var>) <var>I</var> + <var>λ</var> <var>J</var>,</span>
+    where <var>I</var> is the <var>v</var> × <var>v</var> identity and <var>J</var> is the <var>v</var> × <var>v</var> all-ones matrix. The diagonal entry is <var>r</var> (row <var>i</var> dotted with itself), the off-diagonal is <var>λ</var> (row <var>i</var> dotted with row <var>i</var>′), and the identity writes <var>r</var> = (<var>r</var> − <var>λ</var>) + <var>λ</var> on the diagonal and 0 + <var>λ</var> = <var>λ</var> off.</p>
+
+    <h3>Eigenvalues of (r − λ)I + λJ</h3>
+    <p>The matrix <var>J</var> has rank 1 (every row is the all-ones row); its only nonzero eigenvalue is <var>v</var>, with eigenvector (1, 1, …, 1). Adding (<var>r</var> − <var>λ</var>)<var>I</var> shifts all eigenvalues by <var>r</var> − <var>λ</var>. So <var>A</var><var>A</var><sup>T</sup> has eigenvalue (<var>r</var> − <var>λ</var>) + <var>λv</var> on the all-ones direction (once) and <var>r</var> − <var>λ</var> on the remaining <var>v</var> − 1 dimensions.</p>
+
+    <p>Both eigenvalues are positive when (<var>r</var> − <var>λ</var>) > 0 and <var>r</var> + (<var>v</var> − 1)<var>λ</var> > 0 — true for any nontrivial BIBD. So <var>A</var><var>A</var><sup>T</sup> is invertible, has full rank <var>v</var>, and therefore <var>A</var> itself has rank at least <var>v</var>.</p>
+
+    <h3>Closing the argument</h3>
+    <p>The rank of any <var>v</var> × <var>b</var> matrix is at most min(<var>v</var>, <var>b</var>). If <var>A</var> has rank <var>v</var>, then <var>v</var> ≤ <var>b</var>. That is Fisher's inequality.</p>
+
+    <div class="note">
+      <span class="label">Compare.</span> Morris's proof handled a messy sum of non-negative quantities and simplified. This proof made a single matrix identity, read off its eigenvalues, and stopped. The same fact emerged; the algebraic statement is more structured. The conjecture we are building toward proposes there is <i>yet more</i> structure in the rows of <var>A</var> than the rank alone captures — specifically, a Frobenius-invariant geometric structure.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#fisher-morris">2a · Morris's counting proof</a>
+    <a class="next" href="#fields">3 · Finite fields</a>
+  </div>
+</section>
+
+
+<!-- 3. FIELDS -->
+<section id="fields" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 3 · the algebraic thread</div>
+    <h2>Finite fields GF(<var>q</var>)</h2>
+    <span class="tag b">Shoup, ch. 19</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 240" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A schematic comparison of the integers modulo 5, which form a field, versus the integers modulo 6, which do not.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .eq  { font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; }
+      </style>
+
+      <!-- LEFT: Z/5Z — is a field -->
+      <g transform="translate(30,20)">
+        <text x="80" y="0" text-anchor="middle" class="ttl">ℤ/5ℤ  =  GF(5)</text>
+        <text x="80" y="16" text-anchor="middle" font-size="10" fill="var(--blue)">a FIELD (5 is prime)</text>
+
+        <!-- the elements -->
+        <g>
+          <circle cx="20" cy="50" r="14" fill="none" stroke="var(--blue)" stroke-width="1"/>
+          <text x="20" y="54" text-anchor="middle" font-weight="700">0</text>
+          <circle cx="50" cy="50" r="14" fill="none" stroke="var(--blue)" stroke-width="1"/>
+          <text x="50" y="54" text-anchor="middle" font-weight="700">1</text>
+          <circle cx="80" cy="50" r="14" fill="none" stroke="var(--blue)" stroke-width="1"/>
+          <text x="80" y="54" text-anchor="middle" font-weight="700">2</text>
+          <circle cx="110" cy="50" r="14" fill="none" stroke="var(--blue)" stroke-width="1"/>
+          <text x="110" y="54" text-anchor="middle" font-weight="700">3</text>
+          <circle cx="140" cy="50" r="14" fill="none" stroke="var(--blue)" stroke-width="1"/>
+          <text x="140" y="54" text-anchor="middle" font-weight="700">4</text>
+        </g>
+
+        <text x="80" y="95" text-anchor="middle" font-size="10" fill="#4a4a4a" font-style="italic">every nonzero has an inverse:</text>
+        <g font-size="10" class="eq" fill="var(--blue)">
+          <text x="80" y="112" text-anchor="middle">2·3 = 6 ≡ 1  (so 2⁻¹ = 3)</text>
+          <text x="80" y="128" text-anchor="middle">4·4 = 16 ≡ 1  (4⁻¹ = 4)</text>
+        </g>
+        <text x="80" y="168" text-anchor="middle" font-weight="700" fill="var(--blue)">good</text>
+      </g>
+
+      <!-- divider -->
+      <line x1="220" y1="20" x2="220" y2="220" stroke="var(--rule)"/>
+
+      <!-- RIGHT: Z/6Z — is NOT a field -->
+      <g transform="translate(240,20)">
+        <text x="80" y="0" text-anchor="middle" class="ttl">ℤ/6ℤ</text>
+        <text x="80" y="16" text-anchor="middle" font-size="10" fill="var(--red)">NOT a field (6 not prime)</text>
+
+        <g>
+          <circle cx="20" cy="50" r="12" fill="none" stroke="#8a8a8a" stroke-width="1"/>
+          <text x="20" y="54" text-anchor="middle" font-weight="700">0</text>
+          <circle cx="47" cy="50" r="12" fill="none" stroke="#8a8a8a" stroke-width="1"/>
+          <text x="47" y="54" text-anchor="middle" font-weight="700">1</text>
+          <circle cx="74" cy="50" r="12" fill="none" stroke="var(--red)" stroke-width="1.3"/>
+          <text x="74" y="54" text-anchor="middle" font-weight="700">2</text>
+          <circle cx="101" cy="50" r="12" fill="none" stroke="var(--red)" stroke-width="1.3"/>
+          <text x="101" y="54" text-anchor="middle" font-weight="700">3</text>
+          <circle cx="128" cy="50" r="12" fill="none" stroke="#8a8a8a" stroke-width="1"/>
+          <text x="128" y="54" text-anchor="middle" font-weight="700">4</text>
+          <circle cx="155" cy="50" r="12" fill="none" stroke="#8a8a8a" stroke-width="1"/>
+          <text x="155" y="54" text-anchor="middle" font-weight="700">5</text>
+        </g>
+
+        <text x="80" y="95" text-anchor="middle" font-size="10" fill="#4a4a4a" font-style="italic">2 has no inverse: 2·k never ≡ 1 mod 6</text>
+        <g font-size="10" class="eq" fill="var(--red)">
+          <text x="80" y="115" text-anchor="middle">2·3 = 6 ≡ 0    (zero divisor)</text>
+        </g>
+        <text x="80" y="168" text-anchor="middle" font-weight="700" fill="var(--red)">broken</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 3.</span> Integers modulo a prime form a field; modulo a composite they don't. The missing ingredient is multiplicative inverses: mod 6, the element 2 never multiplies to 1 — worse, 2·3 = 0, so you have non-zero elements whose product is zero. A field is what you get when you can always divide by any nonzero element.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>Fields, quickly</h3>
+    <p>A <i>field</i> is a set with two operations, + and ·, satisfying the rules we use to manipulate fractions in ℚ or ℝ: both operations are commutative, associative, distribute, have identity elements 0 and 1 with 0 ≠ 1, and every nonzero element has a multiplicative inverse. ℚ, ℝ, ℂ are infinite fields. Finite fields are the ones with only finitely many elements.</p>
+
+    <h3>The only finite fields</h3>
+    <p>There is a theorem — this is the main result of Shoup's Chapter 19 — that classifies finite fields completely:</p>
+
+    <div class="thm">
+      <span class="label">Classification of finite fields.</span> For every prime power <var>q</var> = <var>p</var><sup><var>w</var></sup> there is, up to isomorphism, exactly one finite field of size <var>q</var>, written GF(<var>q</var>) or 𝔽<sub><var>q</var></sub>. No finite field has size other than a prime power.
+    </div>
+
+    <p>So the sizes of finite fields are exactly: 2, 3, 4, 5, 7, 8, 9, 11, 13, 16, 17, 19, 23, 25, 27, 29, … — the prime powers. When <var>q</var> is prime, GF(<var>q</var>) is just ℤ/<var>q</var>ℤ with the usual + and ·. When <var>q</var> = <var>p</var><sup><var>w</var></sup> with <var>w</var> > 1, GF(<var>q</var>) is a larger construction built on top of GF(<var>p</var>) — the next subsection does it for <var>q</var> = 4.</p>
+
+    <h3>Why this matters for the conjecture</h3>
+    <p>The conjecture's parameter is a prime power <var>q</var>; the associated projective plane PG(2, <var>q</var>) is built from the three-dimensional vector space over GF(<var>q</var>); its Frobenius automorphism is the map <var>x</var> ↦ <var>x</var><sup><var>q</var></sup> on the algebraic closure of GF(<var>q</var>). Every algebraic symmetry the conjecture invokes comes from this classification.</p>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#fisher-rank">2b · Rank view</a>
+    <a class="next" href="#fields-primepower">3a · Why prime powers?</a>
+  </div>
+</section>
+
+
+<!-- 3a. FIELDS — prime powers -->
+<section id="fields-primepower" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 3a · algebraic</div>
+    <h2>Why prime powers?</h2>
+    <span class="tag b">q = p^w</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 240" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A table of small integers labelled as prime powers (usable as finite field sizes) or composite (not).">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 12px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .hd { font-size: 10px; font-variant: small-caps; letter-spacing: 0.1em; fill: #4a4a4a; }
+      </style>
+      <text x="220" y="20" text-anchor="middle" class="ttl">finite field sizes (in blue) vs. composites (in grey)</text>
+
+      <!-- a 4x8 grid of numbers -->
+      <g transform="translate(80,50)">
+        <!-- row header, right-aligned to x=-10 so it sits cleanly to the left of the numbers -->
+        <g class="hd" text-anchor="end">
+          <text x="-10" y="14">2–9</text>
+          <text x="-10" y="48">10–17</text>
+          <text x="-10" y="82">18–25</text>
+          <text x="-10" y="116">26–32</text>
+        </g>
+        <!-- helper: macro for a number box -->
+      </g>
+
+      <!-- Generate individual entries.
+           Prime powers up to 32: 2,3,4,5,7,8,9,11,13,16,17,19,23,25,27,29,31,32 -->
+      <g transform="translate(90,38)" font-family="Georgia" font-size="13" font-weight="700">
+        <!-- row 1: 2..9 -->
+        <g>
+          <!-- x positions -->
+          <g fill="var(--blue)">
+            <text x="0" y="20">2</text><text x="40" y="20">3</text>
+            <text x="80" y="20">4<tspan font-size="9" dy="-4">=2²</tspan></text>
+            <text x="130" y="20">5</text>
+            <text x="210" y="20">7</text>
+            <text x="250" y="20">8<tspan font-size="9" dy="-4">=2³</tspan></text>
+            <text x="300" y="20">9<tspan font-size="9" dy="-4">=3²</tspan></text>
+          </g>
+          <g fill="#bfbaaa">
+            <text x="170" y="20">6</text>
+          </g>
+        </g>
+        <!-- row 2: 10..17 -->
+        <g transform="translate(0,34)">
+          <g fill="var(--blue)">
+            <text x="40" y="20">11</text>
+            <text x="120" y="20">13</text>
+            <text x="240" y="20">16<tspan font-size="9" dy="-4">=2⁴</tspan></text>
+            <text x="300" y="20">17</text>
+          </g>
+          <g fill="#bfbaaa">
+            <text x="0" y="20">10</text>
+            <text x="80" y="20">12</text>
+            <text x="160" y="20">14</text>
+            <text x="200" y="20">15</text>
+          </g>
+        </g>
+        <!-- row 3: 18..25 -->
+        <g transform="translate(0,68)">
+          <g fill="var(--blue)">
+            <text x="40" y="20">19</text>
+            <text x="200" y="20">23</text>
+            <text x="280" y="20">25<tspan font-size="9" dy="-4">=5²</tspan></text>
+          </g>
+          <g fill="#bfbaaa">
+            <text x="0" y="20">18</text>
+            <text x="80" y="20">20</text>
+            <text x="120" y="20">21</text>
+            <text x="160" y="20">22</text>
+            <text x="240" y="20">24</text>
+          </g>
+        </g>
+        <!-- row 4: 26..32 -->
+        <g transform="translate(0,102)">
+          <g fill="var(--blue)">
+            <text x="40" y="20">27<tspan font-size="9" dy="-4">=3³</tspan></text>
+            <text x="120" y="20">29</text>
+            <text x="200" y="20">31</text>
+            <text x="240" y="20">32<tspan font-size="9" dy="-4">=2⁵</tspan></text>
+          </g>
+          <g fill="#bfbaaa">
+            <text x="0" y="20">26</text>
+            <text x="80" y="20">28</text>
+            <text x="160" y="20">30</text>
+          </g>
+        </g>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 3a.</span> The first ten prime powers, in blue. There is a finite field of each of these sizes. The greyed-out numbers — 6, 10, 12, 14, 15, 18, 20, 21, 22, 24, 26, 28, 30 — are composites that aren't prime powers; there is no finite field with those many elements.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The characteristic</h3>
+    <p>In any field <var>F</var>, consider the sums 1, 1 + 1, 1 + 1 + 1, … . Either these are all different (the field is infinite, like ℚ), or two of them are equal, say <var>m</var>·1 = <var>n</var>·1 with <var>m</var> > <var>n</var>, which means (<var>m</var> − <var>n</var>)·1 = 0. The smallest positive integer <var>p</var> with <var>p</var>·1 = 0 is called the <i>characteristic</i> of <var>F</var>.</p>
+
+    <p>If the characteristic exists (the field is finite), it must be prime. For suppose <var>p</var> = <var>ab</var> with 1 &lt; <var>a</var>, <var>b</var> &lt; <var>p</var>. Then <var>ab</var>·1 = (<var>a</var>·1)(<var>b</var>·1) = 0 in a field, which forces <var>a</var>·1 = 0 or <var>b</var>·1 = 0 — contradicting the minimality of <var>p</var>. So characteristic is prime, and the prime subfield generated by 1 is GF(<var>p</var>).</p>
+
+    <h3>Why the size must be a prime power</h3>
+    <p>A finite field <var>F</var> of characteristic <var>p</var> contains GF(<var>p</var>) and, as a vector space over GF(<var>p</var>), has some dimension <var>w</var>. Then |<var>F</var>| = <var>p</var><sup><var>w</var></sup>. No other size is possible.</p>
+
+    <p>Existence goes the other way: for each prime power <var>q</var> = <var>p</var><sup><var>w</var></sup>, one constructs GF(<var>q</var>) as the quotient GF(<var>p</var>)[<var>X</var>]/(<var>f</var>) for some irreducible polynomial <var>f</var> ∈ GF(<var>p</var>)[<var>X</var>] of degree <var>w</var>. Shoup's §19.2 proves this exists.</p>
+
+    <div class="defn">
+      <span class="label">GF(q) construction.</span> Pick an irreducible polynomial <var>f</var>(<var>X</var>) of degree <var>w</var> over GF(<var>p</var>). The elements of GF(<var>p</var><sup><var>w</var></sup>) are residue classes of polynomials mod <var>f</var>; addition is polynomial addition mod <var>p</var>; multiplication is polynomial multiplication mod <var>f</var> and <var>p</var>. Uniqueness: different choices of <var>f</var> give isomorphic fields.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#fields">3 · Finite fields</a>
+    <a class="next" href="#fields-gf4">3b · GF(4) by hand</a>
+  </div>
+</section>
+
+
+<!-- 3b. FIELDS — GF(4) -->
+<section id="fields-gf4" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 3b · algebraic</div>
+    <h2>GF(4) by hand</h2>
+    <span class="tag b">a worked example</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 500 280" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Addition and multiplication tables for the field GF of 4, with elements 0, 1, alpha, alpha plus one.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 13px; fill: var(--stroke); }
+        .fig .hd { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.06em; }
+        .fig .cell { font-family: Georgia, serif; font-size: 13px; }
+        .fig .cell-op { font-family: Georgia, serif; font-size: 14px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.1em; }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+      </style>
+
+      <!-- LEFT: addition table -->
+      <g transform="translate(10,20)">
+        <text x="115" y="0" text-anchor="middle" class="ttl">addition in GF(4)</text>
+        <!-- header row -->
+        <g class="hd">
+          <text x="38" y="24">+</text>
+          <text x="80" y="24">0</text>
+          <text x="120" y="24">1</text>
+          <text x="160" y="24" font-style="italic">α</text>
+          <text x="200" y="24" font-style="italic">α+1</text>
+        </g>
+        <!-- dividers -->
+        <line x1="0" y1="30" x2="230" y2="30" stroke="var(--rule)"/>
+        <line x1="60" y1="10" x2="60" y2="180" stroke="var(--rule)"/>
+        <!-- rows -->
+        <g class="cell" font-style="italic">
+          <!-- row 0 -->
+          <text x="38" y="52" class="hd" font-style="normal">0</text>
+          <text x="80" y="52" text-anchor="middle">0</text>
+          <text x="120" y="52" text-anchor="middle">1</text>
+          <text x="160" y="52" text-anchor="middle">α</text>
+          <text x="200" y="52" text-anchor="middle">α+1</text>
+          <!-- row 1 -->
+          <text x="38" y="80" class="hd" font-style="normal">1</text>
+          <text x="80" y="80" text-anchor="middle">1</text>
+          <text x="120" y="80" text-anchor="middle">0</text>
+          <text x="160" y="80" text-anchor="middle">α+1</text>
+          <text x="200" y="80" text-anchor="middle">α</text>
+          <!-- row α -->
+          <text x="38" y="108" class="hd" font-style="italic">α</text>
+          <text x="80" y="108" text-anchor="middle">α</text>
+          <text x="120" y="108" text-anchor="middle">α+1</text>
+          <text x="160" y="108" text-anchor="middle">0</text>
+          <text x="200" y="108" text-anchor="middle">1</text>
+          <!-- row α+1 -->
+          <text x="38" y="136" class="hd" font-style="italic" text-anchor="middle">α+1</text>
+          <text x="80" y="136" text-anchor="middle">α+1</text>
+          <text x="120" y="136" text-anchor="middle">α</text>
+          <text x="160" y="136" text-anchor="middle">1</text>
+          <text x="200" y="136" text-anchor="middle">0</text>
+        </g>
+      </g>
+
+      <!-- RIGHT: multiplication table -->
+      <g transform="translate(260,20)">
+        <text x="115" y="0" text-anchor="middle" class="ttl">multiplication in GF(4)</text>
+        <g class="hd">
+          <text x="38" y="24">×</text>
+          <text x="80" y="24">0</text>
+          <text x="120" y="24">1</text>
+          <text x="160" y="24" font-style="italic">α</text>
+          <text x="200" y="24" font-style="italic">α+1</text>
+        </g>
+        <line x1="0" y1="30" x2="230" y2="30" stroke="var(--rule)"/>
+        <line x1="60" y1="10" x2="60" y2="180" stroke="var(--rule)"/>
+        <g class="cell" font-style="italic">
+          <!-- row 0 -->
+          <text x="38" y="52" class="hd" font-style="normal">0</text>
+          <text x="80" y="52" text-anchor="middle">0</text>
+          <text x="120" y="52" text-anchor="middle">0</text>
+          <text x="160" y="52" text-anchor="middle">0</text>
+          <text x="200" y="52" text-anchor="middle">0</text>
+          <!-- row 1 -->
+          <text x="38" y="80" class="hd" font-style="normal">1</text>
+          <text x="80" y="80" text-anchor="middle">0</text>
+          <text x="120" y="80" text-anchor="middle">1</text>
+          <text x="160" y="80" text-anchor="middle">α</text>
+          <text x="200" y="80" text-anchor="middle">α+1</text>
+          <!-- row α -->
+          <text x="38" y="108" class="hd" font-style="italic">α</text>
+          <text x="80" y="108" text-anchor="middle">0</text>
+          <text x="120" y="108" text-anchor="middle">α</text>
+          <text x="160" y="108" text-anchor="middle" fill="var(--blue)" font-weight="700">α+1</text>
+          <text x="200" y="108" text-anchor="middle" fill="var(--blue)" font-weight="700">1</text>
+          <!-- row α+1 -->
+          <text x="38" y="136" class="hd" font-style="italic" text-anchor="middle">α+1</text>
+          <text x="80" y="136" text-anchor="middle">0</text>
+          <text x="120" y="136" text-anchor="middle">α+1</text>
+          <text x="160" y="136" text-anchor="middle" fill="var(--blue)" font-weight="700">1</text>
+          <text x="200" y="136" text-anchor="middle" fill="var(--blue)" font-weight="700">α</text>
+        </g>
+      </g>
+
+      <!-- bottom annotation -->
+      <g transform="translate(30,210)">
+        <text x="0" y="0" class="ttl">the irreducible polynomial</text>
+        <text x="0" y="22" font-style="italic" font-size="13">f(X) = X² + X + 1  (choose α with f(α) = 0)</text>
+        <text x="0" y="42" font-style="italic" font-size="12">⟹ α² = α + 1   (rewrite α² using f)</text>
+        <text x="0" y="60" font-style="italic" font-size="12">⟹ α(α+1) = α² + α = (α+1) + α = 1   (addition = XOR in char 2)</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 3b.</span> Addition and multiplication tables for GF(4), the field with four elements. The element <var>α</var> is the root of the irreducible polynomial <var>f</var>(<var>X</var>) = <var>X</var>² + <var>X</var> + 1 over GF(2). Addition is XOR on the bit-pairs; multiplication uses <var>α</var>² = <var>α</var> + 1 to rewrite products.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>Why GF(4) isn't ℤ/4ℤ</h3>
+    <p>The quotient ring ℤ/4ℤ has elements {0, 1, 2, 3}, but 2 · 2 = 4 ≡ 0 — so 2 is a zero divisor, and the quotient is not a field. GF(4) is a different construction with the same size.</p>
+
+    <h3>Construction</h3>
+    <p>Start with GF(2) = {0, 1} with addition = XOR and multiplication = AND. Choose an irreducible polynomial <var>f</var>(<var>X</var>) ∈ GF(2)[<var>X</var>] of degree 2. The quadratic options over GF(2) are <var>X</var>², <var>X</var>² + 1 = (<var>X</var>+1)², <var>X</var>² + <var>X</var>, and <var>X</var>² + <var>X</var> + 1. The only one that has no root in GF(2) (and is therefore irreducible) is <var>f</var>(<var>X</var>) = <var>X</var>² + <var>X</var> + 1.</p>
+
+    <p>Define GF(4) = GF(2)[<var>X</var>] / (<var>f</var>(<var>X</var>)). Elements are residue classes of polynomials modulo <var>f</var>; every class has a unique representative of degree &lt; 2, so the elements are 0, 1, <var>X</var>, <var>X</var> + 1. Write <var>α</var> for the class of <var>X</var>; then the four elements are {0, 1, <var>α</var>, <var>α</var> + 1}.</p>
+
+    <h3>The multiplication table, element by element</h3>
+    <p>Since <var>α</var> is a root of <var>f</var>, we have <var>α</var>² + <var>α</var> + 1 = 0, i.e. <var>α</var>² = <var>α</var> + 1 (in characteristic 2, adding is the same as subtracting). Now:</p>
+    <ul class="annot">
+      <li><var>α</var> · <var>α</var> = <var>α</var>² = <var>α</var> + 1.</li>
+      <li><var>α</var> · (<var>α</var> + 1) = <var>α</var>² + <var>α</var> = (<var>α</var> + 1) + <var>α</var> = 2<var>α</var> + 1 = 1  (since 2 = 0 in GF(2)).</li>
+      <li>(<var>α</var> + 1) · (<var>α</var> + 1) = <var>α</var>² + 2<var>α</var> + 1 = (<var>α</var> + 1) + 0 + 1 = <var>α</var>.</li>
+    </ul>
+    <p>Every nonzero element has an inverse: 1<sup>−1</sup> = 1, <var>α</var><sup>−1</sup> = <var>α</var>+1, (<var>α</var>+1)<sup>−1</sup> = <var>α</var>. GF(4) is a field.</p>
+
+    <div class="note">
+      <span class="label">The cyclic structure.</span> The nonzero elements {1, <var>α</var>, <var>α</var>+1} form a cyclic group under multiplication. Explicitly: <var>α</var><sup>1</sup> = <var>α</var>, <var>α</var><sup>2</sup> = <var>α</var>+1, <var>α</var><sup>3</sup> = 1 — three powers and back. This is the general pattern: the multiplicative group of any finite field GF(<var>q</var>) is cyclic of order <var>q</var> − 1.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#fields-primepower">3a · Prime powers</a>
+    <a class="next" href="#frobenius">4 · Frobenius and Galois</a>
+  </div>
+</section>
+
+<!-- 4. FROBENIUS -->
+<section id="frobenius" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 4 · the algebraic thread</div>
+    <h2>Frobenius and Galois</h2>
+    <span class="tag b">Shoup, §19.7</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 480 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A schematic of GF(q to the w) with the Frobenius map sigma: x maps to x to the q, showing fixed subfield GF(q) and orbit structure on the remaining elements.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 12px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .lbl { font-style: italic; }
+      </style>
+
+      <!-- outer ring: GF(q^w) -->
+      <ellipse cx="240" cy="140" rx="200" ry="90" fill="none" stroke="var(--blue)" stroke-width="1"/>
+      <text x="240" y="38" text-anchor="middle" class="lbl" font-size="13" fill="var(--blue)">GF(qʷ)  — ambient field</text>
+
+      <!-- inner ring: fixed subfield GF(q) -->
+      <ellipse cx="240" cy="140" rx="52" ry="30" fill="var(--blue-pale)" stroke="var(--blue)" stroke-width="1"/>
+      <text x="240" y="143" text-anchor="middle" class="lbl" font-size="12" fill="var(--blue)" font-weight="700">GF(q)</text>
+      <text x="240" y="160" text-anchor="middle" font-size="10" fill="var(--blue)">fixed points of σ</text>
+
+      <!-- orbit of length 2: two dots connected by arc arrows -->
+      <g transform="translate(110,120)">
+        <circle cx="0" cy="0" r="3.5" fill="var(--stroke)"/>
+        <circle cx="34" cy="-10" r="3.5" fill="var(--stroke)"/>
+        <path d="M 3 -1 Q 17 -22 31 -10" fill="none" stroke="var(--stroke)" stroke-width="0.9"
+              marker-end="url(#ar)"/>
+        <path d="M 31 -7 Q 17 10 3 2" fill="none" stroke="var(--stroke)" stroke-width="0.9"
+              marker-end="url(#ar)"/>
+        <text x="-8" y="4" class="lbl" font-size="10">x</text>
+        <text x="42" y="-9" class="lbl" font-size="10">σ(x)</text>
+        <text x="17" y="30" text-anchor="middle" font-size="10" font-style="italic">orbit of length 2</text>
+      </g>
+
+      <!-- orbit of length 5: cycle of dots -->
+      <g transform="translate(370,130)">
+        <g fill="var(--stroke)">
+          <circle cx="0" cy="-20" r="3.5"/>
+          <circle cx="18" cy="-6" r="3.5"/>
+          <circle cx="11" cy="15" r="3.5"/>
+          <circle cx="-11" cy="15" r="3.5"/>
+          <circle cx="-18" cy="-6" r="3.5"/>
+        </g>
+        <path d="M 2 -19 A 22 22 0 0 1 17 -9" fill="none" stroke="var(--stroke)" stroke-width="0.9" marker-end="url(#ar)"/>
+        <path d="M 18 -3 A 22 22 0 0 1 13 13" fill="none" stroke="var(--stroke)" stroke-width="0.9" marker-end="url(#ar)"/>
+        <path d="M 9 16 A 22 22 0 0 1 -9 16" fill="none" stroke="var(--stroke)" stroke-width="0.9" marker-end="url(#ar)"/>
+        <path d="M -13 13 A 22 22 0 0 1 -18 -3" fill="none" stroke="var(--stroke)" stroke-width="0.9" marker-end="url(#ar)"/>
+        <path d="M -17 -9 A 22 22 0 0 1 -2 -19" fill="none" stroke="var(--stroke)" stroke-width="0.9" marker-end="url(#ar)"/>
+        <text x="0" y="48" text-anchor="middle" font-size="10" font-style="italic">orbit of length 5</text>
+      </g>
+
+      <!-- arrow marker -->
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--stroke)"/>
+        </marker>
+      </defs>
+
+      <!-- caption inside SVG -->
+      <text x="240" y="250" text-anchor="middle" font-size="11" fill="#4a4a4a" font-style="italic">
+        σ(x) = xᵠ — fixed on GF(q); orbits elsewhere have length dividing w
+      </text>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 4.</span> The Frobenius map <var>σ</var>(<var>x</var>) = <var>x</var><sup><var>q</var></sup> fixes the smaller field GF(<var>q</var>) pointwise and permutes the rest. Every orbit outside GF(<var>q</var>) has length <var>d</var>, where <var>d</var> divides <var>w</var>; the length-1 orbits (fixed points) are exactly GF(<var>q</var>) ⊂ GF(<var>q</var><sup><var>w</var></sup>).
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The Frobenius automorphism</h3>
+    <div class="defn">
+      <span class="label">Definition (Shoup Thm 19.7).</span> Let <var>q</var> = <var>p</var><sup><var>w</var></sup> be a prime power. The <i>Frobenius map</i> on GF(<var>q</var>) is
+      <span class="eq"><var>σ</var>: GF(<var>q</var>) → GF(<var>q</var>),  <var>σ</var>(<var>x</var>) = <var>x</var><sup><var>p</var></sup>.</span>
+      More generally, on an extension GF(<var>q</var><sup><var>w</var></sup>), the <var>q</var>-power Frobenius <var>σ</var>(<var>x</var>) = <var>x</var><sup><var>q</var></sup> is an automorphism of that field fixing GF(<var>q</var>) pointwise.
+    </div>
+
+    <p>The reason this map is an automorphism, not some arbitrary function, is the "freshman's dream" that holds in characteristic <var>p</var>:
+    <span class="eq">(<var>x</var> + <var>y</var>)<sup><var>p</var></sup> = <var>x</var><sup><var>p</var></sup> + <var>y</var><sup><var>p</var></sup>.</span>
+    In any commutative ring of characteristic <var>p</var>, the binomial expansion of (<var>x</var>+<var>y</var>)<sup><var>p</var></sup> has all middle terms C(<var>p</var>, <var>i</var>) divisible by <var>p</var>, hence equal to 0. So <var>σ</var> respects addition. It clearly respects multiplication: (<var>xy</var>)<sup><var>p</var></sup> = <var>x</var><sup><var>p</var></sup><var>y</var><sup><var>p</var></sup>. So <var>σ</var> is a ring homomorphism; on a field it is either injective or zero, and <var>σ</var>(1) = 1, so it is injective, hence an automorphism on the finite field GF(<var>q</var>).</p>
+
+    <h3>Fixed points and the Galois group</h3>
+    <p>Fermat's little theorem in GF(<var>q</var>) says <var>x</var><sup><var>q</var></sup> = <var>x</var> for every <var>x</var> ∈ GF(<var>q</var>). So the <var>q</var>-power Frobenius fixes GF(<var>q</var>) pointwise. On the extension GF(<var>q</var><sup><var>w</var></sup>), the iterates <var>σ</var><sup>0</sup> = id, <var>σ</var><sup>1</sup>, <var>σ</var><sup>2</sup>, …, <var>σ</var><sup><var>w</var>−1</sup> are all distinct, and <var>σ</var><sup><var>w</var></sup> = id (because every element of GF(<var>q</var><sup><var>w</var></sup>) satisfies <var>x</var><sup><var>q</var><sup><var>w</var></sup></sup> = <var>x</var>).</p>
+
+    <div class="thm">
+      <span class="label">Galois theorem (Shoup 19.9).</span> The group Gal(GF(<var>q</var><sup><var>w</var></sup>) / GF(<var>q</var>)) of field automorphisms fixing GF(<var>q</var>) is cyclic of order <var>w</var>, generated by <var>σ</var>.
+    </div>
+
+    <div class="note">
+      <span class="label">Important caveat for Conjecture I.</span> The conjecture is stated with parameter <var>q</var> a prime power, <var>σ</var>(<var>x</var>) = <var>x</var><sup><var>q</var></sup>. If <var>q</var> is itself already prime (<var>w</var> = 1), then <var>σ</var> acts trivially on GF(<var>q</var>), and the statement "faces are fixed setwise by <var>σ</var>" is vacuous — <var>σ</var> fixes every face because it fixes every point. The conjecture has genuine content only when <var>q</var> = <var>p</var><sup><var>w</var></sup> with <var>w</var> ≥ 2, where <var>σ</var> is read as a Galois action on points of the ambient geometry. This is worth flagging before we try to illustrate it with the Fano plane (<var>q</var> = 2, <var>w</var> = 1).
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#fields-gf4">3b · GF(4) by hand</a>
+    <a class="next" href="#frobenius-map">4a · The map σ</a>
+  </div>
+</section>
+
+
+<!-- 4a. FROBENIUS — the map on GF(4) -->
+<section id="frobenius-map" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 4a · algebraic</div>
+    <h2>The map <var>σ</var>: <var>x</var> ↦ <var>x</var><sup><var>q</var></sup></h2>
+    <span class="tag b">worked: GF(4) over GF(2)</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 230" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="The Frobenius map on GF(4): sigma fixes 0 and 1, and swaps alpha with alpha plus one.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 13px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .lbl { font-style: italic; }
+      </style>
+
+      <text x="220" y="24" text-anchor="middle" class="ttl">Frobenius on GF(4): σ(x) = x²</text>
+
+      <!-- domain on the left -->
+      <g transform="translate(100,70)">
+        <text x="0" y="-30" class="ttl" text-anchor="middle">GF(4)</text>
+        <circle cx="0" cy="0" r="16" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1.2"/>
+        <text x="0" y="5" text-anchor="middle" font-weight="700">0</text>
+        <circle cx="0" cy="36" r="16" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1.2"/>
+        <text x="0" y="41" text-anchor="middle" font-weight="700">1</text>
+        <circle cx="0" cy="72" r="16" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1.2"/>
+        <text x="0" y="77" text-anchor="middle" font-weight="700" font-style="italic">α</text>
+        <circle cx="0" cy="108" r="16" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1.2"/>
+        <text x="0" y="113" text-anchor="middle" font-weight="700" font-style="italic">α+1</text>
+      </g>
+
+      <!-- codomain on the right -->
+      <g transform="translate(340,70)">
+        <text x="0" y="-30" class="ttl" text-anchor="middle">GF(4)</text>
+        <circle cx="0" cy="0" r="16" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1.2"/>
+        <text x="0" y="5" text-anchor="middle" font-weight="700">0</text>
+        <circle cx="0" cy="36" r="16" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1.2"/>
+        <text x="0" y="41" text-anchor="middle" font-weight="700">1</text>
+        <circle cx="0" cy="72" r="16" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1.2"/>
+        <text x="0" y="77" text-anchor="middle" font-weight="700" font-style="italic">α</text>
+        <circle cx="0" cy="108" r="16" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1.2"/>
+        <text x="0" y="113" text-anchor="middle" font-weight="700" font-style="italic">α+1</text>
+      </g>
+
+      <!-- Arrows: 0->0 and 1->1 (fixed) in blue; α->α+1 and α+1->α (swapped) in red -->
+      <defs>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--stroke)"/>
+        </marker>
+      </defs>
+
+      <!-- 0 -> 0 (fixed, straight, blue) -->
+      <line x1="116" y1="70" x2="324" y2="70" stroke="var(--blue)" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#ar2)"/>
+      <!-- 1 -> 1 (fixed, straight, blue) -->
+      <line x1="116" y1="106" x2="324" y2="106" stroke="var(--blue)" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#ar2)"/>
+      <!-- α -> α+1 (swapped, curved, red) -->
+      <path d="M 116 142 Q 220 160 324 178" fill="none" stroke="var(--red)" stroke-width="1.2" marker-end="url(#ar2)"/>
+      <!-- α+1 -> α (swapped, curved, red) -->
+      <path d="M 116 178 Q 220 160 324 142" fill="none" stroke="var(--red)" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+      <!-- legend in middle bottom -->
+      <g transform="translate(155,205)">
+        <line x1="0" y1="0" x2="16" y2="0" stroke="var(--blue)" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="22" y="4" font-size="11" fill="#4a4a4a">fixed (in GF(2))</text>
+        <line x1="120" y1="0" x2="136" y2="0" stroke="var(--red)" stroke-width="1.2"/>
+        <text x="142" y="4" font-size="11" fill="#4a4a4a">a 2-cycle</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 4a.</span> The Frobenius map on GF(4) with parameter <var>q</var> = 2 (so <var>σ</var>(<var>x</var>) = <var>x</var>²). The fixed set is the subfield GF(2) = {0, 1}. The map swaps <var>α</var> with <var>α</var>+1. The orbit structure is {0}, {1}, {<var>α</var>, <var>α</var>+1} — two fixed points and one 2-cycle.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>Compute <var>σ</var>(<var>x</var>) = <var>x</var>² on each element of GF(4)</h3>
+    <ul class="annot">
+      <li><var>σ</var>(0) = 0² = 0.   <i>Fixed.</i></li>
+      <li><var>σ</var>(1) = 1² = 1.   <i>Fixed.</i></li>
+      <li><var>σ</var>(<var>α</var>) = <var>α</var>² = <var>α</var> + 1 (using the relation from §3b).</li>
+      <li><var>σ</var>(<var>α</var> + 1) = (<var>α</var> + 1)² = <var>α</var>² + 2<var>α</var> + 1 = (<var>α</var>+1) + 0 + 1 = <var>α</var>.</li>
+    </ul>
+    <p>The last step uses 2<var>α</var> = 0 because the characteristic is 2. So <var>σ</var> swaps <var>α</var> with <var>α</var>+1 and is its own inverse: <var>σ</var>² = id. That matches the Galois theorem (§4): Gal(GF(4) / GF(2)) is cyclic of order 2, generated by <var>σ</var>.</p>
+
+    <h3>Orbits</h3>
+    <p>Write ⟨<var>σ</var>⟩ for the group it generates. The orbits of ⟨<var>σ</var>⟩ on GF(4) are the equivalence classes under "<var>x</var> ∼ <var>y</var> iff <var>σ</var><sup><var>i</var></sup>(<var>x</var>) = <var>y</var> for some <var>i</var>". On GF(4) they are:</p>
+
+    <div class="ex">
+      <span class="label">Orbits of σ on GF(4).</span>  {0},  {1},  {<var>α</var>, <var>α</var>+1}.
+    </div>
+
+    <p>Two singleton orbits, one 2-element orbit. The singletons are GF(2); the 2-element orbit is its complement. This is the pattern for any extension: fixed points make up the subfield, non-fixed points form orbits of the same length as the extension degree.</p>
+
+    <h3>A larger example for intuition</h3>
+    <p>In GF(16) over GF(4) (<var>w</var> = 2), the 2-power Frobenius of GF(4) lifts to a 4-power Frobenius on GF(16); singletons again form the subfield GF(4) (4 points), and the remaining 12 points form 6 orbits of length 2. In GF(64) over GF(4) (<var>w</var> = 3), the fixed set has 4 points; the other 60 points form 20 orbits of length 3. The pattern: orbit lengths divide <var>w</var>, and their total count obeys a Möbius-inversion formula Shoup gives in §19.9.</p>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#frobenius">4 · Frobenius and Galois</a>
+    <a class="next" href="#frobenius-orbits">4b · Orbits and the cyclic group</a>
+  </div>
+</section>
+
+
+<!-- 4b. FROBENIUS — orbits diagram -->
+<section id="frobenius-orbits" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 4b · algebraic</div>
+    <h2>Orbits and the cyclic group ⟨<var>σ</var>⟩</h2>
+    <span class="tag b">how σ moves points</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 500 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Lattice of intermediate subfields between GF(q) and GF(q to the w) for w equals 6. The intermediate subfields GF(q-squared) and GF(q-cubed) correspond to divisors of 6.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 12px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .lbl { font-style: italic; }
+        .fig .deg { font-size: 10px; fill: #6a6a6a; font-style: italic; }
+      </style>
+
+      <text x="250" y="22" text-anchor="middle" class="ttl">subfield lattice / fixed-point lattice</text>
+      <text x="250" y="38" text-anchor="middle" font-size="10" font-style="italic">(for w = 6; intermediate subfields are GF(qᵈ) for d | 6)</text>
+
+      <!-- Top: GF(q^6) — extension degree 6 over GF(q) -->
+      <g transform="translate(250,70)">
+        <rect x="-60" y="-14" width="120" height="24" fill="var(--blue-pale)" stroke="var(--blue)" stroke-width="1"/>
+        <text x="0" y="3" text-anchor="middle" font-style="italic">GF(q⁶)</text>
+        <text x="68" y="3" class="deg">[ deg 6 ]</text>
+        <text x="130" y="3" font-size="10">fixed by ⟨σ⁶⟩ = {id}</text>
+      </g>
+
+      <!-- Level 2: GF(q^2) on left and GF(q^3) on right -->
+      <g transform="translate(140,140)">
+        <rect x="-40" y="-12" width="80" height="22" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1"/>
+        <text x="0" y="3" text-anchor="middle" font-style="italic">GF(q²)</text>
+        <text x="48" y="3" class="deg">[ deg 2 ]</text>
+        <text x="0" y="32" text-anchor="middle" font-size="10">fixed by ⟨σ²⟩</text>
+      </g>
+      <g transform="translate(360,140)">
+        <rect x="-40" y="-12" width="80" height="22" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1"/>
+        <text x="0" y="3" text-anchor="middle" font-style="italic">GF(q³)</text>
+        <text x="48" y="3" class="deg">[ deg 3 ]</text>
+        <text x="0" y="32" text-anchor="middle" font-size="10">fixed by ⟨σ³⟩</text>
+      </g>
+
+      <!-- Bottom: GF(q) — extension degree 1 -->
+      <g transform="translate(250,210)">
+        <rect x="-50" y="-12" width="100" height="22" fill="var(--blue-pale)" stroke="var(--blue)" stroke-width="1.3"/>
+        <text x="0" y="3" text-anchor="middle" font-style="italic" font-weight="700">GF(q)</text>
+        <text x="58" y="3" class="deg">[ deg 1 ]</text>
+        <text x="120" y="3" font-size="10">fixed by ⟨σ⟩</text>
+      </g>
+
+      <!-- connecting lines -->
+      <g stroke="var(--stroke)" stroke-width="0.8" fill="none">
+        <line x1="230" y1="80" x2="160" y2="127"/>
+        <line x1="270" y1="80" x2="340" y2="127"/>
+        <line x1="160" y1="153" x2="230" y2="198"/>
+        <line x1="340" y1="153" x2="270" y2="198"/>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 4b.</span> For <var>w</var> = 6, the subfields of GF(<var>q</var><sup>6</sup>) containing GF(<var>q</var>) are indexed by divisors of 6: namely 1, 2, 3, 6. Each corresponds to the fixed field of a power of <var>σ</var>. This subfield-divisor correspondence (Shoup Thm 19.13) is the combinatorial shadow of Galois theory for finite fields.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The cyclic group ⟨<var>σ</var>⟩</h3>
+    <p>For an extension GF(<var>q</var><sup><var>w</var></sup>) / GF(<var>q</var>), the group generated by the Frobenius ⟨<var>σ</var>⟩ is cyclic of order <var>w</var>. Its subgroups are the ⟨<var>σ</var><sup><var>d</var></sup>⟩ for <var>d</var> | <var>w</var>, each of order <var>w</var>/<var>d</var>.</p>
+
+    <div class="thm">
+      <span class="label">Subfield-divisor correspondence (Shoup Thm 19.13).</span>
+      The subfields of GF(<var>q</var><sup><var>w</var></sup>) containing GF(<var>q</var>) are in one-to-one correspondence with the positive divisors <var>d</var> of <var>w</var>, via
+      <span class="eq"><var>d</var>  ↔  GF(<var>q</var><sup><var>d</var></sup>)  =  {<var>x</var> : <var>σ</var><sup><var>d</var></sup>(<var>x</var>) = <var>x</var>}.</span>
+    </div>
+
+    <h3>Why the conjecture cares</h3>
+    <p>When Conjecture I says "orbits of <var>σ</var> coincide with lines of PG(2, <var>q</var>)", it is asking us to compute two things and compare them: the orbit decomposition of a set of points in GF(<var>q</var>)³ under the Frobenius action, and the line structure of the projective plane over GF(<var>q</var>). Both are finite, computable objects; the claim is that they coincide <i>as set partitions</i>. That is a strong claim, because the two partitions come from very different places.</p>
+
+    <div class="note">
+      <span class="label">One subtle point.</span> The conjecture speaks of <var>σ</var> acting "on row indices through PG(2, <var>q</var>)". For this action to be non-trivial, the points of PG(2, <var>q</var>) must themselves have an algebraic-Galois structure that <var>σ</var> can permute. If <var>q</var> is prime, PG(2, <var>q</var>) is built from GF(<var>q</var>)³, which has no Galois action by <var>σ</var> over itself — the conjecture is then vacuous. The nontrivial content lives at <var>q</var> = 4, 8, 9, 16, 25, 27, … where PG(2, <var>q</var>) sits inside a larger projective plane PG(2, <var>q</var><sup><var>w</var></sup>) and <var>σ</var> permutes its points. This is the content of §8c (the commentary section).
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#frobenius-map">4a · σ on GF(4)</a>
+    <a class="next" href="#proj">5 · Projective plane</a>
+  </div>
+</section>
+
+
+<!-- 5. PROJ -->
+<section id="proj" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 5 · the geometric thread</div>
+    <h2>The projective plane PG(2, <var>q</var>)</h2>
+    <span class="tag g">Morris ch.18.4</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A three-dimensional schematic: lines through the origin in GF(q) cubed correspond to points of PG(2, q). Two-dimensional subspaces (planes through the origin) correspond to lines of PG(2, q).">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11.5px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .lbl { font-style: italic; }
+      </style>
+
+      <!-- perspective box for GF(q)^3 -->
+      <g transform="translate(60,50)">
+        <!-- coordinate axes -->
+        <line x1="0" y1="130" x2="160" y2="130" stroke="var(--stroke)" stroke-width="0.8" marker-end="url(#ar3)"/>
+        <line x1="0" y1="130" x2="0"   y2="10"  stroke="var(--stroke)" stroke-width="0.8" marker-end="url(#ar3)"/>
+        <line x1="0" y1="130" x2="90"  y2="70"  stroke="var(--stroke)" stroke-width="0.8" marker-end="url(#ar3)"/>
+        <text x="164" y="134" class="lbl">x₁</text>
+        <text x="-2"  y="4"   class="lbl">x₃</text>
+        <text x="94"  y="66"  class="lbl">x₂</text>
+        <circle cx="0" cy="130" r="2" fill="var(--stroke)"/>
+
+        <!-- a plane (2-dim subspace) = 1 line of PG(2,q); shown as parallelogram (drawn BELOW lines so they sit on top) -->
+        <polygon points="0,130 140,90 150,20 10,60" fill="var(--green)" fill-opacity="0.12" stroke="var(--green)" stroke-width="0.7" stroke-dasharray="2 2"/>
+
+        <!-- two lines through origin = 2 points of PG(2,q) -->
+        <line x1="0" y1="130" x2="130" y2="40" stroke="var(--green)" stroke-width="1.3"/>
+        <line x1="0" y1="130" x2="80" y2="20"  stroke="var(--green)" stroke-width="1.3"/>
+        <!-- dots at endpoints -->
+        <circle cx="130" cy="40" r="3" fill="var(--green)"/>
+        <circle cx="80"  cy="20" r="3" fill="var(--green)"/>
+        <!-- labels, pushed clear of the parallelogram tint -->
+        <text x="154" y="44" fill="var(--green)" class="lbl" font-size="10">[a:b:c]</text>
+        <text x="38"  y="12" fill="var(--green)" class="lbl" font-size="10">[a′:b′:c′]</text>
+
+        <!-- subspace annotation beneath the parallelogram on the x1 axis -->
+        <text x="80" y="158" fill="var(--green)" class="lbl" font-size="10" text-anchor="middle">2-dim subspace  =  1 line of PG(2,q)</text>
+
+        <!-- the origin -->
+        <text x="-10" y="144" class="lbl">0</text>
+      </g>
+
+      <defs>
+        <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--stroke)"/>
+        </marker>
+      </defs>
+
+      <!-- RIGHT: the table -->
+      <g transform="translate(260,50)">
+        <text x="70" y="0" class="ttl" text-anchor="middle">PG(2, q) dictionary</text>
+        <g font-size="12" font-style="italic">
+          <text x="0" y="22">1-dim subspace of GF(q)³</text>
+          <text x="0" y="38" fill="var(--green)" font-weight="700">↔  point of PG(2, q)</text>
+
+          <text x="0" y="70">2-dim subspace of GF(q)³</text>
+          <text x="0" y="86" fill="var(--green)" font-weight="700">↔  line of PG(2, q)</text>
+
+          <text x="0" y="118" font-style="normal" class="ttl">counts</text>
+          <text x="0" y="134">#points = q² + q + 1</text>
+          <text x="0" y="150">#lines = q² + q + 1</text>
+          <text x="0" y="166">pts on each line = q + 1</text>
+          <text x="0" y="182">lines thru each pt = q + 1</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 5.</span> The projective plane PG(2, <var>q</var>) is built from the vector space GF(<var>q</var>)³. Points are 1-dimensional subspaces; lines are 2-dimensional subspaces; incidence is containment. Counting: a 1-dim subspace contains <var>q</var>−1 nonzero vectors grouped into scalar classes, so there are (<var>q</var>³−1)/(<var>q</var>−1) = <var>q</var>² + <var>q</var> + 1 such subspaces.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>Construction</h3>
+    <p>Let <var>V</var> = GF(<var>q</var>)³, the three-dimensional vector space over GF(<var>q</var>). The projective plane PG(2, <var>q</var>) has:</p>
+
+    <ul class="annot">
+      <li><b>Points:</b> the 1-dimensional subspaces of <var>V</var>. A nonzero vector (<var>a</var>, <var>b</var>, <var>c</var>) gives a point, and two nonzero vectors give the same point iff they are scalar multiples. We write [<var>a</var> : <var>b</var> : <var>c</var>] for the point defined by (<var>a</var>, <var>b</var>, <var>c</var>).</li>
+      <li><b>Lines:</b> the 2-dimensional subspaces of <var>V</var>. Equivalently, a line is the zero set of a nonzero linear form <var>a</var><var>x</var><sub>1</sub> + <var>b</var><var>x</var><sub>2</sub> + <var>c</var><var>x</var><sub>3</sub>, up to scalar.</li>
+      <li><b>Incidence:</b> a point lies on a line iff the 1-dim subspace is contained in the 2-dim subspace, iff the linear form vanishes at the vector.</li>
+    </ul>
+
+    <h3>The counts</h3>
+    <p>How many points? The nonzero vectors in GF(<var>q</var>)³ number <var>q</var>³ − 1. Each 1-dim subspace contains <var>q</var> − 1 nonzero vectors (all scalar multiples of a generator). So the number of 1-dim subspaces is (<var>q</var>³ − 1)/(<var>q</var> − 1) = <var>q</var>² + <var>q</var> + 1. Dually, the number of lines is also <var>q</var>² + <var>q</var> + 1.</p>
+
+    <p>How many points on a line? A 2-dim subspace has <var>q</var>² elements, of which <var>q</var>² − 1 are nonzero, grouped into scalar classes of size <var>q</var> − 1. So it contains (<var>q</var>² − 1)/(<var>q</var> − 1) = <var>q</var> + 1 points. Dually, each point lies on <var>q</var> + 1 lines.</p>
+
+    <div class="note">
+      <span class="label">The design parameters.</span> For PG(2, <var>q</var>) with <var>v</var> = <var>q</var>² + <var>q</var> + 1 and <var>k</var> = <var>q</var> + 1, the BIBD parameter equations force <var>λ</var> = 1 and <var>b</var> = <var>v</var>. That is: every pair of points determines a unique line, and there are exactly as many lines as points. A <i>symmetric</i> BIBD(<var>q</var>² + <var>q</var> + 1, <var>q</var> + 1, 1).
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#frobenius-orbits">4b · Orbits</a>
+    <a class="next" href="#proj-construction">5a · Construction</a>
+  </div>
+</section>
+
+
+<!-- 5a. Proj construction -->
+<section id="proj-construction" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 5a · geometric</div>
+    <h2>From GF(<var>q</var>)³ to points and lines</h2>
+    <span class="tag g">small example: q = 2</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="The seven nonzero vectors of GF(2) cubed, listed as binary triples, each representing a point of PG(2, 2). Below each vector is the corresponding projective coordinate.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 12px; fill: var(--stroke); }
+        .fig .bin { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; fill: var(--stroke); font-weight: 700; }
+        .fig .pt { font-family: Georgia, serif; font-style: italic; font-size: 12px; fill: var(--green); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+      </style>
+
+      <text x="220" y="20" text-anchor="middle" class="ttl">Nonzero vectors of GF(2)³  =  7 points of PG(2, 2)</text>
+      <text x="220" y="36" text-anchor="middle" font-size="10" font-style="italic">(over GF(2) each nonzero vector is its own point)</text>
+
+      <!-- 7 columns: vector (binary) -> point coordinates -->
+      <g transform="translate(40,70)">
+        <!-- vec 001 -->
+        <g transform="translate(0,0)">
+          <text x="20" y="0" text-anchor="middle" class="bin">001</text>
+          <line x1="20" y1="6" x2="20" y2="22" stroke="var(--stroke)" stroke-width="0.6"/>
+          <text x="20" y="36" text-anchor="middle" class="pt">[0:0:1]</text>
+          <text x="20" y="54" text-anchor="middle" class="pt" font-weight="700">P₁</text>
+        </g>
+        <g transform="translate(55,0)">
+          <text x="20" y="0" text-anchor="middle" class="bin">010</text>
+          <line x1="20" y1="6" x2="20" y2="22" stroke="var(--stroke)" stroke-width="0.6"/>
+          <text x="20" y="36" text-anchor="middle" class="pt">[0:1:0]</text>
+          <text x="20" y="54" text-anchor="middle" class="pt" font-weight="700">P₂</text>
+        </g>
+        <g transform="translate(110,0)">
+          <text x="20" y="0" text-anchor="middle" class="bin">011</text>
+          <line x1="20" y1="6" x2="20" y2="22" stroke="var(--stroke)" stroke-width="0.6"/>
+          <text x="20" y="36" text-anchor="middle" class="pt">[0:1:1]</text>
+          <text x="20" y="54" text-anchor="middle" class="pt" font-weight="700">P₃</text>
+        </g>
+        <g transform="translate(165,0)">
+          <text x="20" y="0" text-anchor="middle" class="bin">100</text>
+          <line x1="20" y1="6" x2="20" y2="22" stroke="var(--stroke)" stroke-width="0.6"/>
+          <text x="20" y="36" text-anchor="middle" class="pt">[1:0:0]</text>
+          <text x="20" y="54" text-anchor="middle" class="pt" font-weight="700">P₄</text>
+        </g>
+        <g transform="translate(220,0)">
+          <text x="20" y="0" text-anchor="middle" class="bin">101</text>
+          <line x1="20" y1="6" x2="20" y2="22" stroke="var(--stroke)" stroke-width="0.6"/>
+          <text x="20" y="36" text-anchor="middle" class="pt">[1:0:1]</text>
+          <text x="20" y="54" text-anchor="middle" class="pt" font-weight="700">P₅</text>
+        </g>
+        <g transform="translate(275,0)">
+          <text x="20" y="0" text-anchor="middle" class="bin">110</text>
+          <line x1="20" y1="6" x2="20" y2="22" stroke="var(--stroke)" stroke-width="0.6"/>
+          <text x="20" y="36" text-anchor="middle" class="pt">[1:1:0]</text>
+          <text x="20" y="54" text-anchor="middle" class="pt" font-weight="700">P₆</text>
+        </g>
+        <g transform="translate(330,0)">
+          <text x="20" y="0" text-anchor="middle" class="bin">111</text>
+          <line x1="20" y1="6" x2="20" y2="22" stroke="var(--stroke)" stroke-width="0.6"/>
+          <text x="20" y="36" text-anchor="middle" class="pt">[1:1:1]</text>
+          <text x="20" y="54" text-anchor="middle" class="pt" font-weight="700">P₇</text>
+        </g>
+      </g>
+
+      <!-- lines: recall a line of PG(2,2) is a 2-dim subspace of GF(2)^3;
+           equivalently, the three nonzero vectors whose sum (XOR) is zero. -->
+      <g transform="translate(40,160)">
+        <text x="0" y="0" class="ttl">the 7 lines of PG(2, 2)</text>
+        <text x="0" y="16" font-size="10" font-style="italic">each line = 3 points whose coord-vectors XOR to 000</text>
+        <g font-family="Georgia" font-style="italic" font-size="12" fill="var(--green)">
+          <text x="0" y="40">ℓ₁ = {P₁, P₂, P₃}   (001 + 010 = 011)</text>
+          <text x="0" y="56">ℓ₂ = {P₁, P₄, P₅}   (001 + 100 = 101)</text>
+          <text x="0" y="72">ℓ₃ = {P₂, P₄, P₆}   (010 + 100 = 110)</text>
+          <text x="0" y="88">ℓ₄ = {P₃, P₄, P₇}   (011 + 100 = 111)</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 5a.</span> Points of PG(2, 2) are the seven nonzero vectors of GF(2)³. Lines are 2-dim subspaces; concretely, a line is a triple of points whose coordinate vectors XOR to zero (since in GF(2), linear dependence of three vectors over a 2-dim subspace means <var>v</var><sub>1</sub> + <var>v</var><sub>2</sub> = <var>v</var><sub>3</sub>). Four lines are shown; the other three are ℓ<sub>5</sub>, ℓ<sub>6</sub>, ℓ<sub>7</sub> (see §5b).
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The smallest projective plane</h3>
+    <p>Set <var>q</var> = 2. Then GF(2) = {0, 1}, and GF(2)³ has 2³ = 8 vectors, seven of which are nonzero. Over GF(2) there are no nontrivial scalar multiples (only 0 and 1), so each nonzero vector IS a 1-dim subspace. Thus PG(2, 2) has <var>q</var>² + <var>q</var> + 1 = 7 points; we label them <var>P</var><sub>1</sub> through <var>P</var><sub>7</sub> using the binary value of their coordinates.</p>
+
+    <h3>Lines as linear dependencies</h3>
+    <p>A line of PG(2, 2) is a 2-dim subspace of GF(2)³. A 2-dim subspace has 4 vectors (2² = 4), one of which is zero and three of which are nonzero. So a line has exactly 3 points, and those three points' coordinate vectors sum to zero (because any three vectors in a 2-dim space are linearly dependent, and over GF(2) linear dependence with 3 vectors means they XOR to zero).</p>
+
+    <h3>The 7 lines</h3>
+    <p>Enumerating triples of nonzero vectors that XOR to zero gives exactly 7 lines. Using the labelling above:</p>
+
+    <div class="ex">
+      <span class="label">The 7 lines of PG(2, 2).</span>
+      <span class="eq">ℓ<sub>1</sub> = {P<sub>1</sub>, P<sub>2</sub>, P<sub>3</sub>},  ℓ<sub>2</sub> = {P<sub>1</sub>, P<sub>4</sub>, P<sub>5</sub>},  ℓ<sub>3</sub> = {P<sub>2</sub>, P<sub>4</sub>, P<sub>6</sub>},</span>
+      <span class="eq">ℓ<sub>4</sub> = {P<sub>3</sub>, P<sub>4</sub>, P<sub>7</sub>},  ℓ<sub>5</sub> = {P<sub>1</sub>, P<sub>6</sub>, P<sub>7</sub>},  ℓ<sub>6</sub> = {P<sub>2</sub>, P<sub>5</sub>, P<sub>7</sub>},  ℓ<sub>7</sub> = {P<sub>3</sub>, P<sub>5</sub>, P<sub>6</sub>}.</span>
+    </div>
+
+    <p>Seven points, seven lines, each line has 3 points, each point is in 3 lines, each pair of points is in exactly one line. This is BIBD(7, 3, 1) — the design from §1.</p>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#proj">5 · Projective plane</a>
+    <a class="next" href="#proj-fano">5b · The Fano plane</a>
+  </div>
+</section>
+
+
+<!-- 5b. Fano plane figure -->
+<section id="proj-fano" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 5b · geometric</div>
+    <h2>The Fano plane PG(2, 2)</h2>
+    <span class="tag g">the canonical picture</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 260 210" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="The Fano plane drawn as an equilateral triangle with seven points: three vertices, three edge midpoints, and one centre. The seven lines are the three edges, the three medians, and the inscribed circle through the midpoints.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); font-style: italic; }
+        .fig .ttl { font-size: 11px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.1em; font-style: normal; }
+      </style>
+
+      <!-- Coordinates (verified): equilateral, centroid (130,115), side 140
+           P1=(60,155.41), P2=(200,155.41), P3=(130,34.17),
+           P4=(130,155.41) [bot mid], P5=(95,94.79) [left mid], P6=(165,94.79) [right mid],
+           P7=(130,115) [centre], incircle r=40.41 -->
+
+      <!-- 3 edges -->
+      <g stroke="var(--green)" stroke-width="1.1" fill="none">
+        <line x1="60"  y1="155.41" x2="200" y2="155.41"/>  <!-- bottom edge: P1 P4 P2 -->
+        <line x1="60"  y1="155.41" x2="130" y2="34.17"/>   <!-- left edge: P1 P5 P3 -->
+        <line x1="200" y1="155.41" x2="130" y2="34.17"/>   <!-- right edge: P2 P6 P3 -->
+      </g>
+      <!-- 3 medians -->
+      <g stroke="var(--green)" stroke-width="1.1" fill="none">
+        <line x1="60"  y1="155.41" x2="165" y2="94.79"/>   <!-- P1 P7 P6 -->
+        <line x1="200" y1="155.41" x2="95"  y2="94.79"/>   <!-- P2 P7 P5 -->
+        <line x1="130" y1="34.17"  x2="130" y2="155.41"/>  <!-- P3 P7 P4 -->
+      </g>
+      <!-- incircle (the seventh "line") -->
+      <circle cx="130" cy="115" r="40.41" fill="none" stroke="var(--green)" stroke-width="1.1"/>
+
+      <!-- 7 points -->
+      <g fill="var(--stroke)">
+        <circle cx="60"  cy="155.41" r="3.5"/>
+        <circle cx="200" cy="155.41" r="3.5"/>
+        <circle cx="130" cy="34.17"  r="3.5"/>
+        <circle cx="130" cy="155.41" r="3.5"/>
+        <circle cx="95"  cy="94.79"  r="3.5"/>
+        <circle cx="165" cy="94.79"  r="3.5"/>
+        <circle cx="130" cy="115"    r="3.5"/>
+      </g>
+      <!-- labels -->
+      <text x="52"  y="172">P₁</text>
+      <text x="200" y="172">P₂</text>
+      <text x="125" y="28">P₃</text>
+      <text x="135" y="172">P₄</text>
+      <text x="78"  y="90">P₅</text>
+      <text x="172" y="90">P₆</text>
+      <text x="136" y="111">P₇</text>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 5b.</span> The Fano plane. Seven points (three vertices, three edge-midpoints, one centre); seven "lines" (three edges, three medians, one <i>circle</i>). The inscribed circle is a perfectly respectable line in this geometry: it contains three points and, with the six straight lines, makes every pair of points lie on exactly one line.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The "lines" include a circle</h3>
+    <p>The picture of the Fano plane is drawn as an equilateral triangle with its three medians and the inscribed circle. The three vertices, three midpoints, and centre are the seven points. The six straight segments (three edges plus three medians) plus the circle are the seven lines.</p>
+
+    <p>That the circle is a "line" can feel odd, but remember: in PG(2, 2) a line is any 3-element subset of points such that the three coordinate vectors XOR to zero. The midpoints {P<sub>4</sub>, P<sub>5</sub>, P<sub>6</sub>} have coordinates (0,1,1), (1,1,0), (1,0,1); XOR them and you get (0,0,0). So they form a line. Drawing this line as a circle is just an artistic choice — any visualization in the Euclidean plane will have to distort some of the combinatorial lines since seven lines among seven points cannot all be drawn as straight lines.</p>
+
+    <h3>Why this figure matters for Conjecture I</h3>
+    <p>The incidence matrix of the Fano plane is the matrix <var>A</var> the conjecture cares about (for <var>q</var> = 2). Its seven rows are {0, 1}-vectors in ℝ⁷, each with exactly three ones. The conjecture asks for the Delaunay triangulation of those seven points in ℝ⁷ and claims its faces coincide with Frobenius orbits.</p>
+
+    <div class="note">
+      <span class="label">Reality check for q = 2.</span> As flagged in §4 and §4b: when <var>q</var> = 2 is prime, the Frobenius <var>σ</var>(<var>x</var>) = <var>x</var>² acts trivially on GF(2), and therefore trivially on every point of PG(2, 2). The seven orbits of ⟨<var>σ</var>⟩ on the 7 points are seven singletons. So the conjecture at <var>q</var> = 2 reduces to "every Delaunay face of the 7 Fano rows is a subset of singletons" — vacuously true. The interesting cases are <var>q</var> = 4, 8, 9, …, where singletons give way to 2-, 3-, 4-element orbits matching line structures.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#proj-construction">5a · Construction</a>
+    <a class="next" href="#proj-isbibd">5c · It IS a symmetric BIBD</a>
+  </div>
+</section>
+
+
+<!-- 5c. Proj is a BIBD -->
+<section id="proj-isbibd" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 5c · combinatorial + geometric</div>
+    <h2>PG(2, <var>q</var>) is a symmetric BIBD</h2>
+    <span class="tag g">threads cross</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 480 280" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Parameters of the symmetric BIBD coming from PG(2, q), for small values of q.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 12px; fill: var(--stroke); }
+        .fig .ttl { font-size: 12px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.08em; }
+        .fig .hd { font-size: 11px; font-variant: small-caps; letter-spacing: 0.08em; font-weight: 700; }
+      </style>
+
+      <text x="240" y="22" text-anchor="middle" class="ttl">PG(2, q) as a symmetric BIBD, for the first few q</text>
+
+      <!-- table -->
+      <g transform="translate(40,50)">
+        <!-- header -->
+        <g class="hd">
+          <text x="0"   y="0">q</text>
+          <text x="60"  y="0">v = q²+q+1</text>
+          <text x="170" y="0">k = q+1</text>
+          <text x="240" y="0">λ</text>
+          <text x="280" y="0">b</text>
+          <text x="330" y="0">name</text>
+        </g>
+        <line x1="-4" y1="6" x2="376" y2="6" stroke="var(--stroke)" stroke-width="0.6"/>
+
+        <g font-family="Georgia" font-style="italic" font-size="13">
+          <!-- q=2 row -->
+          <text x="0" y="26">2</text>
+          <text x="90" y="26" text-anchor="middle">7</text>
+          <text x="188" y="26" text-anchor="middle">3</text>
+          <text x="245" y="26">1</text>
+          <text x="285" y="26">7</text>
+          <text x="330" y="26" fill="var(--green)" font-weight="700">Fano</text>
+
+          <!-- q=3 -->
+          <text x="0" y="50">3</text>
+          <text x="90" y="50" text-anchor="middle">13</text>
+          <text x="188" y="50" text-anchor="middle">4</text>
+          <text x="245" y="50">1</text>
+          <text x="285" y="50">13</text>
+          <text x="330" y="50">PG(2,3)</text>
+
+          <!-- q=4 -->
+          <text x="0" y="74">4</text>
+          <text x="90" y="74" text-anchor="middle">21</text>
+          <text x="188" y="74" text-anchor="middle">5</text>
+          <text x="245" y="74">1</text>
+          <text x="285" y="74">21</text>
+          <text x="330" y="74" fill="var(--blue)" font-weight="700">PG(2,4)*</text>
+
+          <!-- q=5 -->
+          <text x="0" y="98">5</text>
+          <text x="90" y="98" text-anchor="middle">31</text>
+          <text x="188" y="98" text-anchor="middle">6</text>
+          <text x="245" y="98">1</text>
+          <text x="285" y="98">31</text>
+          <text x="330" y="98">PG(2,5)</text>
+
+          <!-- q=7 -->
+          <text x="0" y="122">7</text>
+          <text x="90" y="122" text-anchor="middle">57</text>
+          <text x="188" y="122" text-anchor="middle">8</text>
+          <text x="245" y="122">1</text>
+          <text x="285" y="122">57</text>
+          <text x="330" y="122">PG(2,7)</text>
+
+          <!-- q=8 -->
+          <text x="0" y="146">8</text>
+          <text x="90" y="146" text-anchor="middle">73</text>
+          <text x="188" y="146" text-anchor="middle">9</text>
+          <text x="245" y="146">1</text>
+          <text x="285" y="146">73</text>
+          <text x="330" y="146" fill="var(--blue)" font-weight="700">PG(2,8)*</text>
+
+          <!-- q=9 -->
+          <text x="0" y="170">9</text>
+          <text x="90" y="170" text-anchor="middle">91</text>
+          <text x="188" y="170" text-anchor="middle">10</text>
+          <text x="245" y="170">1</text>
+          <text x="285" y="170">91</text>
+          <text x="330" y="170" fill="var(--blue)" font-weight="700">PG(2,9)*</text>
+        </g>
+      </g>
+
+      <text x="240" y="260" text-anchor="middle" font-size="10" font-style="italic">* non-prime q: Frobenius acts nontrivially on the associated Galois extension</text>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 5c.</span> PG(2, <var>q</var>) is the symmetric BIBD(<var>q</var>² + <var>q</var> + 1, <var>q</var> + 1, 1) for every prime power <var>q</var>. The cases marked with an asterisk are where <var>q</var> is itself a prime power <var>p</var><sup><var>w</var></sup> with <var>w</var> ≥ 2 — only in those cases does Frobenius <var>σ</var>(<var>x</var>) = <var>x</var><sup><var>q</var></sup> act nontrivially on the plane and the conjecture has nontrivial content.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The statement, in plain words</h3>
+    <p>The projective plane PG(2, <var>q</var>) has <var>v</var> = <var>q</var>² + <var>q</var> + 1 points and <var>b</var> = <var>q</var>² + <var>q</var> + 1 lines. Every line has <var>k</var> = <var>q</var> + 1 points. Every point lies on <var>r</var> = <var>q</var> + 1 lines. Any two points lie on a unique line (<var>λ</var> = 1). The plane is a BIBD, and <var>b</var> = <var>v</var> makes it a <i>symmetric</i> BIBD.</p>
+
+    <div class="thm">
+      <span class="label">Theorem (Morris 18.4.1).</span> For every prime power <var>q</var>, the projective plane PG(2, <var>q</var>) is a symmetric BIBD with parameters (<var>v</var>, <var>k</var>, <var>λ</var>) = (<var>q</var>² + <var>q</var> + 1, <var>q</var> + 1, 1).
+    </div>
+
+    <p>This fact is the hinge that connects the combinatorial thread (§§1–2) with the algebraic thread (§§3–4). The combinatorial object (the symmetric BIBD) has an algebraic origin (the vector space GF(<var>q</var>)³), and the algebraic object (the Frobenius automorphism) has a combinatorial shadow (a permutation on the points).</p>
+
+    <h3>Why the incidence matrix is now doubly meaningful</h3>
+    <p>The <var>v</var> × <var>v</var> incidence matrix <var>A</var> of PG(2, <var>q</var>) is a 0/1 matrix of full rank <var>v</var> (Fisher). Its rows come with <i>two</i> structures at once:</p>
+
+    <ul class="annot">
+      <li><b>A combinatorial structure.</b> Each row is the indicator of a point across the <var>b</var> lines — a subset of the <var>q</var> + 1 lines through that point.</li>
+      <li><b>An algebraic structure.</b> Rows are indexed by points of PG(2, <var>q</var>), so the Galois group ⟨<var>σ</var>⟩ permutes them. For non-prime <var>q</var>, this permutation is nontrivial and has orbits.</li>
+    </ul>
+
+    <p>The conjecture asserts that these two structures interact in a precise way: the Delaunay triangulation of the row vectors (viewed as points in ℝ<sup><var>v</var></sup>) captures the Frobenius orbits exactly. We still need §6 — Delaunay triangulations — before we can read the claim in full.</p>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#proj-fano">5b · The Fano plane</a>
+    <a class="next" href="#delaunay">6 · Delaunay triangulations</a>
+  </div>
+</section>
+
+
+<!-- 6. DELAUNAY -->
+<section id="delaunay" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 6 · the geometric thread</div>
+    <h2>Delaunay triangulations</h2>
+    <span class="tag g">BCKO ch.9</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 480 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Two different triangulations of the same six points on a convex hull. The left is a fan triangulation from one vertex, producing long thin triangles; the right is the Delaunay triangulation, producing balanced ones.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); font-style: italic; }
+        .fig .ttl { font-size: 11px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.1em; font-style: normal; }
+      </style>
+
+      <!-- Six points on a convex hexagonal hull (no interior points).
+           Both triangulations are valid; they differ only in interior edges.
+             p1 = (30, 160)  — bottom-left
+             p2 = (80,  40)  — top-left
+             p3 = (150, 30)  — top-center
+             p4 = (220, 50)  — top-right
+             p5 = (215, 170) — bottom-right
+             p6 = (120, 185) — bottom-center -->
+
+      <!-- LEFT: fan from p1 — produces long thin triangles -->
+      <g transform="translate(10,30)">
+        <text x="120" y="-8" text-anchor="middle" class="ttl">fan from p₁ · long thin triangles</text>
+        <g stroke="var(--stroke)" stroke-width="0.9" fill="none">
+          <path d="M 30 160 L 80 40 L 150 30 L 220 50 L 215 170 L 120 185 Z"/>
+          <line x1="30" y1="160" x2="150" y2="30"/>
+          <line x1="30" y1="160" x2="220" y2="50"/>
+          <line x1="30" y1="160" x2="215" y2="170"/>
+        </g>
+        <g fill="var(--stroke)">
+          <circle cx="30"  cy="160" r="3.2"/>
+          <circle cx="80"  cy="40"  r="3.2"/>
+          <circle cx="150" cy="30"  r="3.2"/>
+          <circle cx="220" cy="50"  r="3.2"/>
+          <circle cx="215" cy="170" r="3.2"/>
+          <circle cx="120" cy="185" r="3.2"/>
+        </g>
+        <text x="18" y="174" font-size="10">p₁</text>
+      </g>
+
+      <!-- RIGHT: Delaunay — balanced, zig-zag interior -->
+      <g transform="translate(240,30)">
+        <text x="120" y="-8" text-anchor="middle" class="ttl">Delaunay · balanced triangles</text>
+        <g stroke="var(--green)" stroke-width="1.0" fill="none">
+          <path d="M 30 160 L 80 40 L 150 30 L 220 50 L 215 170 L 120 185 Z"/>
+          <!-- zig-zag: p2-p6, p3-p6, p3-p5 -->
+          <line x1="80"  y1="40"  x2="120" y2="185"/>
+          <line x1="150" y1="30"  x2="120" y2="185"/>
+          <line x1="150" y1="30"  x2="215" y2="170"/>
+        </g>
+        <g fill="var(--green)">
+          <circle cx="30"  cy="160" r="3.2"/>
+          <circle cx="80"  cy="40"  r="3.2"/>
+          <circle cx="150" cy="30"  r="3.2"/>
+          <circle cx="220" cy="50"  r="3.2"/>
+          <circle cx="215" cy="170" r="3.2"/>
+          <circle cx="120" cy="185" r="3.2"/>
+        </g>
+      </g>
+
+      <!-- caption -->
+      <text x="240" y="246" text-anchor="middle" font-size="10" font-style="italic">same points, different edges · Delaunay maximises the minimum angle</text>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 6.</span> Two triangulations of the same point set. A point set admits many triangulations; the Delaunay triangulation is the one whose angle vector is lexicographically largest — equivalently, it "avoids skinny triangles" more than any alternative. This property is canonical: Delaunay is uniquely characterised by it.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>What a triangulation is</h3>
+    <div class="defn">
+      <span class="label">Triangulation.</span> A <i>triangulation</i> of a finite point set <var>P</var> ⊂ ℝ<sup><var>d</var></sup> is a simplicial complex <var>T</var> whose vertices are exactly <var>P</var> and whose union covers the convex hull of <var>P</var>. In the plane, <var>T</var> is a collection of triangles whose edges and vertices fit together to tile the hull.
+    </div>
+
+    <p>A point set has many triangulations. For seven points in general position, there are many valid ways to cut up the hull. The <i>Delaunay</i> triangulation singles out one: the one that avoids long thin triangles as much as possible.</p>
+
+    <h3>Three equivalent characterisations</h3>
+    <p>BCKO's Chapter 9 proves three characterisations of the Delaunay triangulation are equivalent (for points in general position):</p>
+
+    <ol class="annot">
+      <li><b>Angle-optimal.</b> The angle vector of the triangulation — the sorted list of all interior angles — is lexicographically largest among all triangulations. No triangulation has a less-skinny worst triangle.</li>
+      <li><b>Locally Delaunay.</b> For every interior edge <var>e</var> = <var>pq</var>, if <var>pqr</var> and <var>pqs</var> are the two adjacent triangles, then <var>s</var> lies <i>outside</i> the circumcircle of <var>pqr</var> (and equivalently <var>r</var> lies outside the circumcircle of <var>pqs</var>).</li>
+      <li><b>Empty circumcircle.</b> For every triangle <var>pqr</var> of the triangulation, the open circumcircle of <var>pqr</var> contains no other point of <var>P</var>.</li>
+    </ol>
+
+    <p>Characterisations 1 and 3 are the two we unpack in detail, in §6a and §6b. Characterisation 2 is the technical bridge between them — BCKO uses it to prove the others by the algorithmic argument of "edge flipping".</p>
+
+    <div class="note">
+      <span class="label">Dimension matters.</span> The three characterisations all generalise to higher-dimensional point sets, where "triangle" becomes "<var>d</var>-simplex" and "circumcircle" becomes "circumsphere". Since the conjecture embeds <var>v</var> = <var>q</var>² + <var>q</var> + 1 points into ℝ<sup><var>v</var></sup>, the Delaunay triangulation we care about is not 2-dimensional; it lives in high-dimensional space. The theory carries over — §6c sketches how.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#proj-isbibd">5c · PG(2,q) is a BIBD</a>
+    <a class="next" href="#delaunay-angle">6a · Angle-optimality</a>
+  </div>
+</section>
+
+
+<!-- 6a. Delaunay angle-optimality -->
+<section id="delaunay-angle" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 6a · geometric</div>
+    <h2>Angle-optimality</h2>
+    <span class="tag g">the edge flip</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 480 220" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Two triangulations of a convex quadrilateral, one with each of the two possible diagonals. The left has a smaller minimum angle; the right is Delaunay.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); font-style: italic; }
+        .fig .ttl { font-size: 11px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.1em; font-style: normal; }
+      </style>
+
+      <!-- Quadrilateral coordinates (verified): r1=(20,100), r2=(120,30), r3=(220,100), r4=(120,130) -->
+
+      <!-- LEFT: diagonal r1-r3 (bad, min angle 16.7°) -->
+      <g transform="translate(10,30)">
+        <text x="120" y="-10" text-anchor="middle" class="ttl">diagonal r₁–r₃</text>
+        <text x="120" y="4" text-anchor="middle" font-size="10">min angle 16.7°</text>
+        <g transform="translate(0,14)">
+          <g stroke="var(--stroke)" stroke-width="0.9" fill="none">
+            <line x1="20" y1="100" x2="120" y2="30"/>
+            <line x1="120" y1="30" x2="220" y2="100"/>
+            <line x1="220" y1="100" x2="120" y2="130"/>
+            <line x1="120" y1="130" x2="20" y2="100"/>
+            <line x1="20" y1="100" x2="220" y2="100" stroke="var(--red)" stroke-width="1.2"/>
+          </g>
+          <g fill="var(--stroke)">
+            <circle cx="20"  cy="100" r="3.5"/>
+            <circle cx="120" cy="30"  r="3.5"/>
+            <circle cx="220" cy="100" r="3.5"/>
+            <circle cx="120" cy="130" r="3.5"/>
+          </g>
+          <text x="8"   y="95">r₁</text>
+          <text x="118" y="22">r₂</text>
+          <text x="226" y="95">r₃</text>
+          <text x="120" y="148" text-anchor="middle">r₄</text>
+        </g>
+      </g>
+
+      <!-- RIGHT: diagonal r2-r4 (Delaunay, min angle 51.7°) -->
+      <g transform="translate(240,30)">
+        <text x="120" y="-10" text-anchor="middle" class="ttl">diagonal r₂–r₄</text>
+        <text x="120" y="4" text-anchor="middle" font-size="10">min angle 51.7°</text>
+        <g transform="translate(0,14)">
+          <g stroke="var(--stroke)" stroke-width="0.9" fill="none">
+            <line x1="20" y1="100" x2="120" y2="30"/>
+            <line x1="120" y1="30" x2="220" y2="100"/>
+            <line x1="220" y1="100" x2="120" y2="130"/>
+            <line x1="120" y1="130" x2="20" y2="100"/>
+            <line x1="120" y1="30" x2="120" y2="130" stroke="var(--green)" stroke-width="1.2"/>
+          </g>
+          <g fill="var(--stroke)">
+            <circle cx="20"  cy="100" r="3.5"/>
+            <circle cx="120" cy="30"  r="3.5"/>
+            <circle cx="220" cy="100" r="3.5"/>
+            <circle cx="120" cy="130" r="3.5"/>
+          </g>
+          <text x="8"   y="95">r₁</text>
+          <text x="118" y="22">r₂</text>
+          <text x="226" y="95">r₃</text>
+          <text x="120" y="148" text-anchor="middle">r₄</text>
+        </g>
+      </g>
+
+      <!-- bottom caption -->
+      <text x="240" y="210" text-anchor="middle" font-size="10" font-style="italic">flipping the diagonal raises the minimum angle — the Delaunay choice is on the right</text>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 6a.</span> The two triangulations of a convex quadrilateral differ in one edge — the diagonal. Flipping the diagonal changes the angle vector; Delaunay is the triangulation that cannot be improved by any such flip. For the points shown, the minimum angle jumps from 16.7° to 51.7° — a dramatic improvement, and a correct Delaunay step.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The angle vector</h3>
+    <p>Given a triangulation <var>T</var> with <var>m</var> triangles, list all 3<var>m</var> interior angles and sort them ascending: <var>α</var><sub>1</sub> ≤ <var>α</var><sub>2</sub> ≤ … ≤ <var>α</var><sub>3<var>m</var></sub>. Call the result <var>A</var>(<var>T</var>). Compare two triangulations lexicographically: <var>T</var> is better than <var>T</var>′ iff <var>A</var>(<var>T</var>) beats <var>A</var>(<var>T</var>′) at the first index where they differ.</p>
+
+    <div class="defn">
+      <span class="label">Delaunay (by angles).</span> A triangulation of a point set <var>P</var> is <i>Delaunay</i> iff it is optimal for the angle-vector ordering. For points in general position, this triangulation is unique.
+    </div>
+
+    <h3>Thales's theorem (the edge-flip workhorse)</h3>
+    <p>The reason flips work: given four points forming a convex quadrilateral, the two possible diagonals give two triangulations, and a classical theorem of Thales (BCKO Thm 9.2) says that <i>the better triangulation is the one where the flipped-in diagonal produces triangles with larger minimum angles</i>. Equivalently: the flipped-in diagonal is the one that does NOT have a point in its circumcircle.</p>
+
+    <h3>Why "optimal" is canonical</h3>
+    <p>"Canonical" has a precise meaning here: the angle-vector criterion is a <i>globally</i> defined optimisation that does not depend on any choice (of coordinate system, of orientation, of algorithm). Every triangulation can in principle be scored by its angle vector, and the Delaunay triangulation is the argmax. That global definition is what makes Conjecture I's statement precise — it's not "some triangulation that's kind of natural", it's <i>the</i> Delaunay triangulation.</p>
+
+    <div class="note">
+      <span class="label">Why we care for Conjecture I.</span> The Delaunay triangulation being canonical is what makes the conjecture non-trivial. If one could get any answer by choosing the right triangulation, the claim "Frobenius orbits = Delaunay faces" would be empty. Because Delaunay is unique (in general position), the conjecture is a precise claim about a specific geometric object.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#delaunay">6 · Delaunay</a>
+    <a class="next" href="#delaunay-empty">6b · Empty circumcircle</a>
+  </div>
+</section>
+
+
+<!-- 6b. Delaunay empty-circle -->
+<section id="delaunay-empty" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 6b · geometric</div>
+    <h2>The empty-circumcircle criterion</h2>
+    <span class="tag g">the characteristic property</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 240" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A triangle with its circumscribed circle shown. Another point lies outside the circle, so the triangle passes the empty circumcircle test.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11.5px; fill: var(--stroke); font-style: italic; }
+        .fig .ttl { font-size: 11px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.1em; font-style: normal; }
+      </style>
+
+      <!-- Verified: triangle (60,130), (200,130), (130,50); circumcenter (130, 120.6), r = 70.62
+           Point C outside: (130, 40), dist 80.62 (OUTSIDE) -->
+
+      <!-- circumcircle -->
+      <circle cx="130" cy="120.6" r="70.62" fill="var(--green-pale)" fill-opacity="0.4" stroke="var(--green)" stroke-width="0.9" stroke-dasharray="3 3"/>
+
+      <!-- triangle -->
+      <g stroke="var(--green)" stroke-width="1.2" fill="none">
+        <polygon points="60,130 200,130 130,50"/>
+      </g>
+
+      <!-- points -->
+      <g fill="var(--stroke)">
+        <circle cx="60"  cy="130" r="3.5"/>
+        <circle cx="200" cy="130" r="3.5"/>
+        <circle cx="130" cy="50"  r="3.5"/>
+      </g>
+      <!-- labels -->
+      <text x="49" y="143">p</text>
+      <text x="210" y="143">q</text>
+      <text x="124" y="42">r</text>
+
+      <!-- the "other" point outside circumcircle -->
+      <circle cx="130" cy="40" r="4" fill="var(--red)"/>
+      <text x="140" y="40" fill="var(--red)">s</text>
+
+      <!-- circumcenter indicator -->
+      <circle cx="130" cy="120.6" r="1.5" fill="var(--green)"/>
+      <text x="134" y="124" font-size="9" fill="var(--green)">O</text>
+
+      <!-- radius line -->
+      <line x1="130" y1="120.6" x2="60" y2="130" stroke="var(--green)" stroke-width="0.6" stroke-dasharray="1 2"/>
+
+      <!-- annotation -->
+      <text x="220" y="60" class="ttl" fill="var(--green)">empty circumcircle</text>
+      <text x="220" y="76" font-size="11">O = circumcentre of △ pqr</text>
+      <text x="220" y="94" font-size="11">r = circumradius</text>
+      <text x="220" y="120" font-size="11" fill="var(--red)">s lies outside: |Os| &gt; r</text>
+      <text x="220" y="138" font-size="11" fill="var(--green)" font-weight="700">⟹ △pqr is a Delaunay triangle</text>
+
+      <!-- bottom fine print -->
+      <text x="220" y="210" text-anchor="middle" font-size="10" font-style="italic">for a Delaunay triangulation, every triangle's circumcircle is empty of other points</text>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 6b.</span> The empty-circumcircle test. A triangle <var>pqr</var> in the Delaunay triangulation has no other point of the set inside its circumcircle. Here <var>s</var> is outside the circle, so the triangle <var>pqr</var> passes the test. BCKO Lemma 9.4 shows this property uniquely characterises Delaunay faces.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The criterion</h3>
+    <div class="thm">
+      <span class="label">Lemma (BCKO 9.4).</span> Let <var>P</var> ⊂ ℝ² be in general position. A triangulation <var>T</var> of <var>P</var> is Delaunay iff for every triangle <var>pqr</var> of <var>T</var>, the open circumcircle of <var>pqr</var> contains no point of <var>P</var>.
+    </div>
+
+    <p>This is a completely local criterion: you can check it one triangle at a time. It also generalises cleanly: in any dimension, a simplex belongs to the Delaunay triangulation iff its circumscribed sphere is empty of other points.</p>
+
+    <h3>Why this matters computationally</h3>
+    <p>Given a candidate triangulation, you verify Delaunay by computing circumscribed spheres for each simplex and checking emptiness. In dimension 2 this is a determinant test per edge. In dimension <var>d</var> it is a (<var>d</var>+2) × (<var>d</var>+2) determinant per <var>d</var>-simplex (the "in-sphere predicate"). For the 7-point Fano rows in ℝ⁷, the test reduces to a polynomial-time computation.</p>
+
+    <h3>The lift trick</h3>
+    <p>There is a beautiful trick that turns "Delaunay in ℝ<sup><var>d</var></sup>" into "convex hull in ℝ<sup><var>d</var>+1</sup>". Lift each point <var>p</var> = (<var>p</var><sub>1</sub>, …, <var>p<sub>d</sub></var>) ∈ ℝ<sup><var>d</var></sup> to <var>p</var>̃ = (<var>p</var><sub>1</sub>, …, <var>p<sub>d</sub></var>, ||<var>p</var>||²) ∈ ℝ<sup><var>d</var>+1</sup> on the paraboloid <var>y</var> = <var>x</var><sub>1</sub>² + … + <var>x<sub>d</sub></var>². Then:</p>
+
+    <div class="thm">
+      <span class="label">Paraboloid lift (BCKO Thm 9.9).</span> The Delaunay triangulation of <var>P</var> in ℝ<sup><var>d</var></sup> is the projection of the lower faces of the convex hull of the lifted points <var>P</var>̃ in ℝ<sup><var>d</var>+1</sup>.
+    </div>
+
+    <p>This trick is the bridge to §6c, where we need Delaunay in an arbitrary ambient dimension — which is where the conjecture lives.</p>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#delaunay-angle">6a · Angle-optimality</a>
+    <a class="next" href="#delaunay-lift">6c · The leap to ℝ^v</a>
+  </div>
+</section>
+
+
+<!-- 6c. Delaunay in high dimension -->
+<section id="delaunay-lift" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 6c · geometric</div>
+    <h2>The leap to ℝ<sup><var>v</var></sup></h2>
+    <span class="tag g">dimension doesn't break the theory</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A three-space schematic: points in the plane lift to a paraboloid in three-space; the lower convex hull, when projected back, gives the Delaunay triangulation.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); font-style: italic; }
+        .fig .ttl { font-size: 11px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.1em; font-style: normal; }
+      </style>
+
+      <!-- Upper region: paraboloid y = ||x||² opening UPWARD in math, so in SVG
+           coordinates (y-down) this is a U opening downward visually — dip in the MIDDLE.
+           Curve from (40,40) dipping to (220,150) and back to (400,40). -->
+      <g transform="translate(0,0)">
+        <!-- the parabola (U-shape in SVG) -->
+        <path d="M 40 40 Q 220 220 400 40" fill="none" stroke="var(--blue)" stroke-width="0.9"/>
+        <text x="408" y="44" fill="var(--blue)" font-size="10" font-style="italic">y = ‖x‖²</text>
+
+        <!-- 5 lifted points ON the curve, at x = 80, 140, 220, 290, 360
+             For Q(40,40, 220,220, 400,40), the curve point at parameter t is
+             (1-t)²(40,40) + 2t(1-t)(220,220) + t²(400,40).
+             Computed sample points:
+             t=0.15 → (93.4, 89.8)
+             t=0.32 → (158.6, 128.3)   [good for x≈160]
+             t=0.50 → (220, 150)        [bottom of curve]
+             t=0.68 → (281.4, 128.3)
+             t=0.85 → (346.6, 89.8)
+        -->
+        <g fill="var(--green)">
+          <circle cx="93.4"  cy="89.8"  r="3.5"/>
+          <circle cx="158.6" cy="128.3" r="3.5"/>
+          <circle cx="220"   cy="150"   r="3.5"/>
+          <circle cx="281.4" cy="128.3" r="3.5"/>
+          <circle cx="346.6" cy="89.8"  r="3.5"/>
+        </g>
+
+        <!-- LOWER CONVEX HULL: the polyline connecting the lifted points from below
+             (smaller y in math = larger y in SVG, since y-axis is flipped; "lower" in
+             math = points that are lowest on the parabola = visually BOTTOM in SVG).
+             These are the visible "lower" faces looking from below the paraboloid. -->
+        <g stroke="var(--red)" stroke-width="1.4" fill="none">
+          <polyline points="93.4,89.8 158.6,128.3 220,150 281.4,128.3 346.6,89.8"/>
+        </g>
+
+        <text x="220" y="178" text-anchor="middle" fill="var(--red)" font-size="11" font-weight="700">lower hull (the Delaunay lift)</text>
+      </g>
+
+      <!-- Lower region: the base plane ℝ² with 5 points (projections of the lifted ones) -->
+      <g transform="translate(0,190)">
+        <polygon points="40,0 400,0 440,40 80,40" fill="none" stroke="var(--stroke)" stroke-width="0.7" stroke-dasharray="2 2"/>
+        <g fill="var(--green)">
+          <circle cx="93.4"  cy="20" r="3"/>
+          <circle cx="158.6" cy="20" r="3"/>
+          <circle cx="220"   cy="20" r="3"/>
+          <circle cx="281.4" cy="20" r="3"/>
+          <circle cx="346.6" cy="20" r="3"/>
+        </g>
+        <text x="220" y="58" text-anchor="middle" class="ttl">ℝ² — original points</text>
+      </g>
+
+      <!-- projection dashes from lifted to base -->
+      <g stroke="var(--stroke)" stroke-width="0.4" stroke-dasharray="1 3">
+        <line x1="93.4"  y1="89.8"  x2="93.4"  y2="210"/>
+        <line x1="158.6" y1="128.3" x2="158.6" y2="210"/>
+        <line x1="220"   y1="150"   x2="220"   y2="210"/>
+        <line x1="281.4" y1="128.3" x2="281.4" y2="210"/>
+        <line x1="346.6" y1="89.8"  x2="346.6" y2="210"/>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 6c.</span> The Delaunay lift. Lift each point <var>p</var> ∈ ℝ<sup><var>d</var></sup> to (<var>p</var>, ‖<var>p</var>‖²) on a paraboloid in ℝ<sup><var>d</var>+1</sup>, then take the lower convex hull. The lower hull's faces, projected back, are the Delaunay cells of the original point set. The trick works in every dimension, including the <var>d</var> = <var>v</var> case the conjecture cares about.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The conjecture's ambient dimension</h3>
+    <p>Conjecture I asks for the Delaunay triangulation of the <var>v</var> rows of the incidence matrix <var>A</var> of PG(2, <var>q</var>), viewed as points in ℝ<sup><var>v</var></sup>. For the Fano case (<var>q</var> = 2), that is 7 points in ℝ⁷. For <var>q</var> = 4, it is 21 points in ℝ²¹. For <var>q</var> = 8, it is 73 points in ℝ⁷³.</p>
+
+    <p>These are extremely high-dimensional point sets. But the Delaunay theory from §6 does not depend on dimension; the angle-optimality characterisation generalises to <i>dihedral-angle</i> optimality, and the empty-circumscribed-sphere characterisation is dimension-free to state. BCKO's theorems all extend.</p>
+
+    <h3>A subtlety: general position</h3>
+    <p>In ℝ<sup><var>d</var></sup>, "general position" means no <var>d</var> + 2 points lie on a common (<var>d</var> − 1)-sphere. For <var>v</var> binary 0/1 vectors of Hamming weight <var>r</var> in ℝ<sup><var>v</var></sup>, this is emphatically <i>not</i> automatic — such points lie on a common Euclidean sphere (they are equidistant from the centroid, all having the same norm). So the Delaunay triangulation as stated requires a more careful interpretation — perhaps one that accounts for this degeneracy, or uses a perturbation. The conjecture paper notes this as part of the "what could go wrong" territory.</p>
+
+    <div class="note">
+      <span class="label">The canonicality argument.</span> Even granting the degeneracy issue, the <i>non-uniqueness</i> of the Delaunay triangulation in degenerate configurations usually resolves into a small canonical set (the Regular triangulation, or the lexicographic breaker of ties on the paraboloid lift). Conjecture I at its strongest says the structure is canonical enough to pin down exactly which triangulation is meant, and that the faces match Frobenius orbits whatever the choice.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#delaunay-empty">6b · Empty circumcircle</a>
+    <a class="next" href="#conj">7 · The conjecture</a>
+  </div>
+</section>
+
+<!-- 7. CONJECTURE -->
+<section id="conj" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 7 · synthesis</div>
+    <h2>The conjecture, read</h2>
+    <span class="tag k">Fisher–Frobenius coincidence</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 500 240" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A diagram showing the five objects that the conjecture brings into a single relation: the prime power q, the BIBD, the incidence matrix, the Frobenius automorphism, and the Delaunay triangulation.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); }
+        .fig .ttl { font-size: 11px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.1em; }
+        .fig .lbl { font-style: italic; }
+      </style>
+
+      <!-- Top centre: prime power q -->
+      <g transform="translate(250,40)">
+        <rect x="-30" y="-18" width="60" height="30" fill="var(--paper-card)" stroke="var(--stroke)" stroke-width="1.2"/>
+        <text x="0" y="3" text-anchor="middle" class="lbl" font-weight="700">q</text>
+        <text x="0" y="32" text-anchor="middle" font-size="10">prime power</text>
+      </g>
+
+      <!-- LEFT: BIBD -->
+      <g transform="translate(85,130)">
+        <rect x="-54" y="-18" width="108" height="30" fill="var(--paper-card)" stroke="var(--red)" stroke-width="1.1"/>
+        <text x="0" y="3" text-anchor="middle" fill="var(--red)" font-weight="700">BIBD: PG(2, q)</text>
+        <text x="0" y="30" text-anchor="middle" font-size="10">v = q² + q + 1 rows</text>
+      </g>
+
+      <!-- CENTRE: Frobenius σ and its orbits -->
+      <g transform="translate(250,130)">
+        <rect x="-50" y="-18" width="100" height="30" fill="var(--paper-card)" stroke="var(--blue)" stroke-width="1.1"/>
+        <text x="0" y="3" text-anchor="middle" fill="var(--blue)" font-weight="700">σ: x ↦ xᵠ</text>
+        <text x="0" y="30" text-anchor="middle" font-size="10">permutation on rows</text>
+      </g>
+
+      <!-- RIGHT: Delaunay triangulation -->
+      <g transform="translate(415,130)">
+        <rect x="-56" y="-18" width="112" height="30" fill="var(--paper-card)" stroke="var(--green)" stroke-width="1.1"/>
+        <text x="0" y="3" text-anchor="middle" fill="var(--green)" font-weight="700">Delaunay of rows</text>
+        <text x="0" y="30" text-anchor="middle" font-size="10">faces = Delaunay cells</text>
+      </g>
+
+      <!-- Arrows from q to each -->
+      <g stroke="var(--stroke)" stroke-width="0.8" fill="none" stroke-dasharray="2 3">
+        <line x1="235" y1="54" x2="113" y2="112"/>
+        <line x1="250" y1="58" x2="250" y2="112"/>
+        <line x1="265" y1="54" x2="385" y2="112"/>
+      </g>
+
+      <!-- The bottom claim: orbits = cells -->
+      <g transform="translate(250,200)">
+        <text x="0" y="0" text-anchor="middle" class="ttl" font-size="12">Conjecture I</text>
+        <text x="0" y="20" text-anchor="middle" class="lbl" font-size="13">σ-orbits  =  Delaunay faces</text>
+      </g>
+
+      <!-- equality brackets connecting the three lower boxes -->
+      <g stroke="var(--stroke)" stroke-width="0.7" fill="none">
+        <line x1="139" y1="145" x2="200" y2="150"/>
+        <line x1="300" y1="150" x2="359" y2="145"/>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 7.</span> Five objects, one relation. The prime power <var>q</var> determines three things independently: a combinatorial object (the BIBD), an algebraic symmetry (Frobenius), and a geometric partition (Delaunay faces). The conjecture says the algebraic and geometric partitions agree.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>Why "coincidence"</h3>
+    <p>The name <i>Fisher–Frobenius coincidence</i> captures the structure of the claim. The word "coincidence" is doing a lot of work — it suggests that two things, calculated independently, end up equal without either obviously depending on the other.</p>
+
+    <p>Here the two things are:</p>
+
+    <ul class="annot">
+      <li>The <b>Frobenius orbit</b> partition of the points of PG(2, <var>q</var>), which comes from the Galois theory of finite fields (no geometry).</li>
+      <li>The <b>Delaunay face</b> partition of those same points, after they're embedded in ℝ<sup><var>v</var></sup> via the incidence matrix (no algebra; Euclidean geometry only).</li>
+    </ul>
+
+    <p>There is no <i>a priori</i> reason these two partitions should agree. One comes from iterating <var>x</var><sup><var>q</var></sup>; the other from computing empty spheres in high-dimensional Euclidean space. The conjecture claims they do agree. If true, it connects Fisher's rank theorem (§2b), the Frobenius algebra (§4), and the Delaunay canonicality (§6a) into a single proposition.</p>
+
+    <div class="note">
+      <span class="label">The "Fisher" half.</span> Fisher's inequality tells us rank <var>A</var> = <var>v</var>. That tells us the rows of <var>A</var> are <i>affinely independent</i> in ℝ<sup><var>v</var></sup> — they span a (<var>v</var>−1)-dimensional affine subspace, which is the minimum dimension needed to have a non-degenerate triangulation of <var>v</var> points. Fisher is precisely the side condition that lets Delaunay have content.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#delaunay-lift">6c · Leap to ℝ^v</a>
+    <a class="next" href="#conj-statement">7a · Full statement</a>
+  </div>
+</section>
+
+
+<!-- 7a. Full statement -->
+<section id="conj-statement" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 7a · synthesis</div>
+    <h2>The full statement</h2>
+    <span class="tag k">verbatim, now readable</span>
+  </div>
+
+  <div class="viz">
+    <!-- This one uses a typographic rendering of the conjecture -->
+    <div style="background: var(--paper-card); padding: 24px 26px; font-family: Georgia, serif; font-size: 14.5px; line-height: 1.75;">
+      <div style="text-align: center; font-variant: small-caps; font-weight: 700; letter-spacing: 0.12em; font-size: 13px; margin-bottom: 14px;">
+        Conjecture I  ·  The Fisher–Frobenius Coincidence
+      </div>
+
+      <p style="text-align: justify; margin: 0 0 10px;">
+        Let <var>q</var> be a prime power, <var>v</var> = <var>q</var>² + <var>q</var> + 1, and
+        <span style="color: var(--red);"><var>D</var></span> the symmetric <span style="color: var(--red);">BIBD(<var>v</var>, <var>q</var>+1, 1)</span>
+        realised as the projective plane <span style="color: var(--green);">PG(2, <var>q</var>)</span>.
+        Let <var>A</var> be the <var>v</var> × <var>v</var> incidence matrix,
+        and view its <var>v</var> rows as points in ℝ<sup><var>v</var></sup>.
+      </p>
+
+      <p style="text-align: justify; margin: 0 0 10px;">
+        The <span style="color: var(--green);">Delaunay triangulation</span>
+        of this point set has the property that every face is fixed setwise by
+        the <span style="color: var(--blue);">Frobenius automorphism <var>σ</var>: <var>x</var> ↦ <var>x</var><sup><var>q</var></sup></span>
+        acting on row indices through its action on PG(2, <var>q</var>).
+      </p>
+
+      <p style="text-align: justify; margin: 0; font-weight: 700;">
+        Equivalently: <var>σ</var> permutes Delaunay cells,
+        and its orbits coincide with lines of PG(2, <var>q</var>).
+      </p>
+
+      <div style="border-top: 1px dotted var(--rule); margin-top: 16px; padding-top: 10px; font-size: 11px; color: var(--ink-soft); font-style: italic;">
+        Tripoint: Morris ch. 17 (BIBDs, Fisher) · Shoup ch. 14, 19 (matrices over GF(<var>q</var>), Frobenius) · BCKO ch. 9 (Delaunay).
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h3>How to read each clause</h3>
+
+    <h3>"Let <var>q</var> be a prime power"</h3>
+    <p>From §3: the only sizes for finite fields are prime powers. Since we want a projective plane coming from GF(<var>q</var>), we need <var>q</var> prime-powered.</p>
+
+    <h3>"<var>v</var> = <var>q</var>² + <var>q</var> + 1"</h3>
+    <p>From §5: this is the number of points (and lines) of PG(2, <var>q</var>). Explicitly: <var>q</var>=2 gives <var>v</var>=7, <var>q</var>=3 gives <var>v</var>=13, <var>q</var>=4 gives <var>v</var>=21, <var>q</var>=5 gives <var>v</var>=31, etc.</p>
+
+    <h3>"<var>D</var> the symmetric BIBD(<var>v</var>, <var>q</var>+1, 1)"</h3>
+    <p>From §5c: PG(2, <var>q</var>) realised as a combinatorial design. Symmetric means <var>b</var> = <var>v</var>; block size <var>k</var> = <var>q</var>+1; every pair of points in exactly one block (<var>λ</var> = 1).</p>
+
+    <h3>"<var>A</var> ... view its <var>v</var> rows as points in ℝ<sup><var>v</var></sup>"</h3>
+    <p>From §1c: the 0/1 incidence matrix of <var>D</var>. Each row has exactly <var>r</var> = <var>q</var>+1 ones. We take these rows as vectors in ℝ<sup><var>v</var></sup> (Euclidean space), promoting a combinatorial object to a geometric one.</p>
+
+    <h3>"Delaunay triangulation of this point set"</h3>
+    <p>From §6: the canonical triangulation of the <var>v</var> points, consisting of simplices whose circumscribed spheres contain no other point. Lives in the (<var>v</var>−1)-dim affine subspace spanned by the points (since rank <var>A</var> = <var>v</var> makes the rows affinely general).</p>
+
+    <h3>"every face is fixed setwise by Frobenius"</h3>
+    <p>From §4: a face is a set of row-indices. <var>σ</var> acts on row-indices by permuting them (since rows correspond to points of PG(2, <var>q</var>) and <var>σ</var> permutes those points). "Fixed setwise" means σ permutes the face as a whole, i.e. maps face → face, not necessarily fixing each element.</p>
+
+    <h3>"equivalently ... orbits coincide with lines"</h3>
+    <p>The second phrasing is the operational one. Lines of PG(2, <var>q</var>) are the blocks of <var>D</var> — there are <var>b</var> = <var>v</var> of them. The claim: <var>σ</var> restricted to each line permutes only within that line, never mixing across lines, and moreover, each line is a single orbit.</p>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#conj">7 · Conjecture</a>
+    <a class="next" href="#conj-fano">7b · Fano case</a>
+  </div>
+</section>
+
+
+<!-- 7b. The Fano case -->
+<section id="conj-fano" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 7b · synthesis</div>
+    <h2>The Fano case, explicitly</h2>
+    <span class="tag k">q = 2 — vacuous but instructive</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 520 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A schematic for the q equals 2 case: the seven Fano rows as 0/1 vectors in R^7, with Frobenius acting trivially on indices so every orbit is a singleton.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11.5px; fill: var(--stroke); }
+        .fig .ttl { font-size: 11px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.1em; }
+        .fig .lbl { font-style: italic; }
+      </style>
+
+      <text x="260" y="22" text-anchor="middle" class="ttl">q = 2  ·  σ(x) = x²  on GF(2) = id  ⟹  σ trivial on PG(2, 2)</text>
+
+      <!-- 7 row vectors on left -->
+      <g transform="translate(30,50)" font-family="SFMono-Regular, Consolas, monospace" font-size="11">
+        <text x="0" y="0" class="ttl" font-family="Georgia">rows of A as 0/1 vectors in ℝ⁷</text>
+        <g>
+          <text x="0" y="22"  font-weight="700">row 1:</text><text x="48" y="22">(1, 1, 1, 0, 0, 0, 0)</text>
+          <text x="0" y="40"  font-weight="700">row 2:</text><text x="48" y="40">(1, 0, 0, 1, 1, 0, 0)</text>
+          <text x="0" y="58"  font-weight="700">row 3:</text><text x="48" y="58">(0, 1, 0, 1, 0, 1, 0)</text>
+          <text x="0" y="76"  font-weight="700">row 4:</text><text x="48" y="76">(1, 0, 0, 0, 0, 1, 1)</text>
+          <text x="0" y="94"  font-weight="700">row 5:</text><text x="48" y="94">(0, 1, 0, 0, 1, 0, 1)</text>
+          <text x="0" y="112" font-weight="700">row 6:</text><text x="48" y="112">(0, 0, 1, 1, 0, 0, 1)</text>
+          <text x="0" y="130" font-weight="700">row 7:</text><text x="48" y="130">(0, 0, 1, 0, 1, 1, 0)</text>
+        </g>
+      </g>
+
+      <!-- right: what Frobenius does -->
+      <g transform="translate(310,50)">
+        <text x="0" y="0" class="ttl">Frobenius on row indices</text>
+        <g font-family="Georgia" font-style="italic" font-size="12">
+          <text x="0" y="22" fill="var(--blue)">σ(1) = 1</text>
+          <text x="0" y="40" fill="var(--blue)">σ(2) = 2</text>
+          <text x="0" y="58" fill="var(--blue)">σ(3) = 3</text>
+          <text x="0" y="76" fill="var(--blue)">σ(4) = 4</text>
+          <text x="0" y="94" fill="var(--blue)">σ(5) = 5</text>
+          <text x="0" y="112" fill="var(--blue)">σ(6) = 6</text>
+          <text x="0" y="130" fill="var(--blue)">σ(7) = 7</text>
+        </g>
+        <text x="0" y="160" font-size="10" font-style="italic">all 7 orbits are singletons.</text>
+      </g>
+
+      <!-- Bottom strip: so every subset is σ-fixed -->
+      <g transform="translate(60,210)">
+        <rect x="0" y="0" width="400" height="30" fill="var(--paper-card)" stroke="var(--stroke)" stroke-width="0.7"/>
+        <text x="200" y="15" text-anchor="middle" font-size="11" font-style="italic">every Delaunay face is a subset of {1,…,7}, hence σ-fixed</text>
+        <text x="200" y="28" text-anchor="middle" font-size="10" fill="#4a4a4a">⟹ conjecture TRUE but VACUOUSLY, for q = 2</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 7b.</span> The Fano case is not a proper test. For <var>q</var> = 2, Frobenius <var>σ</var>(<var>x</var>) = <var>x</var>² is the identity on GF(2), so it fixes every point of PG(2, 2) individually. Every subset of {1, …, 7} is "fixed setwise" — meaning the conjecture holds trivially but tells us nothing about whether the Delaunay faces have any relation to projective lines.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The Fano plane's incidence matrix explicitly</h3>
+    <p>Using the labelling of §5a, the incidence matrix of PG(2, 2) (with a reindexing of blocks so row <var>i</var> ↔ point <var>P<sub>i</sub></var> and column <var>j</var> ↔ line ℓ<sub><var>j</var></sub>) is the seven rows:</p>
+
+    <div class="ex">
+      <span class="label">The 7 Fano rows as vectors in ℝ⁷.</span>
+      <span class="eq"><var>v</var><sub>1</sub> = (1, 1, 1, 0, 0, 0, 0),    <var>v</var><sub>2</sub> = (1, 0, 0, 1, 1, 0, 0),    <var>v</var><sub>3</sub> = (0, 1, 0, 1, 0, 1, 0),</span>
+      <span class="eq"><var>v</var><sub>4</sub> = (1, 0, 0, 0, 0, 1, 1),    <var>v</var><sub>5</sub> = (0, 1, 0, 0, 1, 0, 1),    <var>v</var><sub>6</sub> = (0, 0, 1, 1, 0, 0, 1),    <var>v</var><sub>7</sub> = (0, 0, 1, 0, 1, 1, 0).</span>
+    </div>
+
+    <p>All seven have exactly three 1's and four 0's. They live on a sphere in ℝ⁷ (equidistant from (½, ½, ½, ½, ½, ½, ½)). That common-sphere condition is a serious technical obstacle — in principle the Delaunay triangulation can be degenerate on such a configuration.</p>
+
+    <h3>What Frobenius does for <var>q</var> = 2</h3>
+    <p>Since <var>σ</var>(<var>x</var>) = <var>x</var>² fixes GF(2) pointwise, it fixes each <var>P</var> = [<var>a</var> : <var>b</var> : <var>c</var>] ∈ PG(2, 2) with <var>a</var>, <var>b</var>, <var>c</var> ∈ GF(2). So <var>σ</var> induces the identity permutation on {1, 2, …, 7}. Every set is fixed setwise by the identity. Conjecture I is therefore <i>vacuously true</i> at <var>q</var> = 2.</p>
+
+    <h3>Why <var>q</var> = 4 is the first real test</h3>
+    <p>For <var>q</var> = 4, PG(2, 4) sits naturally inside PG(2, 16) (as the fixed points of <var>σ</var> = the 4-power Frobenius on GF(16)). This lift gives <var>σ</var> genuine content on PG(2, 4), but now <var>v</var> = 21 points embed in ℝ²¹. No small computation — needs a computer.</p>
+
+    <div class="note">
+      <span class="label">The conjecture at <var>q</var> prime.</span> A careful reading of "Frobenius acting on PG(2, <var>q</var>)" for prime <var>q</var> must invoke the action on an algebraic extension — since over GF(<var>q</var>) itself the map is trivial. The most natural reading: let PG(2, <var>q</var>) sit inside PG(2, <var>q</var><sup>2</sup>) and take <var>σ</var> to be the <var>q</var>-power Frobenius of GF(<var>q</var><sup>2</sup>). Then PG(2, <var>q</var>) is the fixed-point set of <var>σ</var>, and the action is trivial, making the conjecture once again vacuous for <var>q</var> prime — but non-trivially so, for a subtler reason. Either way, the first non-trivial case is <var>q</var> = 4.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#conj-statement">7a · Statement</a>
+    <a class="next" href="#conj-commentary">7c · What could go wrong</a>
+  </div>
+</section>
+
+
+<!-- 7c. Commentary -->
+<section id="conj-commentary" class="topic">
+  <div class="topic-head">
+    <div class="crumb">§ 7c · synthesis</div>
+    <h2>What could go wrong</h2>
+    <span class="tag k">plausibility audit</span>
+  </div>
+
+  <figure class="viz">
+    <svg viewBox="0 0 440 260" class="fig" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A two-column schematic: reasons the conjecture is plausible on the left, reasons it could fail on the right.">
+      <style>
+        .fig text { font-family: Georgia, serif; font-size: 11px; fill: var(--stroke); }
+        .fig .ttl { font-size: 11px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.1em; }
+      </style>
+
+      <!-- LEFT: plausibility -->
+      <g transform="translate(20,30)">
+        <text x="0" y="0" class="ttl" fill="var(--green)">reasons it's plausible</text>
+        <line x1="0" y1="6" x2="180" y2="6" stroke="var(--green)" stroke-width="0.6"/>
+        <g font-family="Georgia" font-size="11" fill="var(--stroke)">
+          <text x="0" y="24">• Morris calls the elementary</text>
+          <text x="12" y="38">proof of Fisher "mysterious"</text>
+          <text x="0" y="56">• Shoup makes Frobenius the</text>
+          <text x="12" y="70">canonical Galois generator</text>
+          <text x="0" y="88">• BCKO makes Delaunay the</text>
+          <text x="12" y="102">canonical triangulation</text>
+          <text x="0" y="124">• three canonicals acting on</text>
+          <text x="12" y="138">the same object at once</text>
+          <text x="0" y="160" font-style="italic">"canonical × canonical</text>
+          <text x="12" y="174" font-style="italic">often = canonical again"</text>
+        </g>
+      </g>
+
+      <!-- vertical divider -->
+      <line x1="220" y1="20" x2="220" y2="240" stroke="var(--rule)" stroke-width="0.6" stroke-dasharray="2 3"/>
+
+      <!-- RIGHT: failure modes -->
+      <g transform="translate(240,30)">
+        <text x="0" y="0" class="ttl" fill="var(--red)">reasons it could fail</text>
+        <line x1="0" y1="6" x2="180" y2="6" stroke="var(--red)" stroke-width="0.6"/>
+        <g font-family="Georgia" font-size="11" fill="var(--stroke)">
+          <text x="0" y="24">• Fano rows are all equidistant</text>
+          <text x="12" y="38">from centroid — Delaunay is</text>
+          <text x="12" y="52">degenerate for this config</text>
+          <text x="0" y="70">• naive embedding may give</text>
+          <text x="12" y="84">wrong Delaunay structure;</text>
+          <text x="12" y="98">conjecture may need a specific</text>
+          <text x="12" y="112">choice of embedding</text>
+          <text x="0" y="130">• conjecture's q = prime case</text>
+          <text x="12" y="144">needs subtle interpretation</text>
+          <text x="0" y="162">• even q = 4 is a 21-point</text>
+          <text x="12" y="176">Delaunay in ℝ²¹; hard to</text>
+          <text x="12" y="190">verify without computer</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="figlabel">Fig. 7c.</span> Reasons for and against. The conjecture's appeal is structural: three canonical constructions from disjoint subjects happen to act on one object. Its difficulties are technical: degeneracy of the embedding, ambiguity in the <var>q</var>-prime case, and the sheer ambient dimension of even the smallest non-trivial test (<var>q</var>=4, ℝ²¹).
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>Three reasons the conjecture is plausible</h3>
+
+    <h3>The canonicality argument</h3>
+    <p>Each of Fisher, Frobenius, and Delaunay is canonical in its own domain. Fisher says rank <var>A</var> = <var>v</var> is forced — no perturbation of the design can make this fail. Frobenius is the unique generator of the Galois group Gal(GF(<var>q</var><sup><var>w</var></sup>)/GF(<var>q</var>)). Delaunay is the unique angle-optimal triangulation of a generic point set. When three canonical constructions act on the same object, their structures are often forced to align. Conjecture I speculates this happens here.</p>
+
+    <h3>The mystery of Morris's proof</h3>
+    <p>As §2a noted, Morris's elementary proof of Fisher is long and proceeds by algebraic manipulation, with the number <var>v</var> emerging from the simplification rather than from any visible structure. That pattern — a "long messy proof" hiding a cleaner statement — is a classic tell that deeper structure is present. Conjecture I is one candidate for that deeper structure: the rank isn't just full, it's full <i>because</i> of a specific Galois-invariant geometric decomposition.</p>
+
+    <h3>The known BIBD-Delaunay connection</h3>
+    <p>In the paper that spawned this conjecture, the author notes that 2-designs and their automorphism groups are known to act transitively on Delaunay-like triangulations in various lower-dimensional cases. The conjecture extrapolates this known phenomenon to the highly symmetric, high-dimensional case of PG(2, <var>q</var>).</p>
+
+    <h3>Two reasons to worry</h3>
+
+    <h3>Degeneracy of the embedding</h3>
+    <p>All rows of the incidence matrix have Hamming weight <var>r</var> = <var>q</var>+1. As Euclidean vectors, they are equidistant from the centroid, hence on a common sphere. The Delaunay triangulation of points on a common sphere is <i>not</i> well-defined by the empty-circumsphere criterion — any simplex spanning the sphere has all other points <i>on</i> its circumsphere. So the statement requires either (a) a tie-breaking rule, (b) a perturbation of the points off the sphere, or (c) a specific non-standard embedding.</p>
+
+    <h3>The meaning of <var>σ</var> on PG(2, <var>q</var>) for prime <var>q</var></h3>
+    <p>As §7b noted: for prime <var>q</var>, <var>σ</var>(<var>x</var>) = <var>x</var><sup><var>q</var></sup> acts trivially on GF(<var>q</var>) and therefore trivially on PG(2, <var>q</var>). To give the statement content in the prime case, one must lift to a larger field and take <var>σ</var> to act on the extended plane PG(2, <var>q</var><sup><var>w</var></sup>). Choosing this lift is a nontrivial decision the conjecture's verbiage doesn't make explicit.</p>
+
+    <div class="note">
+      <span class="label">What a proof or disproof would look like.</span> A proof would identify a specific embedding of the Fano rows into ℝ⁷ (or the 21 PG(2, 4) rows into ℝ²¹) such that (i) the Delaunay triangulation is well-defined, (ii) the Frobenius action <var>σ</var> induces an isometry, and (iii) <var>σ</var>-orbits coincide with Delaunay faces. A counterexample would be a specific <var>q</var> for which no such embedding exists. Numerical exploration at <var>q</var> = 4 is the natural first step.
+    </div>
+
+    <h3>Closing</h3>
+    <p>The conjecture is in the suggestive-but-unverified state where mathematical conjectures typically begin their lives. Its appeal is the structural elegance of three independent canonicals coinciding. Its challenges are technical: degeneracy, high dimension, and the subtle interpretation of Frobenius in the prime-<var>q</var> case. Whether the Fisher–Frobenius coincidence is a real theorem waiting to be proved, or an over-optimistic hope waiting for a counterexample, is an open question.</p>
+
+    <div class="aside" style="font-size: 12.5px; color: var(--ink-soft); margin-top: 16px; border-top: 1px dotted var(--rule); padding-top: 10px;">
+      <i>Sources used throughout:</i> Morris, <i>Combinatorics</i> (Chapters 17–18); Shoup, <i>A Computational Introduction to Number Theory and Algebra</i> (Chapters 14, 19); Berg, Cheong, van Kreveld, Overmars, <i>Computational Geometry</i> (Chapter 9). The conjecture statement is taken verbatim from the uploaded document; commentary on plausibility is the author's gloss.
+    </div>
+  </div>
+
+  <div class="pager">
+    <a class="prev" href="#conj-fano">7b · Fano case</a>
+    <a class="next disabled" href="#conj-commentary">end</a>
+  </div>
+</section>
+
+
+  </main>
+</div>
+
+<script>
+  /* Topic router — keitai-style :active only for feedback, JS only for
+     main-panel content swap and backdrop colour change. No transitions
+     on interactive elements; only on the body backdrop (per Tufte
+     Theme 4: colour restraint, reserve saturated colour for state). */
+
+  const bodyEl = document.body;
+  const topics = Array.from(document.querySelectorAll('.topic'));
+  const tocLinks = Array.from(document.querySelectorAll('nav.toc a'));
+
+  /* Ordered list of topics for prev/next */
+  const order = topics.map(t => t.id);
+
+  /* Map from topic id to backdrop colour class */
+  const bgClass = (id) => {
+    if (id === 'cover') return 't-cover';
+    if (id.startsWith('designs')) return 't-designs';
+    if (id.startsWith('fisher')) return 't-fisher';
+    if (id.startsWith('fields')) return 't-fields';
+    if (id.startsWith('frobenius')) return 't-frobenius';
+    if (id.startsWith('proj')) return 't-proj';
+    if (id.startsWith('delaunay')) return 't-delaunay';
+    if (id.startsWith('conj')) return 't-conj';
+    return 't-cover';
+  };
+
+  function setTopic(id, pushHash) {
+    if (!order.includes(id)) id = 'cover';
+    topics.forEach(t => t.classList.toggle('active', t.id === id));
+    tocLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+
+    /* Swap backdrop class */
+    const allBg = ['t-cover','t-designs','t-fisher','t-fields','t-frobenius','t-proj','t-delaunay','t-conj'];
+    allBg.forEach(c => bodyEl.classList.remove(c));
+    bodyEl.classList.add(bgClass(id));
+
+    if (pushHash) {
+      try { history.replaceState(null, '', '#' + id); }
+      catch (e) { /* sandboxed iframe (artifact viewer) blocks history mutation; ignore */ }
+    }
+    /* Scroll viewport to top of content panel */
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  /* Click handling */
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const id = a.getAttribute('href').slice(1);
+    if (order.includes(id)) {
+      e.preventDefault();
+      setTopic(id, true);
+    }
+  });
+
+  /* Keyboard nav: left/right for prev/next */
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    const current = topics.find(t => t.classList.contains('active'));
+    if (!current) return;
+    const idx = order.indexOf(current.id);
+    if (e.key === 'ArrowRight' && idx < order.length - 1) {
+      e.preventDefault(); setTopic(order[idx+1], true);
+    } else if (e.key === 'ArrowLeft' && idx > 0) {
+      e.preventDefault(); setTopic(order[idx-1], true);
+    }
+  });
+
+  /* Initial topic from hash */
+  const initial = window.location.hash.slice(1) || 'cover';
+  setTopic(initial, false);
+</script>
+</body>
+</html>
+
+
